@@ -9,7 +9,13 @@
 - 系统设置：站点标题、Logo、SEO 基础配置
 - 用户与权限：基础角色与权限分配
 
-## 2. 技术栈
+## 2. AI SEO 发布优化计划
+
+文章发布优化按计划文档执行：[AI Native SEO Publishing OS 开发计划](docs/AI_SEO_PUBLISHING_PLAN.md)。
+
+后续开发必须在该文档中更新任务状态、验收命令和真实结果。
+
+## 3. 技术栈
 
 - Python 3.12 + Django 5.1
 - PostgreSQL 15
@@ -18,12 +24,12 @@
 - Django Jazzmin（后台 UI）
 - Docker / Docker Compose
 
-## 3. 环境要求
+## 4. 环境要求
 
 - Docker Engine 20.10+
 - Docker Compose v2
 
-## 4. 快速启动
+## 5. 快速启动
 
 1. 配置环境变量（参考 `.env.example`）
 2. 构建并启动容器：
@@ -43,7 +49,7 @@
    - 前台：`http://127.0.0.1:8001/`
    - 后台：`http://127.0.0.1:8001/django-admin/`
 
-## 5. 权限初始化（可选）
+## 6. 权限初始化（可选）
 
 ```bash
 docker compose exec web python manage.py setup_roles
