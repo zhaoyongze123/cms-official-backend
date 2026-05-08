@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block meta_description %}{% if article.meta_description %}{{ article.meta_description }}{% else %}{{ article.body|striptags|truncatewords:30 }}{% endif %}{% endblock %}
+
+{% block meta_keywords %}{{ article.category.name|default:article.title }}{% endblock %}
+
+{% block title %}{{ article.title }}{% endblock %}
+
+{% block extra_head %}
+  <link rel="canonical" href="{{ request.build_absolute_uri|add:article.get_absolute_url }}" />
+{% endblock %}
+
+{% block content %}
+<div class="container py-5 mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <header class="detail-header">
+                <div class="mb-4">
+                    <span class="hero-badge">{{ article.category.name|default:"未分类" }}</span>
+                </div>
+                <h1 class="detail-title display-3 fw-bold">{{ article.title }}</h1>
+                <div class="detail-meta">
+                    <span class="d-flex align-items-center gap-2">
+                        发布日期：{{ article.created_at|date:"Y-m-d" }}
+                    </span>
+                    <span class="d-flex align-items-center gap-2">
+                        最后更新：{{ article.updated_at|date:"H:i" }}
+                    </span>
+                </div>
+            </header>
+
+            <div class="row justify-content-center">
+                <div class="col-md-10 col-lg-9">
+                    <div class="rich-content">
+                        {{ article.body|safe }}
+                    </div>
+
+                    <div class="mt-5 pt-5 border-top d-flex justify-content-between align-items-center flex-wrap">
+                        {% if prev_article %}
+                          <a href="{{ prev_article.get_absolute_url }}" class="btn-premium">&larr; {{ prev_article.title }}</a>
+                        {% endif %}
+                        {% if next_article %}
+                          <a href="{{ next_article.get_absolute_url }}" class="btn-premium">{{ next_article.title }} &rarr;</a>
+                        {% endif %}
+                        <div class="mb-3">
+                            <a href="{% url 'simple_cms:article_list' %}" class="btn-premium">
+                                返回列表
+                            </a>
+                        </div>
+                        <div class="text-muted small">
+                            企业内容管理系统
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.detail-header { border-bottom: 2px solid var(--color-border-light); margin-bottom: 4rem; padding-bottom: 2rem; }
+.detail-title { color: var(--color-text); line-height: 1.2; letter-spacing: -0.02em; }
+.rich-content { border-radius: var(--radius-lg); background: white; padding: 2rem 0; }
+.rich-content p { font-size: 1.2rem; line-height: 2; margin-bottom: 2rem; color: var(--color-text-secondary); }
+.rich-content h2, .rich-content h3 { margin-top: 4rem; margin-bottom: 1.5rem; color: var(--color-text); position: relative; }
+.rich-content h2::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -8px;
+    width: 40px;
+    height: 4px;
+    background: var(--color-primary);
+    border-radius: 4px;
+}
+</style>
+{% endblock %}
+

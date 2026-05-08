@@ -1,0 +1,15 @@
+.git
+.gitignore
+.DS_Store
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+*.log
+media/
+media_data/
+staticfiles/
+db_dump.sql
+media.tar.gz
+AI_Native_SEO_Publishing_OS_Professional_PRD.docx

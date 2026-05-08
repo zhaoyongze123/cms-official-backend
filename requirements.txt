@@ -1,0 +1,26 @@
+# Core
+Django>=5.1,<5.2
+
+# Database
+psycopg2-binary>=2.9
+
+# Cache
+redis>=5.0
+
+# WSGI Server
+gunicorn>=21.2
+
+# Environment
+django-environ>=0.11
+
+# Image processing
+Pillow>=10.0
+
+# Editors
+django-ckeditor
+
+# Admin Theme
+django-jazzmin
+
+# Alibaba Cloud SDK
+aliyun-python-sdk-core>=2.15.0

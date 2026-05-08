@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block meta_description %}{% if category %}{{ category.seo_description|default:category.name }}{% else %}文章列表{% endif %}{% endblock %}
+
+{% block meta_keywords %}{% if category %}{{ category.seo_keywords|default:category.name }}{% else %}文章列表{% endif %}{% endblock %}
+
+{% block title %}{% if category %}{{ category.seo_title|default:category.name }}{% else %}文章列表{% endif %}{% endblock %}
+
+{% block content %}
+<section class="custom-hero">
+    <div class="container">
+        <span class="hero-badge">企业内容管理系统</span>
+        <h1 class="hero-title">
+            {% if category %}
+                探索 <span style="color: var(--color-primary)">{{ category.name }}</span>
+            {% else %}
+                发现 <span style="color: var(--color-primary)">优质内容</span>
+            {% endif %}
+        </h1>
+        <p class="text-secondary mx-auto" style="max-width: 600px; font-size: 1.1rem;">
+            行业动态、公告资讯与深度文章。
+        </p>
+    </div>
+</section>
+
+<div class="container mt-5 pt-4">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="row g-4">
+                {% for article in articles %}
+                <div class="col-md-6 mb-4">
+                    <article class="article-card">
+                        <div class="article-image">
+                            {% if article.cover_image and article.cover_image.file %}
+                            <img
+                                src="{{ article.cover_image.file.url }}"
+                                alt="{{ article.title }}"
+                                style="width: 100%; height: 100%; object-fit: cover;"
+                            />
+                            {% else %}
+                            <div style="height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; color: #64748b; background: #f8fafc;">
+                                暂无封面
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="article-content">
+                            <div class="article-category">
+                                {{ article.category.name|default:"未分类" }}
+                            </div>
+                            <h3 class="article-title">
+                                <a href="{% url 'simple_cms:article_detail' article.slug %}">{{ article.title }}</a>
+                            </h3>
+                            <div class="article-excerpt">
+                                {{ article.body|truncatewords_html:25|safe }}
+                            </div>
+                            <div class="article-footer">
+                                <span>{{ article.created_at|date:"Y-m-d" }}</span>
+                                <a href="{% url 'simple_cms:article_detail' article.slug %}" class="font-weight-bold" style="color: var(--color-primary)">
+                                    阅读详情
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+                {% empty %}
+                <div class="col-12 py-5 text-center">
+                    <p class="text-muted">暂无发布内容</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if is_paginated %}
+            <nav class="mt-5 pb-5">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="{% if search_query %}?q={{ search_query }}&page={{ page_obj.previous_page_number }}{% else %}?page={{ page_obj.previous_page_number }}{% endif %}" style="border-radius: 10px; padding: 0.6rem 1.2rem;">
+                            上一页
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    <li class="page-item mx-2">
+                        <span class="page-link border-0 text-dark" style="background: none;">
+                            第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 页
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{% if search_query %}?q={{ search_query }}&page={{ page_obj.next_page_number }}{% else %}?page={{ page_obj.next_page_number }}{% endif %}" style="border-radius: 10px; padding: 0.6rem 1.2rem;">
+                            下一页
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            <div class="sidebar-widget">
+                <h4 class="widget-title">栏目分类</h4>
+                <ul class="cat-list">
+                    <li>
+                        <a href="{% url 'simple_cms:article_list' %}" class="cat-link{% if not category %} active{% endif %}">
+                            全部文章 <span>{{ published_total }}</span>
+                        </a>
+                    </li>
+                    {% for cat in categories %}
+                    <li>
+                        <a href="{% url 'simple_cms:category_list' cat.slug %}" class="cat-link{% if category and category.pk == cat.pk %} active{% endif %}">
+                            {{ cat.name }} <span>{{ cat.article_count }}</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="sidebar-widget bg-premium-gradient" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); color: white;">
+                <h4 class="text-white mb-3">需要帮助？</h4>
+                <p style="font-size: 0.9rem; opacity: 0.9;">查看文档或联系管理员。</p>
+                <a href="/django-admin/" class="btn btn-outline-light btn-sm mt-3" style="border-radius: 50px;">进入后台</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .page-link {
+        color: var(--color-text-secondary);
+        border: 1px solid var(--color-border-light);
+    }
+    .page-link:hover {
+        background: var(--color-primary);
+        color: white !important;
+        border-color: var(--color-primary);
+    }
+</style>
+{% endblock %}
+
+
+
+
+
