@@ -1,10 +1,13 @@
+import re
+
 from django.db.models import Count, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views.generic import DetailView, ListView
 
-from .models import Article, ArticleSlugHistory, Category
+from .models import Article, ArticleSlugHistory, Category, Tag
+from .services.seo import build_seo_context, build_toc
 
 
 def get_category_queryset():
@@ -57,6 +60,24 @@ class SearchArticleListView(ListView):
         context["categories"] = get_category_queryset()
         context["published_total"] = Article.objects.published().count()
         context["search_query"] = self.request.GET.get("q", "").strip()
+        return context
+
+
+class TagArticleListView(ListView):
+    template_name = "simple_cms/article_list.html"
+    context_object_name = "articles"
+    paginate_by = 10
+
+    def get_queryset(self):
+        self.tag = get_object_or_404(Tag, slug=self.kwargs["slug"])
+        return Article.objects.published().filter(tags=self.tag)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["tag"] = self.tag
+        context["categories"] = get_category_queryset()
+        context["published_total"] = Article.objects.published().count()
+        context["search_query"] = ""
         return context
 
 
@@ -114,6 +135,21 @@ class ArticleDetailView(DetailView):
         current = self.object
         context["prev_article"] = qs.filter(created_at__gt=current.created_at).order_by("created_at").first()
         context["next_article"] = qs.filter(created_at__lt=current.created_at).first()
+        seo_context = build_seo_context(current, request=self.request)
+        toc_items = build_toc(current)
+        rendered_body = current.content_html or current.body
+        for item in toc_items:
+            escaped_title = re.escape(item["title"])
+            rendered_body = re.sub(
+                rf"(<h{item['level']}[^>]*>)({escaped_title})(</h{item['level']}>)",
+                rf'\1<a id="{item["anchor"]}"></a>\2\3',
+                rendered_body,
+                count=1,
+            )
+        context["seo_context"] = seo_context
+        context["toc_items"] = toc_items
+        context["rendered_body"] = rendered_body
+        context["faq_items"] = list(current.faq_items.all())
         return context
 
 
