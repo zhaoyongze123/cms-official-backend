@@ -42,6 +42,20 @@ class Category(models.Model):
         return self.name
 
 
+class Tag(models.Model):
+    name = models.CharField("标签名称", max_length=100, unique=True)
+    slug = models.SlugField("标签缩略名", max_length=120, unique=True, allow_unicode=True)
+    created_at = models.DateTimeField("创建时间", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "文章标签"
+        verbose_name_plural = "文章标签"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class Article(models.Model):
     STATUS_CHOICES = (
         ("draft", "草稿"),
@@ -74,7 +88,19 @@ class Article(models.Model):
         blank=True,
         related_name="article_cover",
     )
+    tags = models.ManyToManyField("Tag", verbose_name="标签", blank=True, related_name="articles")
     body = RichTextUploadingField(verbose_name="正文内容")
+    content_json = models.JSONField(
+        "TipTap 内容 JSON",
+        default=dict,
+        blank=True,
+        help_text="编辑真相源，遵循 TipTap v1 契约。",
+    )
+    content_html = models.TextField(
+        "正文 HTML 缓存",
+        blank=True,
+        help_text="供新版编辑器和 SEO 渲染复用的 HTML 缓存。",
+    )
 
     is_pinned = models.BooleanField("置顶", default=False)
     pinned_at = models.DateTimeField("置顶时间", null=True, blank=True)
@@ -148,6 +174,8 @@ class Article(models.Model):
                 "category_id",
                 "cover_image_id",
                 "body",
+                "content_json",
+                "content_html",
                 "is_pinned",
                 "pinned_at",
                 "sort_order",
@@ -177,6 +205,51 @@ class Article(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class SeoMetadata(models.Model):
+    article = models.OneToOneField(Article, on_delete=models.CASCADE, related_name="seo_metadata")
+    meta_title = models.CharField("Meta Title", max_length=255, blank=True)
+    meta_description = models.TextField("Meta Description", blank=True)
+    meta_keywords = models.CharField("Meta Keywords", max_length=500, blank=True)
+    canonical_url = models.URLField("Canonical URL", blank=True)
+    robots = models.CharField("Robots", max_length=50, default="index,follow")
+    og_title = models.CharField("OG 标题", max_length=255, blank=True)
+    og_description = models.TextField("OG 描述", blank=True)
+    og_image = models.ForeignKey(
+        ImageItem,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="seo_og_articles",
+        verbose_name="OG 图片",
+    )
+    created_at = models.DateTimeField("创建时间", auto_now_add=True)
+    updated_at = models.DateTimeField("更新时间", auto_now=True)
+
+    class Meta:
+        verbose_name = "SEO 元数据"
+        verbose_name_plural = "SEO 元数据"
+
+    def __str__(self):
+        return f"SEO: {self.article.title}"
+
+
+class FaqItem(models.Model):
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="faq_items")
+    question = models.CharField("问题", max_length=255)
+    answer = models.TextField("答案")
+    sort_order = models.PositiveIntegerField("排序权重", default=0)
+    created_at = models.DateTimeField("创建时间", auto_now_add=True)
+    updated_at = models.DateTimeField("更新时间", auto_now=True)
+
+    class Meta:
+        verbose_name = "FAQ 条目"
+        verbose_name_plural = "FAQ 条目"
+        ordering = ["sort_order", "id"]
+
+    def __str__(self):
+        return self.question
 
 
 class ArticleSlugHistory(models.Model):
