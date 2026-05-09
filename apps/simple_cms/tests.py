@@ -1,13 +1,16 @@
-﻿from datetime import timedelta
+﻿import json
+from datetime import timedelta
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from apps.media_library.models import ImageItem
 
-from .models import Article, Category, FaqItem, SeoMetadata, Tag
+from .models import Article, Category, FaqItem, KnowledgeChunk, KnowledgeSource, SeoMetadata, Tag
+from .rag import deterministic_embedding, search_knowledge
 
 
 class ArticleVisibilityTests(TestCase):
@@ -200,4 +203,80 @@ class ContentSeoModelTests(TestCase):
 
         self.assertEqual(image.alt_text, "内容模型封面图")
 
+
+class RagIndexTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name="SEO", slug="seo")
+        self.tag = Tag.objects.create(name="Schema", slug="schema")
+        self.article = Article.objects.create(
+            category=self.category,
+            title="SEO Schema 指南",
+            slug="seo-schema-guide",
+            body="<p>Schema 标记可以帮助搜索引擎理解页面主题。</p><p>SEO 结构化数据需要结合业务语义。</p>",
+            content_html="<h1>SEO Schema 指南</h1><p>Schema 标记可以帮助搜索引擎理解页面主题。</p><p>SEO 结构化数据需要结合业务语义。</p>",
+            meta_description="介绍 SEO Schema 与结构化数据实践。",
+            status="published",
+        )
+        self.article.tags.add(self.tag)
+
+    def test_deterministic_embedding_returns_expected_dimensions(self):
+        vector = deterministic_embedding("schema seo")
+
+        self.assertEqual(len(vector), 1536)
+        self.assertTrue(any(value != 0 for value in vector))
+
+    def test_rebuild_knowledge_index_command_creates_source_and_chunks(self):
+        out: list[str] = []
+        call_command("rebuild_knowledge_index", "--source", "article", stdout=self._writer(out))
+
+        payload = json.loads("".join(out))
+        self.assertEqual(payload["source"], "article")
+        self.assertEqual(payload["indexed_count"], 1)
+        self.assertEqual(KnowledgeSource.objects.count(), 1)
+        self.assertGreater(KnowledgeChunk.objects.count(), 0)
+
+        source = KnowledgeSource.objects.get(source_type="article", source_id=self.article.id)
+        self.assertEqual(source.title, "SEO Schema 指南")
+        self.assertEqual(source.url, self.article.get_absolute_url())
+        self.assertIsNotNone(source.last_indexed_at)
+
+    def test_rebuild_knowledge_index_dry_run_does_not_write_database(self):
+        out: list[str] = []
+        call_command("rebuild_knowledge_index", "--source", "article", "--dry-run", stdout=self._writer(out))
+
+        payload = json.loads("".join(out))
+        self.assertTrue(payload["dry_run"])
+        self.assertEqual(KnowledgeSource.objects.count(), 0)
+        self.assertEqual(KnowledgeChunk.objects.count(), 0)
+
+    def test_rag_query_command_returns_ranked_chunks(self):
+        call_command("rebuild_knowledge_index", "--source", "article")
+
+        out: list[str] = []
+        call_command("rag_query", "Schema", "--limit", "2", stdout=self._writer(out))
+        payload = json.loads("".join(out))
+
+        self.assertEqual(payload["rag_schema_version"], "v1")
+        self.assertEqual(payload["query"], "Schema")
+        self.assertLessEqual(len(payload["chunks"]), 2)
+        self.assertGreater(len(payload["chunks"]), 0)
+        self.assertEqual(payload["chunks"][0]["source_type"], "article")
+        self.assertTrue(payload["chunks"][0]["text"])
+
+    def test_search_knowledge_returns_scored_chunks(self):
+        call_command("rebuild_knowledge_index", "--source", "article")
+
+        chunks = search_knowledge("结构化数据", limit=3)
+
+        self.assertGreater(len(chunks), 0)
+        self.assertIsNotNone(getattr(chunks[0], "score", None))
+        self.assertEqual(chunks[0].source.source_type, "article")
+
+    @staticmethod
+    def _writer(chunks: list[str]):
+        class Writer:
+            def write(self, value):
+                chunks.append(value)
+
+        return Writer()
 

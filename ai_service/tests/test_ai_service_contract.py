@@ -205,7 +205,7 @@ def test_rag_search_returns_chunks(configured_client: TestClient) -> None:
     assert body["trace_id"].startswith("trace_")
     assert body["rag_schema_version"] == "v1"
     assert body["query"] == "测试查询"
-    assert len(body["chunks"]) == 3
+    assert 1 <= len(body["chunks"]) <= 3
     assert body["chunks"][0]["source_type"] == "article"
     assert body["chunks"][0]["text"]
 

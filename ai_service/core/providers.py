@@ -5,7 +5,8 @@ from typing import Any, Protocol
 
 from ai_service.core.config import settings
 from ai_service.core.errors import ServiceError
-from ai_service.core.models import AiPatch, AiReviewRun, AiSuggestion, RagChunk, RagSearchResponse, SeoContext, SourceChunk, build_patch_id, build_run_id, build_suggestion_id, build_trace_id, sha256_like, utc_now
+from ai_service.core.models import AiPatch, AiReviewRun, AiSuggestion, RagSearchResponse, SeoContext, SourceChunk, build_patch_id, build_run_id, build_suggestion_id, build_trace_id, sha256_like, utc_now
+from ai_service.core.rag import build_rag_service
 
 
 class Provider(Protocol):
@@ -202,22 +203,8 @@ class MockProvider:
         }
 
     def search_rag(self, payload: dict[str, Any], trace_id: str) -> RagSearchResponse:
-        query = _normalize_text(payload.get("query"), "未命名查询")
-        limit = int(payload.get("limit") or 3)
-        chunks = [
-            RagChunk(
-                chunk_id=f"chk_{index + 1}",
-                source_type="article",
-                source_id=1000 + index,
-                title=f"{query} 相关内容 {index + 1}",
-                url=f"/articles/{1000 + index}/",
-                text=f"与“{query}”相关的参考内容 {index + 1}。",
-                score=round(0.9 - (index * 0.1), 2),
-                metadata={"provider": self.name, "trace_id": trace_id},
-            )
-            for index in range(limit)
-        ]
-        return RagSearchResponse(rag_schema_version="v1", query=query, chunks=chunks)
+        service = build_rag_service()
+        return service.search_rag(payload=payload, trace_id=trace_id)
 
 
 @dataclass
@@ -248,10 +235,12 @@ class SiliconFlowProvider(MockProvider):
         self._placeholder_unavailable("generate_alt")
 
     def reindex_article(self, article_id: int, payload: dict[str, Any], trace_id: str) -> dict[str, Any]:
-        self._placeholder_unavailable("reindex_article")
+        service = build_rag_service()
+        return service.reindex_article(article_id=article_id, payload=payload, trace_id=trace_id)
 
     def search_rag(self, payload: dict[str, Any], trace_id: str) -> RagSearchResponse:
-        self._placeholder_unavailable("search_rag")
+        service = build_rag_service()
+        return service.search_rag(payload=payload, trace_id=trace_id)
 
 
 def get_provider() -> Provider:
