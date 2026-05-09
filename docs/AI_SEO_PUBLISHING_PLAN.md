@@ -942,6 +942,12 @@ POST   /api/media/{id}/generate-alt/
 ```text
 GET    /api/articles/{id}/analytics/
 GET    /api/dashboard/seo-summary/
+
+A11 首版实现约束：
+
+- Django 新增 `AnalyticsSnapshot`，按文章、来源、日期聚合展示、点击、浏览量、站内点击、转化和 AI 建议采纳率。
+- GSC、GA4、站内事件先以 Stub 方式写入聚合结构，前端只消费 Django 汇总结果。
+- Next.js 监控页优先验证契约形状与信息架构，使用本地 Mock 数据完成展示回归。
 GET    /api/dashboard/ai-suggestion-summary/
 ```
 

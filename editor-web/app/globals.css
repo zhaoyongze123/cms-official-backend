@@ -505,6 +505,26 @@ main {
   color: var(--ink-soft);
 }
 
+.analytics-grid {
+  align-items: start;
+}
+
+.source-health-list,
+.analytics-timeline {
+  display: grid;
+  gap: 14px;
+}
+
+.source-health-card,
+.timeline-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 253, 248, 0.98), rgba(247, 241, 231, 0.9));
+}
+
 @media (max-width: 900px) {
   .sections {
     grid-template-columns: 1fr;

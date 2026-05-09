@@ -29,7 +29,7 @@
 | A08 | REVIEW | `feature/tiptap-editor-basic` | TipTap 文档结构、blockId、content_json 保存、content_html 渲染 | A01、A07 | 2026-05-09 已完成 TipTap 基础编辑器、`blockId` 自动补齐、Django `GET/PATCH /api/articles/{id}/` 与前端 `lint/test/build` 验证；Docker `web` 服务未运行，Django 容器内回归待补 |
 | A09 | TODO | `feature/tiptap-diff-editor` | AI Diff 渲染、Accept、Reject、编辑后接受、content_hash 冲突 | A06、A08 | Patch UI 验收通过 |
 | A10 | TODO | `feature/publish-flow` | 发布前检查、发布 API、Error 阻断、Warning 提示 | A03、A06、A09 | 发布流程可跑通 |
-| A11 | TODO | `feature/analytics-monitoring` | AnalyticsSnapshot、GSC/GA4 Stub、站内事件、监控面板 | A07 | 监控面板可显示 mock 数据 |
+| A11 | IN_PROGRESS | `feature/analytics-monitoring` | AnalyticsSnapshot、GSC/GA4 Stub、站内事件、监控面板 | A07 | 2026-05-09 已补 Django AnalyticsSnapshot、单篇监控与 SEO 总览 API、Next.js 监控面板 Mock 数据与页面骨架，待完成分支回归与 PR |
 | A12 | TODO | `feature/e2e-integration` | 三端联调、契约回归、真实流程冒烟 | A03-A11 | E2E 验收通过 |
 
 ## 3. 任务领取规则

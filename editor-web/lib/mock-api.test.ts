@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildDraftStorageKey,
+  buildAnalyticsMetrics,
   createMockArticle,
+  getMockArticleAnalytics,
   getMockArticleById,
+  getMockSeoSummary,
   listMockArticles,
   updateMockArticlePayload
 } from "./mock-api";
@@ -56,5 +59,23 @@ describe("mock api helpers", () => {
     expect(created.status).toBe("draft");
     expect(created.slug).toBe("a07-mock-article");
     expect(storageKey).toContain(String(created.article_id));
+  });
+
+  it("returns analytics fixtures for article and summary views", () => {
+    const articleAnalytics = getMockArticleAnalytics(102);
+    const summary = getMockSeoSummary();
+
+    expect(articleAnalytics).not.toBeNull();
+    expect(articleAnalytics?.sources.gsc.impressions).toBeGreaterThan(0);
+    expect(summary.totals.total_pageviews).toBeGreaterThan(0);
+    expect(summary.source_health).toHaveLength(3);
+  });
+
+  it("builds dashboard metric cards from summary payload", () => {
+    const metrics = buildAnalyticsMetrics(getMockSeoSummary());
+
+    expect(metrics).toHaveLength(4);
+    expect(metrics[0].label).toBe("总展示");
+    expect(metrics[3].unit).toBe("%");
   });
 });

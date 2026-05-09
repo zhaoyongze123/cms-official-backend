@@ -52,6 +52,13 @@ Next.js 只能调用 Django API。
 | `GET` | `/api/articles/{id}/analytics/` | 单篇监控 |
 | `GET` | `/api/dashboard/seo-summary/` | SEO 总览 |
 
+实现约束补充：
+
+- A11 首版由 Django 聚合 `AnalyticsSnapshot` 后返回，前端不直接拼接 GSC、GA4、站内事件原始结果。
+- `GET /api/articles/{id}/analytics/` 返回文章概览、来源快照与时间线。
+- `GET /api/dashboard/seo-summary/` 返回站点汇总、Top 文章与来源健康度。
+- 首版 Stub 保持在 Django / Next.js 内部实现，不改现有 OpenAPI 路径和版本号。
+
 ## 4. Django ↔ FastAPI API
 
 Django 是 FastAPI 的唯一调用方。
