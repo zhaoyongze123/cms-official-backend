@@ -3,6 +3,7 @@ Django>=5.1,<5.2
 fastapi>=0.115,<0.116
 uvicorn>=0.34,<0.35
 httpx>=0.28,<0.29
+langgraph>=0.2,<0.3
 
 # Database
 psycopg2-binary>=2.9
