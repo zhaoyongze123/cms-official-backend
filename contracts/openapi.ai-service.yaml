@@ -1,0 +1,76 @@
+openapi: 3.1.0
+info:
+  title: AI SEO FastAPI Internal API
+  version: v1
+  description: Django CMS 调用 FastAPI AI/RAG Service 的内部 API 契约。
+servers:
+  - url: http://127.0.0.1:8002
+paths:
+  /health:
+    get:
+      summary: 健康检查
+      responses:
+        "200":
+          description: 服务正常
+  /internal/ai/review-article:
+    post:
+      summary: 完整文章 AI 审核
+      security:
+        - internalToken: []
+      responses:
+        "200":
+          description: 审核结果
+  /internal/ai/generate-metadata:
+    post:
+      summary: 生成 SEO Metadata 建议
+      security:
+        - internalToken: []
+      responses:
+        "200":
+          description: Metadata 建议
+  /internal/ai/generate-faq:
+    post:
+      summary: 生成 FAQ 建议
+      security:
+        - internalToken: []
+      responses:
+        "200":
+          description: FAQ 建议
+  /internal/ai/recommend-internal-links:
+    post:
+      summary: 推荐内链
+      security:
+        - internalToken: []
+      responses:
+        "200":
+          description: 内链建议
+  /internal/ai/generate-alt:
+    post:
+      summary: 生成图片 Alt 建议
+      security:
+        - internalToken: []
+      responses:
+        "200":
+          description: 图片 Alt 建议
+  /internal/rag/reindex-article:
+    post:
+      summary: 重建文章 RAG 索引
+      security:
+        - internalToken: []
+      responses:
+        "202":
+          description: 索引任务已创建
+  /internal/rag/search:
+    post:
+      summary: RAG 检索
+      security:
+        - internalToken: []
+      responses:
+        "200":
+          description: 检索结果
+components:
+  securitySchemes:
+    internalToken:
+      type: apiKey
+      in: header
+      name: X-Internal-Token

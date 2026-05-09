@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cms.local/contracts/rag-search.schema.json",
+  "title": "RagSearchResponse",
+  "type": "object",
+  "required": ["rag_schema_version", "query", "chunks"],
+  "properties": {
+    "rag_schema_version": {
+      "type": "string",
+      "const": "v1"
+    },
+    "query": {
+      "type": "string"
+    },
+    "chunks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["chunk_id", "source_type", "source_id", "title", "url", "text", "score"],
+        "properties": {
+          "chunk_id": {
+            "type": "string"
+          },
+          "source_type": {
+            "type": "string",
+            "enum": ["article", "faq", "category", "tag", "product", "service", "brand", "case", "term", "seo_rule"]
+          },
+          "source_id": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

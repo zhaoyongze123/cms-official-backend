@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cms.local/contracts/ai-review.schema.json",
+  "title": "AiReviewRun",
+  "type": "object",
+  "required": [
+    "run_id",
+    "schema_version",
+    "article_id",
+    "status",
+    "provider",
+    "model",
+    "prompt_version",
+    "created_at"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string",
+      "const": "v1"
+    },
+    "article_id": {
+      "type": "integer"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "running", "completed", "failed", "cancelled"]
+    },
+    "provider": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    },
+    "prompt_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "token_usage": {
+      "type": "object"
+    },
+    "error": {
+      "type": ["object", "null"],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}
