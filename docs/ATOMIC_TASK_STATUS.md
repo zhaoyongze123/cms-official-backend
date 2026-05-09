@@ -20,7 +20,7 @@
 | --- | --- | --- | --- | --- | --- |
 | A00 | DONE | `feature/platform-foundation` | Docker Compose、Django health、FastAPI health、Next.js shell、Redis、Postgres、基础环境变量 | 无 | 2026-05-09 已验证 `docker compose ps` 三端健康、Django `check/test` 通过、`/api/health/`、`/health`、`/studio/articles` 返回成功 |
 | A01 | DONE | `feature/contracts-v1` | OpenAPI、JSON Schema、Mock 示例、错误结构 | A00 | 2026-05-09 已完成 `contracts/` JSON Schema 校验、OpenAPI YAML 解析、契约边界文档落库 |
-| A02 | TODO | `feature/django-content-seo-models` | Tag、SeoMetadata、FaqItem、Media Alt、Article content_json 字段 | A01 | 迁移和模型测试通过 |
+| A02 | REVIEW | `feature/django-content-seo-models` | Tag、SeoMetadata、FaqItem、Media Alt、Article content_json 字段 | A01 | 2026-05-09 已验证 `python manage.py check`、`migrate`、`test apps.simple_cms`；全量 `makemigrations --check --dry-run` 受 `aliyun_monitor` 既有迁移漂移影响 |
 | A03 | TODO | `feature/django-seo-renderer` | SEO Context、Schema、OG、Canonical、TOC、Sitemap | A02 | curl 可验证 SEO 输出 |
 | A04 | TODO | `feature/fastapi-langgraph-ai-service` | FastAPI 骨架、Mock Provider、SiliconFlow Provider、LangGraph Review Graph | A01 | FastAPI 测试通过 |
 | A05 | TODO | `feature/rag-pgvector` | pgvector、KnowledgeSource、KnowledgeChunk、Indexer、Retriever、Rerank | A02 | RAG 命令可检索 |

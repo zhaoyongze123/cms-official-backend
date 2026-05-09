@@ -1,10 +1,13 @@
 ﻿from datetime import timedelta
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Article, Category
+from apps.media_library.models import ImageItem
+
+from .models import Article, Category, FaqItem, SeoMetadata, Tag
 
 
 class ArticleVisibilityTests(TestCase):
@@ -132,5 +135,69 @@ class ArticleVisibilityTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "ok")
 
+
+class ContentSeoModelTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name="SEO", slug="seo")
+        self.article = Article.objects.create(
+            category=self.category,
+            title="内容模型",
+            slug="content-model",
+            body="<p>legacy body</p>",
+            status="draft",
+        )
+
+    def test_article_supports_tiptap_content_fields(self):
+        self.article.content_json = {
+            "tiptap_schema_version": "v1",
+            "type": "doc",
+            "content": [
+                {
+                    "type": "paragraph",
+                    "attrs": {"blockId": "blk_intro"},
+                    "content": [{"type": "text", "text": "hello"}],
+                }
+            ],
+        }
+        self.article.content_html = "<p>hello</p>"
+        self.article.save()
+
+        refreshed = Article.objects.get(pk=self.article.pk)
+        self.assertEqual(refreshed.content_json["type"], "doc")
+        self.assertEqual(refreshed.content_html, "<p>hello</p>")
+        self.assertIn("content_json", refreshed.revisions.first().changed_fields)
+
+    def test_article_can_bind_tags(self):
+        tag = Tag.objects.create(name="SEO 基础", slug="seo-basic")
+
+        self.article.tags.add(tag)
+
+        self.assertEqual(list(self.article.tags.values_list("slug", flat=True)), ["seo-basic"])
+
+    def test_seo_metadata_is_unique_per_article(self):
+        metadata = SeoMetadata.objects.create(
+            article=self.article,
+            meta_title="优化标题",
+            meta_description="优化描述",
+            canonical_url="https://example.com/articles/content-model/",
+        )
+
+        self.assertEqual(metadata.article_id, self.article.id)
+        self.assertEqual(str(metadata), "SEO: 内容模型")
+
+    def test_faq_items_are_ordered_by_sort_order(self):
+        later = FaqItem.objects.create(article=self.article, question="Q2", answer="A2", sort_order=20)
+        earlier = FaqItem.objects.create(article=self.article, question="Q1", answer="A1", sort_order=10)
+
+        self.assertEqual(list(self.article.faq_items.all()), [earlier, later])
+
+    def test_image_item_supports_alt_text(self):
+        image = ImageItem.objects.create(
+            title="封面",
+            alt_text="内容模型封面图",
+            file=SimpleUploadedFile("cover.jpg", b"fake-image-bytes", content_type="image/jpeg"),
+        )
+
+        self.assertEqual(image.alt_text, "内容模型封面图")
 
 

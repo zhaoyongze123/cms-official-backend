@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils import timezone
 
-from .models import Article, ArticleRevision, Category
+from .models import Article, ArticleRevision, Category, FaqItem, SeoMetadata, Tag
 
 
 class ArticleRevisionInline(admin.TabularInline):
@@ -25,6 +25,36 @@ class ArticleRevisionInline(admin.TabularInline):
         return False
 
 
+class FaqItemInline(admin.TabularInline):
+    model = FaqItem
+    extra = 0
+    fields = ("sort_order", "question", "answer")
+    ordering = ("sort_order", "id")
+
+
+class SeoMetadataInline(admin.StackedInline):
+    model = SeoMetadata
+    extra = 0
+    max_num = 1
+    fields = (
+        "meta_title",
+        "meta_description",
+        "meta_keywords",
+        "canonical_url",
+        "robots",
+        "og_title",
+        "og_description",
+        "og_image",
+    )
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug", "created_at")
+    search_fields = ("name", "slug")
+    prepopulated_fields = {"slug": ("name",)}
+
+
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ("name", "parent", "slug")
@@ -38,24 +68,25 @@ class CategoryAdmin(admin.ModelAdmin):
 class ArticleAdmin(admin.ModelAdmin):
     list_display = ("title", "category", "status", "publish_date", "created_at", "updated_at")
     list_filter = ("status", "category", "created_at")
-    search_fields = ("title", "slug", "body")
+    search_fields = ("title", "slug", "body", "content_html")
     date_hierarchy = "created_at"
     prepopulated_fields = {"slug": ("title",)}
-    inlines = (ArticleRevisionInline,)
+    filter_horizontal = ("tags",)
+    inlines = (SeoMetadataInline, FaqItemInline, ArticleRevisionInline)
     actions = ("action_publish_now", "action_move_to_draft", "action_archive")
 
     fieldsets = (
         (
             "基础信息",
             {
-                "fields": ("title", "slug", "category", "cover_image"),
+                "fields": ("title", "slug", "category", "cover_image", "tags"),
                 "classes": ("wide", "admin-section"),
             },
         ),
         (
             "正文内容",
             {
-                "fields": ("body",),
+                "fields": ("body", "content_json", "content_html"),
                 "classes": ("admin-section",),
             },
         ),
