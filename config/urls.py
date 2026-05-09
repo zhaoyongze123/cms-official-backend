@@ -4,10 +4,23 @@ URL configuration for WagtailCMS project.
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import include, path
+
+
+def health_view(request):
+    return JsonResponse(
+        {
+            "status": "ok",
+            "service": "django-web",
+            "settings_module": getattr(settings, "SETTINGS_MODULE", ""),
+        }
+    )
+
 
 urlpatterns = [
     path("django-admin/", admin.site.urls),
+    path("api/health/", health_view, name="health"),
     
     # Simple CMS Front-end
     path("", include("apps.simple_cms.urls")),

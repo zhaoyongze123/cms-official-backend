@@ -1,11 +1,15 @@
 # Core
 Django>=5.1,<5.2
+fastapi>=0.115,<0.116
+uvicorn>=0.34,<0.35
+httpx>=0.28,<0.29
 
 # Database
 psycopg2-binary>=2.9
 
 # Cache
 redis>=5.0
+celery>=5.4,<5.5
 
 # WSGI Server
 gunicorn>=21.2
@@ -24,3 +28,6 @@ django-jazzmin
 
 # Alibaba Cloud SDK
 aliyun-python-sdk-core>=2.15.0
+
+# Testing
+pytest>=8.3,<8.4
