@@ -26,6 +26,55 @@ export type ArticleRecord = {
   updated_at: string;
 };
 
+export type TiptapPatchRecord = {
+  patch_id: string;
+  patch_schema_version: "v1";
+  operation: "insert_after" | "delete" | "replace_text" | "alt_text";
+  target_block_id: string;
+  old_text?: string | null;
+  new_text?: string | null;
+  new_block?: Record<string, unknown> | null;
+  position?: number | null;
+  content_hash: string;
+  reason?: string | null;
+};
+
+export type TiptapSuggestionRecord = {
+  suggestion_id: string;
+  schema_version: "v1";
+  article_id: number;
+  type: string;
+  status: "pending" | "accepted" | "rejected" | "edited" | "expired" | "failed";
+  severity: "low" | "medium" | "high";
+  title: string;
+  reason: string;
+  payload?: Record<string, unknown>;
+  patches: TiptapPatchRecord[];
+  source_chunks: Array<{
+    chunk_id: string;
+    source_type: string;
+    source_id: number;
+    title: string;
+    url: string;
+    score: number;
+  }>;
+};
+
+export type SeoCheckRecord = {
+  article_id: number;
+  checks: Array<{
+    level: "error" | "warning" | "passed";
+    code: string;
+    message: string;
+  }>;
+  summary: {
+    errors: number;
+    warnings: number;
+    passed: number;
+    can_publish: boolean;
+  };
+};
+
 export type ArticleListFilters = {
   query?: string;
   status?: string;

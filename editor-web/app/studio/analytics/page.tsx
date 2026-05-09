@@ -1,8 +1,21 @@
-import { buildAnalyticsMetrics, getMockArticleAnalytics, getMockSeoSummary } from "../../../lib/mock-api";
+import { getFoundationStatus } from "../../../lib/foundation";
+import { buildAnalyticsMetrics, type ArticleAnalyticsRecord, type SeoSummaryRecord } from "../../../lib/mock-api";
 
-export default function AnalyticsDashboardPage() {
-  const summary = getMockSeoSummary();
-  const leadArticle = summary.top_articles[0] ? getMockArticleAnalytics(summary.top_articles[0].article_id) : null;
+export default async function AnalyticsDashboardPage() {
+  const summaryResponse = await fetch(new URL("/api/dashboard/seo-summary/", getFoundationStatus().djangoBaseUrl), {
+    cache: "no-store",
+  });
+  const summary = (await summaryResponse.json()) as SeoSummaryRecord;
+  let leadArticle: ArticleAnalyticsRecord | null = null;
+  if (summary.top_articles[0]) {
+    const analyticsResponse = await fetch(
+      new URL(`/api/articles/${summary.top_articles[0].article_id}/analytics/`, getFoundationStatus().djangoBaseUrl),
+      { cache: "no-store" }
+    );
+    if (analyticsResponse.ok) {
+      leadArticle = (await analyticsResponse.json()) as ArticleAnalyticsRecord;
+    }
+  }
   const metrics = buildAnalyticsMetrics(summary);
 
   return (

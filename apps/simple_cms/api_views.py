@@ -13,14 +13,19 @@ from .models import Article
 from .api_services import (
     ApiError,
     accept_suggestion,
+    build_article_content_hash,
+    build_seo_check,
+    create_article,
     ensure_article,
     ensure_review_run,
     ensure_suggestion,
     get_article_analytics,
     get_mock_ai_client,
     get_seo_summary,
+    list_articles,
     list_article_review_runs,
     list_review_run_suggestions,
+    publish_article,
     reject_suggestion,
     serialize_ai_review_run,
     serialize_ai_suggestion,
@@ -70,17 +75,7 @@ def _handle_api_error(view_func):
 
 
 def _build_content_hash(article: Article) -> str:
-    payload = json.dumps(
-        {
-            "title": article.title,
-            "content_json": article.content_json,
-            "content_html": article.content_html,
-        },
-        ensure_ascii=False,
-        sort_keys=True,
-    )
-    digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
-    return f"sha256:{digest}"
+    return build_article_content_hash(article)
 
 
 def _serialize_article(article: Article) -> dict[str, Any]:
@@ -147,6 +142,20 @@ def _validate_content_json(content_json: Any) -> dict[str, Any]:
 
 
 @csrf_exempt
+@require_http_methods(["GET", "POST"])
+@_handle_api_error
+def article_list_api(request):
+    if request.method == "GET":
+        items = [_serialize_article(article) for article in list_articles(request.GET.get("q", ""), request.GET.get("status", "all"))]
+        return _success({"items": items})
+
+    payload = _json_body(request)
+    article = create_article(str(payload.get("title", "未命名文章")))
+    article.refresh_from_db()
+    return _success(_serialize_article(article), status=201)
+
+
+@csrf_exempt
 @require_http_methods(["GET", "PATCH"])
 @_handle_api_error
 def article_detail_api(request, article_id: int):
@@ -210,8 +219,21 @@ def ai_review_run_suggestions_api(request, run_id: str):
 @_handle_api_error
 def ai_suggestion_accept_api(request, suggestion_id: str):
     suggestion = ensure_suggestion(suggestion_id)
-    accept_suggestion(suggestion)
-    return _success({"suggestion": serialize_ai_suggestion(suggestion)})
+    payload = _json_body(request)
+    expected_content_hash = str(payload.get("content_hash", "")).strip()
+    if not expected_content_hash:
+        raise ApiError("content_hash_required", "接受建议时必须传入 content_hash", status_code=400)
+    edited_content_json = None
+    if "content_json" in payload:
+        edited_content_json = _validate_content_json(payload["content_json"])
+    edited_content_html = str(payload.get("content_html", "")) if "content_html" in payload else None
+    suggestion, article = accept_suggestion(
+        suggestion,
+        expected_content_hash=expected_content_hash,
+        edited_content_json=edited_content_json,
+        edited_content_html=edited_content_html,
+    )
+    return _success({"suggestion": serialize_ai_suggestion(suggestion), "article": _serialize_article(article)})
 
 
 @csrf_exempt
@@ -221,6 +243,24 @@ def ai_suggestion_reject_api(request, suggestion_id: str):
     suggestion = ensure_suggestion(suggestion_id)
     reject_suggestion(suggestion)
     return _success({"suggestion": serialize_ai_suggestion(suggestion)})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@_handle_api_error
+def article_seo_check_api(request, article_id: int):
+    article = ensure_article(article_id)
+    return _success(build_seo_check(article))
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@_handle_api_error
+def article_publish_api(request, article_id: int):
+    article = ensure_article(article_id)
+    seo_check = publish_article(article)
+    article.refresh_from_db()
+    return _success({"article": _serialize_article(article), "seo_check": seo_check})
 
 
 @require_http_methods(["GET"])

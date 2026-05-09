@@ -167,6 +167,29 @@ class ArticleVisibilityTests(TestCase):
         self.assertEqual(payload["content_html"], "<p>详情接口</p>")
         self.assertTrue(payload["content_hash"].startswith("sha256:"))
 
+    def test_article_list_api_returns_items(self):
+        draft = self.create_article("api-list-draft", "draft")
+        self.create_article("api-list-published", "published")
+
+        response = self.client.get("/api/articles/", {"status": "draft"})
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload["items"]), 1)
+        self.assertEqual(payload["items"][0]["article_id"], draft.id)
+
+    def test_article_list_api_can_create_article(self):
+        response = self.client.post(
+            "/api/articles/",
+            data=json.dumps({"title": "新建文章"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["title"], "新建文章")
+        self.assertEqual(payload["status"], "draft")
+
     def test_article_detail_api_patch_updates_tiptap_fields(self):
         article = self.create_article("api-patch", "draft")
 
@@ -228,6 +251,19 @@ class ArticleVisibilityTests(TestCase):
 
     def test_ai_review_api_creates_run_and_suggestions(self):
         article = self.create_article("ai-review", "draft")
+        article.content_json = {
+            "tiptap_schema_version": "v1",
+            "type": "doc",
+            "content": [
+                {
+                    "type": "paragraph",
+                    "attrs": {"blockId": "blk_intro"},
+                    "content": [{"type": "text", "text": "原始正文"}],
+                }
+            ],
+        }
+        article.content_html = "<p>原始正文</p>"
+        article.save()
 
         response = self.client.post(
             f"/api/articles/{article.id}/ai-review/",
@@ -246,6 +282,7 @@ class ArticleVisibilityTests(TestCase):
         self.assertEqual(payload["suggestions"][0]["status"], "pending")
         self.assertEqual(payload["suggestions"][0]["patches"][0]["patch_schema_version"], "v1")
         self.assertTrue(payload["suggestions"][0]["patches"][0]["content_hash"].startswith("sha256:"))
+        self.assertEqual(payload["suggestions"][0]["patches"][0]["old_text"], "原始正文")
         self.assertEqual(AiReviewRun.objects.filter(article=article).count(), 1)
         self.assertEqual(AiSuggestion.objects.filter(article=article).count(), 1)
 
@@ -280,6 +317,67 @@ class ArticleVisibilityTests(TestCase):
 
     def test_accept_and_reject_suggestion_api_updates_status(self):
         article = self.create_article("ai-review-status", "draft")
+        article.content_json = {
+            "tiptap_schema_version": "v1",
+            "type": "doc",
+            "content": [
+                {
+                    "type": "paragraph",
+                    "attrs": {"blockId": "blk_intro"},
+                    "content": [{"type": "text", "text": "原始正文"}],
+                }
+            ],
+        }
+        article.content_html = "<p>原始正文</p>"
+        article.save()
+        create_response = self.client.post(
+            f"/api/articles/{article.id}/ai-review/",
+            data={},
+            content_type="application/json",
+        )
+        suggestion_id = create_response.json()["suggestions"][0]["suggestion_id"]
+        content_hash = self.client.get(f"/api/articles/{article.id}/").json()["content_hash"]
+
+        accept_response = self.client.post(
+            f"/api/ai-suggestions/{suggestion_id}/accept/",
+            data=json.dumps({"content_hash": content_hash}),
+            content_type="application/json",
+        )
+        self.assertEqual(accept_response.status_code, 200)
+        self.assertEqual(accept_response.json()["suggestion"]["status"], "accepted")
+        article.refresh_from_db()
+        self.assertEqual(article.content_html, "<p>优化后的正文</p>")
+
+        second_article = self.create_article("ai-review-reject", "draft")
+        reject_create = self.client.post(
+            f"/api/articles/{second_article.id}/ai-review/",
+            data={},
+            content_type="application/json",
+        )
+        reject_suggestion_id = reject_create.json()["suggestions"][0]["suggestion_id"]
+        reject_response = self.client.post(f"/api/ai-suggestions/{reject_suggestion_id}/reject/")
+        self.assertEqual(reject_response.status_code, 200)
+        self.assertEqual(reject_response.json()["suggestion"]["status"], "rejected")
+
+        suggestion = AiSuggestion.objects.get(suggestion_id=reject_suggestion_id)
+        self.assertEqual(suggestion.status, "rejected")
+
+    def test_accept_suggestion_api_detects_content_hash_conflict(self):
+        article = self.create_article("ai-review-conflict", "draft")
+        article.content_json = {
+            "tiptap_schema_version": "v1",
+            "type": "doc",
+            "content": [
+                {
+                    "type": "paragraph",
+                    "attrs": {"blockId": "blk_intro"},
+                    "content": [{"type": "text", "text": "原始正文"}],
+                }
+            ],
+        }
+        article.content_html = "<p>原始正文</p>"
+        article.save()
+
         create_response = self.client.post(
             f"/api/articles/{article.id}/ai-review/",
             data={},
@@ -287,16 +385,111 @@ class ArticleVisibilityTests(TestCase):
         )
         suggestion_id = create_response.json()["suggestions"][0]["suggestion_id"]
 
-        accept_response = self.client.post(f"/api/ai-suggestions/{suggestion_id}/accept/")
-        self.assertEqual(accept_response.status_code, 200)
-        self.assertEqual(accept_response.json()["suggestion"]["status"], "accepted")
+        response = self.client.post(
+            f"/api/ai-suggestions/{suggestion_id}/accept/",
+            data=json.dumps({"content_hash": "sha256:outdated"}),
+            content_type="application/json",
+        )
 
-        reject_response = self.client.post(f"/api/ai-suggestions/{suggestion_id}/reject/")
-        self.assertEqual(reject_response.status_code, 200)
-        self.assertEqual(reject_response.json()["suggestion"]["status"], "rejected")
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["error"]["code"], "content_hash_conflict")
+        self.assertEqual(AiSuggestion.objects.get(suggestion_id=suggestion_id).status, "expired")
 
-        suggestion = AiSuggestion.objects.get(suggestion_id=suggestion_id)
-        self.assertEqual(suggestion.status, "rejected")
+    def test_accept_suggestion_api_supports_edited_status(self):
+        article = self.create_article("ai-review-edited", "draft")
+        article.content_json = {
+            "tiptap_schema_version": "v1",
+            "type": "doc",
+            "content": [
+                {
+                    "type": "paragraph",
+                    "attrs": {"blockId": "blk_intro"},
+                    "content": [{"type": "text", "text": "原始正文"}],
+                }
+            ],
+        }
+        article.content_html = "<p>原始正文</p>"
+        article.save()
+
+        create_response = self.client.post(
+            f"/api/articles/{article.id}/ai-review/",
+            data={},
+            content_type="application/json",
+        )
+        suggestion_id = create_response.json()["suggestions"][0]["suggestion_id"]
+        content_hash = self.client.get(f"/api/articles/{article.id}/").json()["content_hash"]
+
+        response = self.client.post(
+            f"/api/ai-suggestions/{suggestion_id}/accept/",
+            data=json.dumps(
+                {
+                    "content_hash": content_hash,
+                    "content_json": {
+                        "tiptap_schema_version": "v1",
+                        "type": "doc",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "attrs": {"blockId": "blk_intro"},
+                                "content": [{"type": "text", "text": "编辑后采用"}],
+                            }
+                        ],
+                    },
+                    "content_html": "<p>编辑后采用</p>",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["suggestion"]["status"], "edited")
+        article.refresh_from_db()
+        self.assertEqual(article.content_html, "<p>编辑后采用</p>")
+
+    def test_article_seo_check_api_returns_errors_and_warnings(self):
+        article = self.create_article("短标题", "draft")
+        article.meta_description = ""
+        article.content_json = {"tiptap_schema_version": "v1", "type": "doc", "content": []}
+        article.content_html = ""
+        article.save()
+
+        response = self.client.post(f"/api/articles/{article.id}/seo-check/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertFalse(payload["summary"]["can_publish"])
+        self.assertGreaterEqual(payload["summary"]["errors"], 1)
+
+    def test_article_publish_api_blocks_when_seo_check_fails(self):
+        article = self.create_article("短标题", "draft")
+
+        response = self.client.post(f"/api/articles/{article.id}/publish/")
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["error"]["code"], "publish_blocked")
+
+    def test_article_publish_api_publishes_when_checks_pass(self):
+        article = self.create_article("足够长的发布标题", "draft")
+        article.meta_description = "这是一段足够长的元描述，用于通过发布前检查。"
+        article.content_json = {
+            "tiptap_schema_version": "v1",
+            "type": "doc",
+            "content": [
+                {
+                    "type": "paragraph",
+                    "attrs": {"blockId": "blk_intro"},
+                    "content": [{"type": "text", "text": "这是用于发布的足够长正文内容，超过五十个字符，确保发布前检查能够顺利通过。"}],
+                }
+            ],
+        }
+        article.content_html = "<p>这是用于发布的足够长正文内容，超过五十个字符，确保发布前检查能够顺利通过。</p>"
+        article.save()
+
+        response = self.client.post(f"/api/articles/{article.id}/publish/")
+
+        self.assertEqual(response.status_code, 200)
+        article.refresh_from_db()
+        self.assertEqual(article.status, "published")
 
     def test_ai_review_api_returns_not_found_for_missing_article(self):
         response = self.client.post("/api/articles/999999/ai-review/", data={}, content_type="application/json")

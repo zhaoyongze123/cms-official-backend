@@ -37,6 +37,28 @@ class MockAiClient:
     prompt_version: str = "review-v1"
 
     def review_article(self, article: Article) -> tuple[AiReviewRun, list[AiSuggestion]]:
+        content_items = article.content_json.get("content", []) if isinstance(article.content_json, dict) else []
+        intro_block = next(
+            (
+                item
+                for item in content_items
+                if isinstance(item, dict) and item.get("attrs", {}).get("blockId") == "blk_intro"
+            ),
+            None,
+        )
+        target_block_id = "blk_intro"
+        old_text = _collect_text(intro_block) if intro_block else ""
+        if not old_text and content_items:
+            first_block = content_items[0]
+            if isinstance(first_block, dict):
+                target_block_id = str(first_block.get("attrs", {}).get("blockId", "blk_intro"))
+                old_text = _collect_text(first_block)
+        new_text = old_text.strip()
+        if new_text:
+            new_text = f"{new_text} 这段内容已经补充了更明确的主题、步骤和结果。"
+        else:
+            new_text = "优化后的正文，补充了更明确的主题、步骤和结果。"
+
         with transaction.atomic():
             timestamp_ns = time.time_ns()
             run = AiReviewRun.objects.create(
@@ -82,10 +104,10 @@ class MockAiClient:
                 suggestion=suggestion,
                 patch_schema_version="v1",
                 operation="replace_text",
-                target_block_id="blk_intro",
-                old_text="原始正文",
-                new_text="优化后的正文",
-                content_hash=_build_content_hash("replace_text", "blk_intro", "原始正文", "优化后的正文"),
+                target_block_id=target_block_id,
+                old_text=old_text,
+                new_text=new_text,
+                content_hash=_build_content_hash("replace_text", target_block_id, old_text, new_text),
                 reason="补充更清晰的正文表述。",
             )
         return run, [suggestion]
@@ -143,6 +165,27 @@ def get_mock_ai_client() -> MockAiClient:
     return MockAiClient()
 
 
+def create_article(title: str) -> Article:
+    clean_title = title.strip() or "未命名文章"
+    return Article.objects.create(
+        title=clean_title,
+        body="<p></p>",
+        content_json={
+            "tiptap_schema_version": "v1",
+            "type": "doc",
+            "content": [
+                {
+                    "type": "paragraph",
+                    "attrs": {"blockId": "blk_intro"},
+                    "content": [],
+                }
+            ],
+        },
+        content_html="<p></p>",
+        status="draft",
+    )
+
+
 def ensure_article(article_id: int) -> Article:
     try:
         return Article.objects.get(pk=article_id)
@@ -174,16 +217,219 @@ def list_review_run_suggestions(run: AiReviewRun) -> list[dict[str, Any]]:
     return [serialize_ai_suggestion(suggestion) for suggestion in suggestions]
 
 
-def accept_suggestion(suggestion: AiSuggestion) -> AiSuggestion:
+def list_articles(query: str = "", status: str = "all") -> list[Article]:
+    queryset = Article.objects.select_related("category").prefetch_related("tags").order_by("-updated_at", "-id")
+    clean_query = query.strip()
+    clean_status = status.strip() or "all"
+    if clean_status != "all":
+        queryset = queryset.filter(status=clean_status)
+    if clean_query:
+        queryset = queryset.filter(title__icontains=clean_query)
+    return list(queryset)
+
+
+def _find_block_index(content_json: dict[str, Any], block_id: str) -> int:
+    for index, node in enumerate(content_json.get("content", [])):
+        if node.get("attrs", {}).get("blockId") == block_id:
+            return index
+    raise ApiError("patch_target_not_found", "未找到目标正文块", {"block_id": block_id}, status_code=409)
+
+
+def _collect_text(node: Any) -> str:
+    if not isinstance(node, dict):
+        return ""
+    if node.get("type") == "text":
+        return str(node.get("text", ""))
+    return "".join(_collect_text(child) for child in node.get("content", []))
+
+
+def _set_block_text(node: dict[str, Any], text: str) -> dict[str, Any]:
+    updated = dict(node)
+    updated["content"] = [{"type": "text", "text": text}] if text else []
+    return updated
+
+
+def _render_content_html(content_json: dict[str, Any]) -> str:
+    html_parts: list[str] = []
+    for node in content_json.get("content", []):
+        node_type = node.get("type")
+        text = _collect_text(node)
+        if node_type == "heading":
+            level = node.get("attrs", {}).get("level", 2)
+            html_parts.append(f"<h{level}>{text}</h{level}>")
+        elif node_type == "bulletList":
+            html_parts.append(f"<ul><li>{text}</li></ul>")
+        elif node_type == "orderedList":
+            html_parts.append(f"<ol><li>{text}</li></ol>")
+        else:
+            html_parts.append(f"<p>{text}</p>")
+    return "".join(html_parts) or "<p></p>"
+
+
+def _apply_patch(content_json: dict[str, Any], patch: AiPatch) -> dict[str, Any]:
+    next_content = list(content_json.get("content", []))
+    target_index = _find_block_index(content_json, patch.target_block_id)
+    target_node = next_content[target_index]
+    operation = patch.operation
+
+    if operation == "replace_text":
+        old_text = _collect_text(target_node)
+        if patch.old_text and old_text != patch.old_text:
+            raise ApiError(
+                "patch_old_text_mismatch",
+                "建议基于的旧文本与当前正文不一致",
+                {"expected": patch.old_text, "actual": old_text},
+                status_code=409,
+            )
+        next_content[target_index] = _set_block_text(target_node, patch.new_text or "")
+    elif operation == "delete":
+        next_content.pop(target_index)
+    elif operation == "insert_after":
+        if not isinstance(patch.new_block, dict):
+            raise ApiError("invalid_patch", "insert_after 缺少 new_block", status_code=400)
+        next_content.insert(target_index + 1, patch.new_block)
+    elif operation == "alt_text":
+        raise ApiError("unsupported_patch", "当前版本暂不支持图片 Alt Patch 应用", status_code=400)
+
+    return {
+        **content_json,
+        "content": next_content,
+    }
+
+
+def _ensure_suggestion_pending(suggestion: AiSuggestion) -> None:
+    if suggestion.status != "pending":
+        raise ApiError(
+            "suggestion_not_pending",
+            "建议当前状态不允许再次处理",
+            {"status": suggestion.status},
+            status_code=409,
+        )
+
+
+def accept_suggestion(
+    suggestion: AiSuggestion,
+    *,
+    expected_content_hash: str,
+    edited_content_json: dict[str, Any] | None = None,
+    edited_content_html: str | None = None,
+) -> tuple[AiSuggestion, Article]:
+    _ensure_suggestion_pending(suggestion)
+    article = suggestion.article
+    current_hash = build_article_content_hash(article)
+    if current_hash != expected_content_hash:
+        suggestion.status = "expired"
+        suggestion.save(update_fields=["status", "updated_at"])
+        raise ApiError(
+            "content_hash_conflict",
+            "正文版本已变化，建议已过期",
+            {"expected": expected_content_hash, "actual": current_hash},
+            status_code=409,
+        )
+
+    if edited_content_json is not None:
+        article.content_json = edited_content_json
+        article.content_html = edited_content_html or _render_content_html(edited_content_json)
+        article.save()
+        suggestion.status = "edited"
+        suggestion.save(update_fields=["status", "updated_at"])
+        return suggestion, article
+
+    next_content_json = article.content_json
+    for patch in suggestion.patches.order_by("created_at", "id"):
+        next_content_json = _apply_patch(next_content_json, patch)
+    article.content_json = next_content_json
+    article.content_html = _render_content_html(next_content_json)
+    article.save()
     suggestion.status = "accepted"
     suggestion.save(update_fields=["status", "updated_at"])
-    return suggestion
+    return suggestion, article
 
 
 def reject_suggestion(suggestion: AiSuggestion) -> AiSuggestion:
+    _ensure_suggestion_pending(suggestion)
     suggestion.status = "rejected"
     suggestion.save(update_fields=["status", "updated_at"])
     return suggestion
+
+
+def build_article_content_hash(article: Article) -> str:
+    import hashlib
+
+    payload = {
+        "title": article.title,
+        "content_json": article.content_json,
+        "content_html": article.content_html,
+    }
+    digest = hashlib.sha256(str(payload).encode("utf-8")).hexdigest()
+    return f"sha256:{digest}"
+
+
+def build_seo_check(article: Article) -> dict[str, Any]:
+    checks: list[dict[str, str]] = []
+    content_items = article.content_json.get("content", []) if isinstance(article.content_json, dict) else []
+    plain_text = "\n".join(_collect_text(item).strip() for item in content_items).strip()
+
+    if len(article.title.strip()) < 8:
+        checks.append({"level": "error", "code": "title_too_short", "message": "标题至少需要 8 个字符"})
+    else:
+        checks.append({"level": "passed", "code": "title_ok", "message": "标题长度通过"})
+
+    if not article.slug.strip():
+        checks.append({"level": "error", "code": "slug_missing", "message": "Slug 不能为空"})
+    else:
+        checks.append({"level": "passed", "code": "slug_ok", "message": "Slug 已填写"})
+
+    if len(article.meta_description.strip()) < 20:
+        checks.append(
+            {"level": "warning", "code": "meta_description_short", "message": "Meta Description 建议至少 20 个字符"}
+        )
+    else:
+        checks.append({"level": "passed", "code": "meta_description_ok", "message": "Meta Description 已填写"})
+
+    if not plain_text:
+        checks.append({"level": "error", "code": "body_missing", "message": "正文不能为空"})
+    elif len(plain_text) < 50:
+        checks.append({"level": "warning", "code": "body_too_short", "message": "正文建议至少 50 个字符"})
+    else:
+        checks.append({"level": "passed", "code": "body_ok", "message": "正文长度通过"})
+
+    pending_suggestions = article.ai_suggestions.filter(status="pending").count()
+    if pending_suggestions > 0:
+        checks.append(
+            {
+                "level": "warning",
+                "code": "pending_ai_suggestions",
+                "message": f"仍有 {pending_suggestions} 条 AI 建议未处理",
+            }
+        )
+    else:
+        checks.append({"level": "passed", "code": "ai_review_clean", "message": "没有待处理 AI 建议"})
+
+    errors = sum(1 for item in checks if item["level"] == "error")
+    warnings = sum(1 for item in checks if item["level"] == "warning")
+    passed = sum(1 for item in checks if item["level"] == "passed")
+    return {
+        "article_id": article.id,
+        "checks": checks,
+        "summary": {
+            "errors": errors,
+            "warnings": warnings,
+            "passed": passed,
+            "can_publish": errors == 0,
+        },
+    }
+
+
+def publish_article(article: Article) -> dict[str, Any]:
+    seo_check = build_seo_check(article)
+    if not seo_check["summary"]["can_publish"]:
+        raise ApiError("publish_blocked", "发布前检查未通过", {"seo_check": seo_check}, status_code=409)
+    article.status = "published"
+    if article.publish_date is None:
+        article.publish_date = timezone.now()
+    article.save()
+    return seo_check
 
 
 def _round_metric(value: float) -> float:

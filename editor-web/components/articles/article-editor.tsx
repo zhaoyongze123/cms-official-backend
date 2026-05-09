@@ -4,11 +4,20 @@ import { useEffect, useState, useTransition } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
-import { updateArticleDraft } from "../../lib/api-client";
+import {
+  acceptSuggestion,
+  publishArticle,
+  rejectSuggestion,
+  runSeoCheck,
+  triggerAiReview,
+  updateArticleDraft,
+} from "../../lib/api-client";
 import {
   buildDraftStorageKey,
   type ArticleRecord,
   type ArticleStatus,
+  type SeoCheckRecord,
+  type TiptapSuggestionRecord,
 } from "../../lib/mock-api";
 import {
   BlockIdExtension,
@@ -56,6 +65,11 @@ export function ArticleEditor({ article }: ArticleEditorProps) {
   const [isPending, startTransition] = useTransition();
   const [draft, setDraft] = useState<DraftState>(() => createDraft(article));
   const [saveMessage, setSaveMessage] = useState("尚未保存本地草稿。");
+  const [currentArticle, setCurrentArticle] = useState<ArticleRecord>(article);
+  const [suggestions, setSuggestions] = useState<TiptapSuggestionRecord[]>([]);
+  const [seoCheck, setSeoCheck] = useState<SeoCheckRecord | null>(null);
+  const [reviewMessage, setReviewMessage] = useState("尚未触发 AI 审核。");
+  const [publishMessage, setPublishMessage] = useState("尚未执行发布检查。");
   const storageKey = buildDraftStorageKey(article.article_id);
   const editor = useEditor({
     extensions: [StarterKit, BlockIdExtension],
@@ -127,11 +141,106 @@ export function ArticleEditor({ article }: ArticleEditorProps) {
         if (storage) {
           storage.setItem(storageKey, JSON.stringify(nextDraft));
         }
+        setCurrentArticle(result);
         setDraft(nextDraft);
         setSaveMessage(`保存成功，Mock API 返回时间：${new Date(result.updated_at).toLocaleString("zh-CN")}`);
       } catch (error) {
         const message = error instanceof Error ? error.message : "未知错误";
         setSaveMessage(`保存失败：${message}`);
+      }
+    });
+  }
+
+  function syncArticle(result: ArticleRecord) {
+    const nextDraft = createDraft(result);
+    setCurrentArticle(result);
+    setDraft(nextDraft);
+    const storage = getBrowserStorage();
+    if (storage) {
+      storage.setItem(storageKey, JSON.stringify(nextDraft));
+    }
+  }
+
+  function handleTriggerAiReview() {
+    startTransition(async () => {
+      try {
+        const response = await triggerAiReview(article.article_id);
+        setSuggestions(response.suggestions);
+        setReviewMessage(`已生成 ${response.suggestions.length} 条 AI 建议。`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "未知错误";
+        setReviewMessage(`AI 审核失败：${message}`);
+      }
+    });
+  }
+
+  function handleAcceptSuggestion(suggestion: TiptapSuggestionRecord, edited: boolean) {
+    startTransition(async () => {
+      try {
+        const nextContentJson = normalizeTiptapDocument(editor?.getJSON() ?? draft.content_json);
+        const response = await acceptSuggestion(suggestion.suggestion_id, {
+          content_hash: currentArticle.content_hash ?? "",
+          ...(edited
+            ? {
+                content_json: nextContentJson,
+                content_html: editor?.getHTML() ?? currentArticle.content_html,
+              }
+            : {}),
+        });
+        syncArticle(response.article);
+        setSuggestions((current) =>
+          current.map((item) => (item.suggestion_id === suggestion.suggestion_id ? response.suggestion : item))
+        );
+        setReviewMessage(edited ? "已按编辑后正文接受建议。" : "已应用 AI Patch。");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "未知错误";
+        setReviewMessage(`接受建议失败：${message}`);
+      }
+    });
+  }
+
+  function handleRejectSuggestion(suggestion: TiptapSuggestionRecord) {
+    startTransition(async () => {
+      try {
+        const response = await rejectSuggestion(suggestion.suggestion_id);
+        setSuggestions((current) =>
+          current.map((item) => (item.suggestion_id === suggestion.suggestion_id ? response.suggestion : item))
+        );
+        setReviewMessage("已拒绝该建议。");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "未知错误";
+        setReviewMessage(`拒绝建议失败：${message}`);
+      }
+    });
+  }
+
+  function handleSeoCheck() {
+    startTransition(async () => {
+      try {
+        const result = await runSeoCheck(article.article_id);
+        setSeoCheck(result);
+        setPublishMessage(
+          result.summary.can_publish
+            ? `检查通过：${result.summary.passed} 项通过，${result.summary.warnings} 项警告。`
+            : `检查未通过：${result.summary.errors} 项错误，${result.summary.warnings} 项警告。`
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "未知错误";
+        setPublishMessage(`SEO 检查失败：${message}`);
+      }
+    });
+  }
+
+  function handlePublish() {
+    startTransition(async () => {
+      try {
+        const response = await publishArticle(article.article_id);
+        syncArticle(response.article);
+        setSeoCheck(response.seo_check);
+        setPublishMessage("文章已发布。");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "未知错误";
+        setPublishMessage(`发布失败：${message}`);
       }
     });
   }
@@ -271,13 +380,99 @@ export function ArticleEditor({ article }: ArticleEditorProps) {
           </div>
           <div>
             <dt>Content Hash</dt>
-            <dd>{article.content_hash ?? "待生成"}</dd>
+            <dd>{currentArticle.content_hash ?? "待生成"}</dd>
           </div>
           <div>
             <dt>初始更新时间</dt>
-            <dd>{new Date(article.updated_at).toLocaleString("zh-CN")}</dd>
+            <dd>{new Date(currentArticle.updated_at).toLocaleString("zh-CN")}</dd>
           </div>
         </dl>
+        <div>
+          <h3>A09 AI Diff</h3>
+          <div className="cta-row">
+            <button className="cta" onClick={handleTriggerAiReview} type="button">
+              {isPending ? "处理中..." : "触发 AI 审核"}
+            </button>
+          </div>
+          <p>{reviewMessage}</p>
+          <div className="helper-list">
+            {suggestions.length === 0 ? (
+              <span>暂无建议。</span>
+            ) : (
+              suggestions.map((suggestion) => (
+                <article className="article-card" key={suggestion.suggestion_id}>
+                  <div className="article-card-head">
+                    <span className="status-pill">{suggestion.status}</span>
+                    <span className="caption">{suggestion.severity}</span>
+                  </div>
+                  <strong>{suggestion.title}</strong>
+                  <p>{suggestion.reason}</p>
+                  {suggestion.patches.map((patch) => (
+                    <div key={patch.patch_id}>
+                      <small>
+                        {patch.operation} / {patch.target_block_id}
+                      </small>
+                      <p>旧文本：{patch.old_text ?? "-"}</p>
+                      <p>新文本：{patch.new_text ?? "-"}</p>
+                    </div>
+                  ))}
+                  <div className="cta-row">
+                    <button
+                      className="cta primary"
+                      onClick={() => handleAcceptSuggestion(suggestion, false)}
+                      type="button"
+                      disabled={suggestion.status !== "pending"}
+                    >
+                      接受 Patch
+                    </button>
+                    <button
+                      className="cta"
+                      onClick={() => handleAcceptSuggestion(suggestion, true)}
+                      type="button"
+                      disabled={suggestion.status !== "pending"}
+                    >
+                      编辑后接受
+                    </button>
+                    <button
+                      className="cta"
+                      onClick={() => handleRejectSuggestion(suggestion)}
+                      type="button"
+                      disabled={suggestion.status !== "pending"}
+                    >
+                      拒绝
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </div>
+        <div>
+          <h3>A10 发布闭环</h3>
+          <div className="cta-row">
+            <button className="cta" onClick={handleSeoCheck} type="button">
+              发布前检查
+            </button>
+            <button
+              className="cta primary"
+              onClick={handlePublish}
+              type="button"
+              disabled={seoCheck !== null && !seoCheck.summary.can_publish}
+            >
+              发布文章
+            </button>
+          </div>
+          <p>{publishMessage}</p>
+          {seoCheck ? (
+            <div className="helper-list">
+              {seoCheck.checks.map((check) => (
+                <span key={check.code}>
+                  [{check.level}] {check.message}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
         <div>
           <h3>A08 已完成内容</h3>
           <ul className="helper-list">

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getMockArticleById, updateMockArticlePayload } from "../../../../lib/mock-api";
+import { getFoundationStatus } from "../../../../lib/foundation";
 
 type RouteContext = {
   params: Promise<{
@@ -10,41 +10,20 @@ type RouteContext = {
 
 export async function GET(_request: Request, context: RouteContext) {
   const params = await context.params;
-  const articleId = Number(params.id);
-  const article = getMockArticleById(articleId);
-
-  if (!article) {
-    return NextResponse.json(
-      {
-        error: {
-          code: "article_not_found",
-          message: "未找到对应的 Mock 文章。"
-        }
-      },
-      { status: 404 }
-    );
-  }
-
-  return NextResponse.json(article);
+  const upstream = new URL(`/api/articles/${params.id}/`, getFoundationStatus().djangoBaseUrl);
+  const response = await fetch(upstream, { cache: "no-store" });
+  return NextResponse.json(await response.json(), { status: response.status });
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
   const params = await context.params;
-  const articleId = Number(params.id);
-  const article = getMockArticleById(articleId);
-
-  if (!article) {
-    return NextResponse.json(
-      {
-        error: {
-          code: "article_not_found",
-          message: "未找到对应的 Mock 文章。"
-        }
-      },
-      { status: 404 }
-    );
-  }
-
-  const payload = await request.json();
-  return NextResponse.json(updateMockArticlePayload(article, payload));
+  const upstream = new URL(`/api/articles/${params.id}/`, getFoundationStatus().djangoBaseUrl);
+  const response = await fetch(upstream, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: await request.text()
+  });
+  return NextResponse.json(await response.json(), { status: response.status });
 }
