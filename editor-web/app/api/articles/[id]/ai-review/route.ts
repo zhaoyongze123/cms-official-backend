@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getFoundationStatus } from "../../../../../lib/foundation";
+import { triggerMockAiReview } from "../../../../../lib/mock-api";
 
 type RouteContext = {
   params: Promise<{
@@ -8,16 +8,13 @@ type RouteContext = {
   }>;
 };
 
-export async function POST(request: Request, context: RouteContext) {
+export async function POST(_request: Request, context: RouteContext) {
   const { id } = await context.params;
-  const upstream = new URL(`/api/articles/${id}/ai-review/`, getFoundationStatus().djangoBaseUrl);
-  const response = await fetch(upstream, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: await request.text()
-  });
+  const result = triggerMockAiReview(Number(id));
 
-  return NextResponse.json(await response.json(), { status: response.status });
+  if (!result) {
+    return NextResponse.json({ error: { code: "not_found", message: "Mock 文章不存在。" } }, { status: 404 });
+  }
+
+  return NextResponse.json(result, { status: 202 });
 }

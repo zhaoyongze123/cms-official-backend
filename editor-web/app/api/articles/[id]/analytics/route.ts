@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getFoundationStatus } from "../../../../../lib/foundation";
+import { getMockArticleAnalytics } from "../../../../../lib/mock-api";
 
 type RouteContext = {
   params: Promise<{
@@ -10,7 +10,11 @@ type RouteContext = {
 
 export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params;
-  const upstream = new URL(`/api/articles/${id}/analytics/`, getFoundationStatus().djangoBaseUrl);
-  const response = await fetch(upstream, { cache: "no-store" });
-  return NextResponse.json(await response.json(), { status: response.status });
+  const analytics = getMockArticleAnalytics(Number(id));
+
+  if (!analytics) {
+    return NextResponse.json({ error: { code: "not_found", message: "Mock 监控数据不存在。" } }, { status: 404 });
+  }
+
+  return NextResponse.json(analytics);
 }

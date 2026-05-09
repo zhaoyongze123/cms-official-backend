@@ -13,8 +13,12 @@ type StudioShellProps = {
 const navigationItems = [
   { href: "/studio" as Route, label: "工作台总览" },
   { href: "/studio/articles" as Route, label: "文章列表" },
+  { href: "/studio/media" as Route, label: "媒体库占位" },
+  { href: "/studio/categories" as Route, label: "分类标签占位" },
   { href: "/studio/analytics" as Route, label: "监控面板" },
-  { href: "/studio/settings" as Route, label: "设置占位" }
+  { href: "/studio/settings" as Route, label: "设置占位" },
+  { href: "/studio/audit-logs" as Route, label: "审计日志占位" },
+  { href: "/studio/cloud" as Route, label: "云监控占位" }
 ];
 
 export function StudioShell({ children }: StudioShellProps) {
@@ -27,7 +31,7 @@ export function StudioShell({ children }: StudioShellProps) {
         <div className="studio-brand">
           <span className="eyebrow">AI SEO Studio</span>
           <strong className="studio-title">运营工作台</strong>
-          <span className="studio-subtitle">A11 已接入监控面板 Mock 数据，继续沿用 Studio Shell 工作流。</span>
+          <span className="studio-subtitle">当前使用本地 Mock API 演示，不直连 FastAPI 内部接口。</span>
         </div>
 
         <div className="studio-user">

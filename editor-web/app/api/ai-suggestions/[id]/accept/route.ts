@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getFoundationStatus } from "../../../../../lib/foundation";
+import { acceptMockSuggestion } from "../../../../../lib/mock-api";
 
 type RouteContext = {
   params: Promise<{
@@ -10,14 +10,12 @@ type RouteContext = {
 
 export async function POST(request: Request, context: RouteContext) {
   const { id } = await context.params;
-  const upstream = new URL(`/api/ai-suggestions/${id}/accept/`, getFoundationStatus().djangoBaseUrl);
-  const response = await fetch(upstream, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: await request.text()
-  });
+  const payload = await request.json().catch(() => ({}));
+  const result = acceptMockSuggestion(id, payload);
 
-  return NextResponse.json(await response.json(), { status: response.status });
+  if (!result) {
+    return NextResponse.json({ error: { code: "not_found", message: "Mock 建议不存在。" } }, { status: 404 });
+  }
+
+  return NextResponse.json(result);
 }

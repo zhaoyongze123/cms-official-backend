@@ -1,20 +1,10 @@
-import { getFoundationStatus } from "../../../lib/foundation";
-import { buildAnalyticsMetrics, type ArticleAnalyticsRecord, type SeoSummaryRecord } from "../../../lib/mock-api";
+import { buildAnalyticsMetrics, getMockArticleAnalytics, getMockSeoSummary } from "../../../lib/mock-api";
 
 export default async function AnalyticsDashboardPage() {
-  const summaryResponse = await fetch(new URL("/api/dashboard/seo-summary/", getFoundationStatus().djangoBaseUrl), {
-    cache: "no-store",
-  });
-  const summary = (await summaryResponse.json()) as SeoSummaryRecord;
-  let leadArticle: ArticleAnalyticsRecord | null = null;
+  const summary = getMockSeoSummary();
+  let leadArticle = null;
   if (summary.top_articles[0]) {
-    const analyticsResponse = await fetch(
-      new URL(`/api/articles/${summary.top_articles[0].article_id}/analytics/`, getFoundationStatus().djangoBaseUrl),
-      { cache: "no-store" }
-    );
-    if (analyticsResponse.ok) {
-      leadArticle = (await analyticsResponse.json()) as ArticleAnalyticsRecord;
-    }
+    leadArticle = getMockArticleAnalytics(summary.top_articles[0].article_id);
   }
   const metrics = buildAnalyticsMetrics(summary);
 
@@ -22,10 +12,10 @@ export default async function AnalyticsDashboardPage() {
     <div className="page-stack">
       <section className="hero">
         <span className="eyebrow">Studio / Analytics</span>
-        <h1>A11 监控面板已接入首版 Mock 数据。</h1>
+        <h1>发布后监控面板的本地 Mock 预览。</h1>
         <p>
-          当前页面消费 Django 约定的 `SEO Summary` 与 `Article Analytics` 形状，
-          用本地 mock 数据验证 GSC、GA4、站内事件和 AI 采纳率的展示闭环。
+          当前页面只消费本地 Mock 数据，展示目标契约中的 SEO 总览、单篇趋势、GSC、GA4、站内事件和 AI 采纳率。
+          真实 Analytics API 未落地前，这里不作为后端联调证据。
         </p>
       </section>
 
@@ -85,7 +75,7 @@ export default async function AnalyticsDashboardPage() {
         <div className="panel-heading">
           <div>
             <h2>Top 文章</h2>
-            <p>按浏览量、点击和展示组合排序，便于后续接入真实监控排名。</p>
+            <p>按浏览量、点击和展示组合排序，便于后续替换为真实监控 API。</p>
           </div>
           <span className="caption">聚合文章表现</span>
         </div>

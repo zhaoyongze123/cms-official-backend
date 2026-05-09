@@ -2,8 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ArticleEditor } from "../../../../components/articles/article-editor";
-import { getFoundationStatus } from "../../../../lib/foundation";
-import type { ArticleRecord } from "../../../../lib/mock-api";
+import { getMockArticleById } from "../../../../lib/mock-api";
 
 type Params = Promise<{
   id: string;
@@ -21,16 +20,8 @@ export default async function ArticleDetailPage({
     notFound();
   }
 
-  let article: ArticleRecord | null = null;
-  try {
-    const upstream = new URL(`/api/articles/${articleId}/`, getFoundationStatus().djangoBaseUrl);
-    const response = await fetch(upstream, { cache: "no-store" });
-    if (response.ok) {
-      article = (await response.json()) as ArticleRecord;
-    }
-  } catch {
-    article = null;
-  }
+  const article = getMockArticleById(articleId);
+
   if (!article) {
     notFound();
   }
@@ -41,9 +32,8 @@ export default async function ArticleDetailPage({
         <span className="eyebrow">Article Editor</span>
         <h1>{article.title}</h1>
         <p>
-          当前页面已经进入 A09/A10 收口阶段。保存行为会调用
-          <code> PATCH /api/articles/:id </code>
-          ，并继续串联 AI 审核、Patch 接受、SEO 检查与发布流程。
+          当前页面使用 Next.js 本地 Mock API 演示编辑、AI 建议、发布前检查和发布动作。
+          Django 公开业务 API 未落地前，这里不直连 FastAPI，也不把 Mock 结果当成真实联调完成。
         </p>
         <div className="cta-row">
           <Link className="cta" href="/studio/articles">

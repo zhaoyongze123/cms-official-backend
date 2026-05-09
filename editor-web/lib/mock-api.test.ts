@@ -3,11 +3,14 @@ import { describe, expect, it } from "vitest";
 import {
   buildDraftStorageKey,
   buildAnalyticsMetrics,
+  acceptMockSuggestion,
   createMockArticle,
   getMockArticleAnalytics,
   getMockArticleById,
   getMockSeoSummary,
   listMockArticles,
+  runMockSeoCheck,
+  triggerMockAiReview,
   updateMockArticlePayload
 } from "./mock-api";
 
@@ -77,5 +80,33 @@ describe("mock api helpers", () => {
     expect(metrics).toHaveLength(4);
     expect(metrics[0].label).toBe("总展示");
     expect(metrics[3].unit).toBe("%");
+  });
+
+  it("keeps AI suggestions in shared mock state for publish checks", () => {
+    const review = triggerMockAiReview(101);
+
+    expect(review?.suggestions).toHaveLength(3);
+
+    const check = runMockSeoCheck(101);
+    const suggestionCheck = check?.checks.find((item) => item.code === "ai_suggestions_resolved");
+
+    expect(check?.summary.warnings).toBeGreaterThanOrEqual(1);
+    expect(suggestionCheck?.level).toBe("warning");
+  });
+
+  it("accepts a mock suggestion and updates suggestion state", () => {
+    const article = getMockArticleById(101);
+    const review = triggerMockAiReview(101);
+    const suggestion = review?.suggestions[0];
+
+    expect(article).not.toBeNull();
+    expect(suggestion).toBeDefined();
+
+    const result = acceptMockSuggestion(suggestion!.suggestion_id, {
+      content_hash: article!.content_hash ?? "",
+    });
+
+    expect(result?.suggestion.status).toBe("accepted");
+    expect(result?.article.content_hash).not.toBe(article!.content_hash);
   });
 });

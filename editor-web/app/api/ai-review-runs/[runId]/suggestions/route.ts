@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getFoundationStatus } from "../../../../../lib/foundation";
+import { getMockRunSuggestions } from "../../../../../lib/mock-api";
 
 type RouteContext = {
   params: Promise<{
@@ -10,8 +10,9 @@ type RouteContext = {
 
 export async function GET(_request: Request, context: RouteContext) {
   const { runId } = await context.params;
-  const upstream = new URL(`/api/ai-review-runs/${runId}/suggestions/`, getFoundationStatus().djangoBaseUrl);
-  const response = await fetch(upstream, { cache: "no-store" });
 
-  return NextResponse.json(await response.json(), { status: response.status });
+  return NextResponse.json({
+    run_id: runId,
+    suggestions: getMockRunSuggestions(runId),
+  });
 }

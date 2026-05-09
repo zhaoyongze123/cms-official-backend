@@ -131,6 +131,7 @@ export async function acceptSuggestion(
     content_hash: string;
     content_json?: ArticleRecord["content_json"];
     content_html?: string;
+    edited?: boolean;
   }
 ) {
   const response = await fetch(`/api/ai-suggestions/${suggestionId}/accept`, {

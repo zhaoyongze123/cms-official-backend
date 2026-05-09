@@ -26,10 +26,10 @@ export default async function StudioArticlesPage({
     <div className="page-stack">
       <section className="hero">
         <span className="eyebrow">Studio / Articles</span>
-        <h1>文章列表与编辑入口已切换到 A07 Mock 工作流。</h1>
+        <h1>文章列表、筛选与编辑入口。</h1>
         <p>
-          当前列表数据来自 Next.js 内部 Mock API，字段遵循 `Article v1` 契约，
-          以便后续 A08 TipTap、A09 Diff 和 A11 Analytics 在同一路由骨架上继续接入。
+          当前列表数据来自 Next.js 本地 Mock API，字段按 `Article v1` 契约组织。
+          真实 Django 文章 CRUD API 未落地前，前端只在这里验证 UI、状态流和编辑体验。
         </p>
         <div className="toolbar">
           <form className="search-form" action="/studio/articles">
@@ -59,12 +59,12 @@ export default async function StudioArticlesPage({
         <article className="metric">
           <span className="metric-label">草稿文章</span>
           <strong className="metric-value">{draftCount}</strong>
-          <p className="metric-note">待进入 TipTap 编辑与 AI 审核</p>
+          <p className="metric-note">可进入 TipTap 编辑与 Mock AI 审核</p>
         </article>
         <article className="metric">
           <span className="metric-label">已发布文章</span>
           <strong className="metric-value">{publishedCount}</strong>
-          <p className="metric-note">为监控面板和 SEO 检查预留数据源</p>
+          <p className="metric-note">作为监控面板 Mock 数据源</p>
         </article>
       </section>
 
@@ -72,7 +72,7 @@ export default async function StudioArticlesPage({
         <div className="panel-heading">
           <div>
             <h2>文章列表</h2>
-            <p>点击任意文章进入基础编辑页。当前保存会写入本地浏览器草稿，并通过 Mock API 返回契约响应。</p>
+            <p>点击任意文章进入编辑页。保存、AI 审核、发布检查和发布动作都只调用本地 Mock API。</p>
           </div>
           <span className="caption">`GET /api/articles/`</span>
         </div>
