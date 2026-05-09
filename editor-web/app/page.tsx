@@ -8,15 +8,18 @@ export default function HomePage() {
   return (
     <main className="shell">
       <section className="hero">
-        <span className="eyebrow">Platform Foundation</span>
-        <h1>AI SEO Studio 已完成三端底座接线。</h1>
+        <span className="eyebrow">A07 / Next.js Studio Shell</span>
+        <h1>AI SEO Studio 已进入工作台壳层开发阶段。</h1>
         <p>
-          当前页面只负责证明 Next.js Studio、Django CMS 和 FastAPI AI Service 已经进入同一个运行环境。
-          业务功能要在 contracts 冻结后继续分支开发。
+          当前分支提供登录态、受保护的 Studio Shell、文章列表、文章编辑基础页和 Mock API，
+          用于在不依赖 Django 实现的情况下推进运营工作台开发。
         </p>
         <div className="cta-row">
           <Link className="cta primary" href="/studio/articles">
             进入文章工作台
+          </Link>
+          <Link className="cta" href="/login">
+            进入 Mock 登录
           </Link>
           <a className="cta" href={status.djangoBaseUrl} target="_blank" rel="noreferrer">
             打开 Django 前台

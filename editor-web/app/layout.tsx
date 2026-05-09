@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AI SEO Studio Foundation",
-  description: "AI Native SEO Publishing OS 的 Next.js Studio 底座。"
+  title: "AI SEO Studio",
+  description: "AI Native SEO Publishing OS 的 Next.js 运营工作台。"
 };
 
 export default function RootLayout({
