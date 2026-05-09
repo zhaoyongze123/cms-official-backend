@@ -1,5 +1,7 @@
 export type ArticleStatus = "draft" | "published" | "archived";
 
+import { createDocumentFromPlainText, normalizeTiptapDocument, type TiptapDocument } from "./tiptap-document";
+
 export type ArticleRecord = {
   article_id: number;
   schema_version: "v1";
@@ -17,16 +19,7 @@ export type ArticleRecord = {
     name: string;
     slug: string;
   }>;
-  content_json: {
-    type: string;
-    content: Array<{
-      type: string;
-      content?: Array<{
-        type: string;
-        text: string;
-      }>;
-    }>;
-  };
+  content_json: TiptapDocument;
   content_html: string;
   content_hash?: string;
   published_at?: string | null;
@@ -55,15 +48,7 @@ const MOCK_ARTICLES: ArticleRecord[] = [
       { tag_id: 1, name: "AI SEO", slug: "ai-seo" },
       { tag_id: 2, name: "Roadmap", slug: "roadmap" }
     ],
-    content_json: {
-      type: "doc",
-      content: [
-        {
-          type: "paragraph",
-          content: [{ type: "text", text: "本季度优先完成 Studio Shell、TipTap 基础编辑与 AI Diff 验收。"}]
-        }
-      ]
-    },
+    content_json: createDocumentFromPlainText("本季度优先完成 Studio Shell、TipTap 基础编辑与 AI Diff 验收。"),
     content_html: "<p>本季度优先完成 Studio Shell、TipTap 基础编辑与 AI Diff 验收。</p>",
     content_hash: "sha256:a07-101",
     published_at: null,
@@ -84,15 +69,7 @@ const MOCK_ARTICLES: ArticleRecord[] = [
     tags: [
       { tag_id: 3, name: "Contracts", slug: "contracts" }
     ],
-    content_json: {
-      type: "doc",
-      content: [
-        {
-          type: "paragraph",
-          content: [{ type: "text", text: "联调阶段必须坚持 Next.js 仅调用 Django API，不直接访问 FastAPI。"}]
-        }
-      ]
-    },
+    content_json: createDocumentFromPlainText("联调阶段必须坚持 Next.js 仅调用 Django API，不直接访问 FastAPI。"),
     content_html: "<p>联调阶段必须坚持 Next.js 仅调用 Django API，不直接访问 FastAPI。</p>",
     content_hash: "sha256:a07-102",
     published_at: "2026-05-08T20:40:00+08:00",
@@ -113,15 +90,7 @@ const MOCK_ARTICLES: ArticleRecord[] = [
     tags: [
       { tag_id: 4, name: "Analytics", slug: "analytics" }
     ],
-    content_json: {
-      type: "doc",
-      content: [
-        {
-          type: "paragraph",
-          content: [{ type: "text", text: "监控页将消费 Django 聚合后的 SEO Summary 与单篇 AnalyticsSnapshot。"}]
-        }
-      ]
-    },
+    content_json: createDocumentFromPlainText("监控页将消费 Django 聚合后的 SEO Summary 与单篇 AnalyticsSnapshot。"),
     content_html: "<p>监控页将消费 Django 聚合后的 SEO Summary 与单篇 AnalyticsSnapshot。</p>",
     content_hash: "sha256:a07-103",
     published_at: null,
@@ -170,15 +139,7 @@ export function createMockArticle(title: string) {
     status: "draft" as const,
     category: null,
     tags: [],
-    content_json: {
-      type: "doc",
-      content: [
-        {
-          type: "paragraph",
-          content: [{ type: "text", text: "请在编辑页继续完善这篇文章。" }]
-        }
-      ]
-    },
+    content_json: createDocumentFromPlainText("请在编辑页继续完善这篇文章。"),
     content_html: "<p>请在编辑页继续完善这篇文章。</p>",
     content_hash: `sha256:new-${Date.now()}`,
     published_at: null,
@@ -190,9 +151,15 @@ export function updateMockArticlePayload(
   article: ArticleRecord,
   payload: Partial<ArticleRecord>
 ) {
+  const nextContentJson = payload.content_json
+    ? normalizeTiptapDocument(payload.content_json)
+    : article.content_json;
+
   return {
     ...article,
     ...payload,
+    content_json: nextContentJson,
+    content_hash: `sha256:mock-${Date.now()}`,
     updated_at: new Date().toISOString()
   };
 }

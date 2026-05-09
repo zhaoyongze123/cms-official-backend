@@ -447,6 +447,58 @@ main {
   color: var(--navy);
 }
 
+.tiptap-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.tiptap-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.toolbar-chip {
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.toolbar-chip:hover {
+  border-color: var(--navy);
+  color: var(--navy);
+}
+
+.tiptap-editor {
+  min-height: 320px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px 18px;
+  background: #fff;
+  line-height: 1.8;
+}
+
+.tiptap-editor:focus {
+  outline: none;
+}
+
+.tiptap-editor p,
+.tiptap-editor h2,
+.tiptap-editor h3,
+.tiptap-editor ul,
+.tiptap-editor ol {
+  margin: 0 0 16px;
+}
+
+.tiptap-editor ul,
+.tiptap-editor ol {
+  padding-left: 22px;
+}
+
 .helper-list {
   margin: 0;
   padding-left: 18px;

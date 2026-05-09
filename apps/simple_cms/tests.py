@@ -141,6 +141,91 @@ class ArticleVisibilityTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "ok")
 
+    def test_article_detail_api_returns_content_json_and_hash(self):
+        article = self.create_article("api-detail", "draft")
+        article.content_json = {
+            "tiptap_schema_version": "v1",
+            "type": "doc",
+            "content": [
+                {
+                    "type": "paragraph",
+                    "attrs": {"blockId": "blk_intro"},
+                    "content": [{"type": "text", "text": "详情接口"}],
+                }
+            ],
+        }
+        article.content_html = "<p>详情接口</p>"
+        article.meta_description = "接口摘要"
+        article.save()
+
+        response = self.client.get(f"/api/articles/{article.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["article_id"], article.id)
+        self.assertEqual(payload["content_json"]["content"][0]["attrs"]["blockId"], "blk_intro")
+        self.assertEqual(payload["content_html"], "<p>详情接口</p>")
+        self.assertTrue(payload["content_hash"].startswith("sha256:"))
+
+    def test_article_detail_api_patch_updates_tiptap_fields(self):
+        article = self.create_article("api-patch", "draft")
+
+        response = self.client.patch(
+            f"/api/articles/{article.id}/",
+            data=json.dumps(
+                {
+                    "title": "新的标题",
+                    "summary": "新的摘要",
+                    "content_json": {
+                        "tiptap_schema_version": "v1",
+                        "type": "doc",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "attrs": {"blockId": "blk_body"},
+                                "content": [{"type": "text", "text": "新的正文"}],
+                            }
+                        ],
+                    },
+                    "content_html": "<p>新的正文</p>",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        article.refresh_from_db()
+        self.assertEqual(article.title, "新的标题")
+        self.assertEqual(article.meta_description, "新的摘要")
+        self.assertEqual(article.content_json["content"][0]["attrs"]["blockId"], "blk_body")
+        self.assertEqual(article.content_html, "<p>新的正文</p>")
+
+    def test_article_detail_api_rejects_invalid_block_id(self):
+        article = self.create_article("api-invalid", "draft")
+
+        response = self.client.patch(
+            f"/api/articles/{article.id}/",
+            data=json.dumps(
+                {
+                    "content_json": {
+                        "tiptap_schema_version": "v1",
+                        "type": "doc",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "attrs": {"blockId": "bad-id"},
+                                "content": [{"type": "text", "text": "新的正文"}],
+                            }
+                        ],
+                    }
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"]["code"], "invalid_content_json")
+
     def test_ai_review_api_creates_run_and_suggestions(self):
         article = self.create_article("ai-review", "draft")
 

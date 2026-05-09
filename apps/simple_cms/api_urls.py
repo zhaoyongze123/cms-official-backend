@@ -5,6 +5,7 @@ from . import api_views
 app_name = "simple_cms_api"
 
 urlpatterns = [
+    path("articles/<int:article_id>/", api_views.article_detail_api, name="article_detail"),
     path("articles/<int:article_id>/ai-review/", api_views.article_ai_review_api, name="article_ai_review"),
     path("articles/<int:article_id>/ai-review-runs/", api_views.article_ai_review_runs_api, name="article_ai_review_runs"),
     path("ai-review-runs/<str:run_id>/suggestions/", api_views.ai_review_run_suggestions_api, name="ai_review_run_suggestions"),

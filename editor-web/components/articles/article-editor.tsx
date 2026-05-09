@@ -1,19 +1,29 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { EditorContent, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
 
 import { updateArticleDraft } from "../../lib/api-client";
 import {
   buildDraftStorageKey,
   type ArticleRecord,
-  type ArticleStatus
+  type ArticleStatus,
 } from "../../lib/mock-api";
+import {
+  BlockIdExtension,
+  extractPlainText,
+  normalizeTiptapDocument,
+  type TiptapDocument,
+} from "../../lib/tiptap-document";
 
 type ArticleEditorProps = {
   article: ArticleRecord;
 };
 
-type DraftState = Pick<ArticleRecord, "title" | "summary" | "slug" | "status" | "content_html">;
+type DraftState = Pick<ArticleRecord, "title" | "summary" | "slug" | "status"> & {
+  content_json: TiptapDocument;
+};
 
 function createDraft(article: ArticleRecord): DraftState {
   return {
@@ -21,7 +31,7 @@ function createDraft(article: ArticleRecord): DraftState {
     summary: article.summary,
     slug: article.slug,
     status: article.status,
-    content_html: article.content_html.replaceAll(/<[^>]+>/g, "")
+    content_json: normalizeTiptapDocument(article.content_json),
   };
 }
 
@@ -47,6 +57,18 @@ export function ArticleEditor({ article }: ArticleEditorProps) {
   const [draft, setDraft] = useState<DraftState>(() => createDraft(article));
   const [saveMessage, setSaveMessage] = useState("尚未保存本地草稿。");
   const storageKey = buildDraftStorageKey(article.article_id);
+  const editor = useEditor({
+    extensions: [StarterKit, BlockIdExtension],
+    content: draft.content_json,
+    immediatelyRender: false,
+    editorProps: {
+      attributes: {
+        class: "tiptap-editor",
+      },
+    },
+  });
+
+  const contentText = extractPlainText(draft.content_json);
 
   useEffect(() => {
     const storage = getBrowserStorage();
@@ -61,12 +83,25 @@ export function ArticleEditor({ article }: ArticleEditorProps) {
 
     try {
       const parsedDraft = JSON.parse(storedDraft) as DraftState;
-      setDraft(parsedDraft);
+      setDraft({
+        ...parsedDraft,
+        content_json: normalizeTiptapDocument(parsedDraft.content_json),
+      });
       setSaveMessage("已恢复本地草稿。");
     } catch {
       setSaveMessage("检测到本地草稿，但恢复失败，已回退到 Mock 基础数据。");
     }
   }, [storageKey]);
+
+  useEffect(() => {
+    if (!editor) {
+      return;
+    }
+
+    editor.commands.setContent(draft.content_json, {
+      emitUpdate: false,
+    });
+  }, [draft.content_json, editor]);
 
   function updateField<K extends keyof DraftState>(key: K, value: DraftState[K]) {
     setDraft((current) => ({
@@ -78,10 +113,12 @@ export function ArticleEditor({ article }: ArticleEditorProps) {
   function handleSave() {
     startTransition(async () => {
       try {
+        const nextContentJson = normalizeTiptapDocument(editor?.getJSON() ?? draft.content_json);
         const payload = {
           ...article,
           ...draft,
-          content_html: `<p>${draft.content_html}</p>`
+          content_json: nextContentJson,
+          content_html: editor?.getHTML() ?? article.content_html,
         };
 
         const result = await updateArticleDraft(article.article_id, payload);
@@ -104,8 +141,8 @@ export function ArticleEditor({ article }: ArticleEditorProps) {
       <section className="panel editor-panel">
         <div className="editor-toolbar">
           <div>
-            <h2>文章编辑基础页</h2>
-            <p>当前使用 textarea 代替 TipTap，后续 A08 会在此处接入 `content_json` 真正编辑器。</p>
+            <h2>TipTap 基础编辑器</h2>
+            <p>当前保存会同步写入 `content_json`、`blockId` 和 `content_html`，为 A09 Diff 提供稳定正文结构。</p>
           </div>
           <button className="cta primary" onClick={handleSave} type="button">
             {isPending ? "保存中..." : "保存草稿"}
@@ -162,13 +199,49 @@ export function ArticleEditor({ article }: ArticleEditorProps) {
 
         <div className="field">
           <label className="field-label" htmlFor="content">
-            正文占位
+            正文内容
           </label>
-          <textarea
-            id="content"
-            onChange={(event) => updateField("content_html", event.target.value)}
-            value={draft.content_html}
-          />
+          <div className="tiptap-shell">
+            <div className="tiptap-toolbar" role="toolbar" aria-label="编辑器工具栏">
+              <button
+                className="toolbar-chip"
+                onClick={() => editor?.chain().focus().toggleBold().run()}
+                type="button"
+              >
+                加粗
+              </button>
+              <button
+                className="toolbar-chip"
+                onClick={() => editor?.chain().focus().toggleItalic().run()}
+                type="button"
+              >
+                斜体
+              </button>
+              <button
+                className="toolbar-chip"
+                onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+                type="button"
+              >
+                H2
+              </button>
+              <button
+                className="toolbar-chip"
+                onClick={() => editor?.chain().focus().toggleBulletList().run()}
+                type="button"
+              >
+                无序列表
+              </button>
+              <button
+                className="toolbar-chip"
+                onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+                type="button"
+              >
+                有序列表
+              </button>
+            </div>
+            <EditorContent editor={editor} id="content" />
+          </div>
+          <small>正文结构会在保存时规范化为 TipTap v1 文档，并为段落/标题/列表自动补齐 `blockId`。</small>
         </div>
 
         <div className="editor-status">{saveMessage}</div>
@@ -189,6 +262,14 @@ export function ArticleEditor({ article }: ArticleEditorProps) {
             <dd>{article.schema_version}</dd>
           </div>
           <div>
+            <dt>TipTap Blocks</dt>
+            <dd>{draft.content_json.content.length}</dd>
+          </div>
+          <div>
+            <dt>正文字符数</dt>
+            <dd>{contentText.length}</dd>
+          </div>
+          <div>
             <dt>Content Hash</dt>
             <dd>{article.content_hash ?? "待生成"}</dd>
           </div>
@@ -198,11 +279,11 @@ export function ArticleEditor({ article }: ArticleEditorProps) {
           </div>
         </dl>
         <div>
-          <h3>后续接入位置</h3>
+          <h3>A08 已完成内容</h3>
           <ul className="helper-list">
-            <li>A08：TipTap `content_json` 与 `blockId` 保存链路</li>
-            <li>A09：AI Diff Decoration、Accept / Reject</li>
-            <li>A10：发布前 SEO 检查与发布按钮</li>
+            <li>保存时同步产出 `content_json` 与 `content_html`</li>
+            <li>顶层正文块自动补齐 `blockId`</li>
+            <li>刷新后可从本地草稿恢复 TipTap 文档状态</li>
           </ul>
         </div>
       </aside>
