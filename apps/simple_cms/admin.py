@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils import timezone
 
-from .models import Article, ArticleRevision, Category, FaqItem, SeoMetadata, Tag
+from .models import Article, ArticleRevision, Category, FaqItem, KnowledgeChunk, KnowledgeSource, SeoMetadata, Tag
 
 
 class ArticleRevisionInline(admin.TabularInline):
@@ -146,6 +146,21 @@ class ArticleAdmin(admin.ModelAdmin):
             count += 1
         self.message_user(request, f"已归档 {count} 篇文章")
 
+
+@admin.register(KnowledgeSource)
+class KnowledgeSourceAdmin(admin.ModelAdmin):
+    list_display = ("source_type", "source_id", "title", "is_active", "last_indexed_at", "updated_at")
+    list_filter = ("source_type", "is_active")
+    search_fields = ("title", "url")
+    readonly_fields = ("created_at", "updated_at", "last_indexed_at")
+
+
+@admin.register(KnowledgeChunk)
+class KnowledgeChunkAdmin(admin.ModelAdmin):
+    list_display = ("id", "source", "chunk_index", "embedding_dimensions", "is_active", "updated_at")
+    list_filter = ("is_active", "source__source_type")
+    search_fields = ("chunk_text", "source__title", "chunk_hash")
+    readonly_fields = ("created_at", "updated_at")
 
 
 

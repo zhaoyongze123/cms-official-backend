@@ -142,6 +142,6 @@ def reindex_article(request: Request, _: str = Depends(validate_internal_token))
 
 @app.post("/internal/rag/search")
 def search_rag(request: Request, _: str = Depends(validate_internal_token)) -> dict[str, Any]:
-    body = request.state.body
+    body = _body(request)
     payload = get_provider().search_rag(payload=body, trace_id=_trace_id(request))
     return _base_response(request, payload.to_dict())

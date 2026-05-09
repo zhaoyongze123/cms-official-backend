@@ -11,6 +11,9 @@ env = environ.Env(
     DEBUG=(bool, False),
     ALLOWED_HOSTS=(list, []),
     CSRF_TRUSTED_ORIGINS=(list, []),
+    RAG_VECTOR_DIMENSIONS=(int, 1536),
+    RAG_CHUNK_SIZE=(int, 500),
+    RAG_CHUNK_OVERLAP=(int, 80),
 )
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
@@ -32,6 +35,9 @@ ALIYUN_DNS_REGION = env("ALIYUN_DNS_REGION", default="cn-hangzhou")
 ALIYUN_DNS_DOMAINS = env("ALIYUN_DNS_DOMAINS", default="")
 ALIYUN_CMS_NAMESPACE = env("ALIYUN_CMS_NAMESPACE", default="acs_ecs_dashboard")
 ALIYUN_CMS_METRICS = env("ALIYUN_CMS_METRICS", default="CPUUtilization,MemoryUtilization,InternetIn,InternetOut")
+RAG_VECTOR_DIMENSIONS = env("RAG_VECTOR_DIMENSIONS", default=1536)
+RAG_CHUNK_SIZE = env("RAG_CHUNK_SIZE", default=500)
+RAG_CHUNK_OVERLAP = env("RAG_CHUNK_OVERLAP", default=80)
 
 INSTALLED_APPS = [
     "jazzmin",
@@ -46,6 +52,7 @@ INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
+    "django.contrib.sitemaps",
     "django.contrib.messages",
     "django.contrib.staticfiles",
 ]

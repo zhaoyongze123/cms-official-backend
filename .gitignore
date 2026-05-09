@@ -74,6 +74,7 @@ docker-compose.override.yml
 jazzmin_change_form.html
 # Playwright artifacts
 output/
+.vendor-wheels/
 
 # Project Notes
 TODO.md

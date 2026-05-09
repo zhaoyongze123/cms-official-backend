@@ -90,3 +90,12 @@ curl -I http://127.0.0.1:3000/studio/articles
 ```bash
 docker compose exec web python manage.py setup_roles
 ```
+
+## 9. A05 RAG 验证
+
+```bash
+docker compose exec -T web python manage.py rebuild_knowledge_index --dry-run
+docker compose exec -T web python manage.py rebuild_knowledge_index --source article
+docker compose exec -T web python manage.py rag_query "SEO Schema" --limit 5
+docker compose exec -T web python manage.py test
+```
