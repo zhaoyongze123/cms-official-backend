@@ -1,15 +1,22 @@
-# AI Native SEO Publishing OS 后端开发计划
+# AI Native SEO Publishing OS 方案设计与实施计划
 
-更新时间：2026-05-08  
-当前分支：`feature/ai-seo-publishing`  
-计划状态：待开发  
-阶段目标：先在现有 Django CMS 内闭环后端能力，完成技术 SEO 发布、RAG 知识库、AI 建议审核和基础监控占位；完整 Cursor/TipTap 风格编辑器作为后续独立前端里程碑。
+更新时间：2026-05-09
+当前分支：`feature/ai-seo-publishing`
+计划状态：待开发
+目标状态：完整建设 `Django CMS + FastAPI AI/RAG Service + Next.js TipTap Studio + PostgreSQL pgvector`，形成内容生产、AI 优化、SEO 发布、数据监控闭环。
 
 ## 1. 执行规则
 
-### 1.1 状态流转
+### 1.1 本计划的硬性要求
 
-每个任务必须独立闭环，开发时只允许使用以下状态：
+- 本文档是完整实施计划，不再把 FastAPI AI 服务、Next.js Studio、TipTap Diff 编辑器标记为可选或远期设想。
+- Django CMS、FastAPI AI/RAG Service、Next.js Studio、PostgreSQL pgvector 都是目标架构的一部分。
+- 所有 AI 输出默认是建议，必须经过运营接受或拒绝，不允许直接覆盖正式内容。
+- SEO 技术标签、Canonical、Sitemap、JSON-LD、Schema 必须由系统规则生成，不允许由 AI 直接生成最终技术代码。
+- 任何真实 API Key 不允许写入 Git、文档、提交信息、PR 描述、测试快照或日志。
+- 本地测试必须支持 Mock Provider，不能依赖外网或真实模型调用。
+
+### 1.2 状态流转
 
 | 状态 | 含义 |
 | --- | --- |
@@ -18,15 +25,16 @@
 | `BLOCKED` | 被明确问题阻塞，必须写清原因 |
 | `DONE` | 已完成并通过验收 |
 
-### 1.2 每个任务完成条件
+### 1.3 每个任务完成条件
 
-- 代码、迁移、后台配置、模板或文档已同步更新。
-- 本文档中对应任务状态更新为 `DONE`，并追加真实验收命令和结果。
-- 涉及数据库变更时必须提交迁移文件，并验证迁移可执行。
-- 涉及 AI 或 RAG 时必须提供 Mock 路径，测试不得依赖外网或真实 API Key。
-- 任务完成后必须执行最小回归测试。
+- 代码、迁移、接口、测试、运维配置和文档同步更新。
+- 涉及数据库变更时提交迁移文件，并验证迁移可执行。
+- 涉及 AI/RAG 时提供 Mock 路径，并记录 Provider、模型、Prompt 版本和原始响应摘要。
+- 涉及前端时完成浏览器验收，至少覆盖桌面和移动端关键页面。
+- 涉及发布输出时必须通过真实 HTTP 响应验证 SEO 标签。
+- 完成后执行最小回归测试，并把命令和结果写入 PR 描述。
 
-### 1.3 固定验证命令
+### 1.4 固定验证命令
 
 基础验证：
 
@@ -47,6 +55,7 @@ docker compose exec -T web python manage.py migrate
 
 ```bash
 curl -s http://127.0.0.1:8001/<article-slug>/ | grep -E "canonical|og:title|application/ld\\+json"
+curl -I http://127.0.0.1:8001/sitemap.xml
 ```
 
 涉及 RAG 时追加：
@@ -56,180 +65,933 @@ docker compose exec -T web python manage.py rebuild_knowledge_index --dry-run
 docker compose exec -T web python manage.py rag_query "测试查询" --limit 5
 ```
 
-## 2. 当前基线
+涉及 FastAPI AI Service 时追加：
 
-### 2.1 已有能力
+```bash
+curl -s http://127.0.0.1:8002/health
+curl -s http://127.0.0.1:8002/internal/rag/search -H "Content-Type: application/json" -d '{"query":"测试查询","limit":3}'
+```
 
-- 文章模型已有分类、标题、slug、封面图、正文、发布状态、定时发布时间、置顶排序、SEO Description。
-- 已有已发布文章过滤、未来发布时间隐藏、草稿详情 404。
-- 已有 slug 历史记录和旧链接 301 跳转。
-- 已有文章版本快照。
-- 后台使用 Django Admin + Jazzmin + CKEditor。
-- 前台已有文章列表页和详情页。
-- Docker Compose 已可运行，当前本地访问端口为 `127.0.0.1:8001`。
+涉及 Next.js Studio 时追加：
 
-### 2.2 必须补齐的后端缺口
+```bash
+cd editor-web
+npm run lint
+npm run test
+npm run build
+```
 
-- 没有 URL、页面类型、canonical 的统一规则文档。
-- 没有结构化 Tag 模型。
-- 没有独立 SeoMetadata 模型，当前 SEO 字段和内容字段混在 Article 中。
-- 没有统一 SEO Context，模板逻辑容易继续分散。
-- 没有 FAQ、内链建议、AI 建议审核、Prompt 版本追踪。
-- 没有 RAG 知识库、Embedding、检索、重建索引命令。
-- 没有 Article / FAQ / Breadcrumb JSON-LD、OG、Sitemap、TOC。
-- 没有基础 SEO 检查器。
-- 没有 AI 输出安全与内容风控边界。
+## 2. 项目背景
 
-## 3. 后端架构原则
+当前项目是基于 Django 的 CMS 官网后台，已经具备基础内容发布能力：
 
-### 3.1 领域模型边界
+| 能力 | 当前状态 |
+| --- | --- |
+| 文章管理 | 已有 `Article`、`Category`、正文、封面图、状态、定时发布 |
+| 发布过滤 | 已有已发布文章过滤、未来发布时间隐藏、草稿详情 404 |
+| URL 稳定性 | 已有 slug 历史记录和旧链接 301 |
+| 版本快照 | 已有 `ArticleRevision` |
+| 后台 | Django Admin + Jazzmin + CKEditor |
+| 前台 | 文章列表页、分类页、搜索页、详情页 |
+| 本地服务 | Docker Compose，Django 访问端口 `127.0.0.1:8001` |
 
-- `Article` 是内容主体：标题、slug、摘要、正文、封面、分类、标签、状态、发布时间。
-- `SeoMetadata` 是搜索展示层：meta title、meta description、canonical override、OG、robots。
-- `FaqItem` 是页面内容模块，也是 FAQ Schema 来源。
-- `Tag` 是结构化语义标签，不使用逗号字符串存储。
-- `AiSuggestion` 是 AI 建议审计记录，不直接代表最终内容。
-- `InternalLinkSuggestion` 是站内链接建议，不直接改正文。
-- `KnowledgeDocument` / `KnowledgeChunk` 是 RAG 检索数据层，不直接替代业务表。
-- `AnalyticsSnapshot` 是发布后表现数据占位，不在本阶段接完整 OAuth。
+现有系统的问题是：内容发布仍停留在传统 CMS 阶段，SEO 能力主要依赖人工填写，AI 没有进入编辑工作流，缺少 RAG、结构化建议、Diff 审核、发布前检查和发布后监控。
 
-### 3.2 服务层边界
+本项目要升级为：
 
-- `seo_context`：统一输出页面 title、description、canonical、robots、OG、JSON-LD、breadcrumbs。
-- `seo_checks`：输出发布前 SEO 检查项，只提示，不阻塞保存。
-- `toc`：解析正文 H2/H3，生成目录和稳定锚点。
-- `knowledge_base`：抽取、切块、Embedding、索引、检索。
-- `ai_providers`：封装 Mock/OpenAI/Anthropic 等 Provider。
-- `suggestions`：处理 AI 建议创建、接受、拒绝和状态流转。
-- `internal_links`：生成只基于真实已发布文章和 RAG 结果的内链建议。
+```text
+AI Native SEO Publishing OS
+AI 原生 SEO 内容发布系统
+```
 
-### 3.3 AI 与 RAG 原则
+目标不是增加几个 AI 按钮，而是把文章发布流程升级为完整闭环：
 
-- AI 生成内容默认只是建议，不直接覆盖运营内容。
-- 每条建议必须可接受、可拒绝、可追踪来源、Provider、模型、Prompt 版本和原始响应。
-- 内链建议只能指向数据库中真实存在、已发布、已到发布时间的站内文章。
-- FAQ、内链、标签、描述等建议必须可追溯到 RAG 检索结果。
-- Schema、Canonical、OG、Sitemap、TOC 使用规则生成，不让 AI 生成关键技术 SEO 代码。
-- 没有 API Key 时系统必须可正常发布文章，AI/RAG 使用 Mock Provider 或明确禁用真实调用。
+```text
+运营写文章
+AI 理解公司知识库
+AI 生成 SEO 优化建议
+AI 在编辑器中以 Diff 展示修改
+运营逐条接受或拒绝
+系统生成 SEO 技术标签
+发布 SEO 优化页面
+持续监控页面数据
+```
 
-### 3.4 技术选型依据
+## 3. 产品目标
 
-- RAG 向量库：PostgreSQL + pgvector。pgvector 官方支持 Postgres 13+、Docker 镜像和 cosine/L2/inner product 检索，适合当前项目复用 PostgreSQL，不额外引入独立向量数据库。参考：[pgvector README](https://github.com/pgvector/pgvector)。
-- Django 向量字段：使用 `pgvector` Python 包提供的 `pgvector.django.VectorField` 和 `VectorExtension`。参考：[pgvector-python](https://github.com/pgvector/pgvector-python)。
-- Embedding 默认模型：`text-embedding-3-small`，默认 1536 维，适合低成本中文/英文内容检索；测试环境必须使用 Mock Embedding。参考：[OpenAI Embeddings Guide](https://platform.openai.com/docs/guides/embeddings) 和 [Embeddings API Reference](https://platform.openai.com/docs/api-reference/embeddings)。
+### 3.1 核心目标
 
-## 4. 任务清单
+让运营人员即使不懂 SEO，也能发布专业级 SEO 页面。
 
-### T00 - SEO URL 与页面类型规则梳理
+系统必须自动或半自动完成：
 
-状态：`TODO`  
-目标：先锁定 URL、页面类型、canonical、slug 和 Sitemap 规则，避免后续 SEO 输出返工。  
-依赖：无
+| 能力 | 说明 |
+| --- | --- |
+| SEO 标题优化 | AI 生成可审核 title 建议，Django 规则落库和渲染 |
+| Meta Description | AI 生成描述建议，运营接受后进入 `SeoMetadata` |
+| FAQ 生成 | 基于 RAG 生成 FAQ，人工接受后展示并进入 FAQ Schema |
+| 内链推荐 | 只推荐真实存在且已发布的站内文章 |
+| 图片 Alt | AI 生成 Alt 建议，人工接受后写入媒体库 |
+| Schema | Django 规则生成 Article、FAQ、Breadcrumb Schema |
+| OG Tags | Django 规则生成 Open Graph 和 Twitter Card |
+| Canonical | Django 统一生成，允许人工覆盖 |
+| JSON-LD | Django 结构化序列化输出，禁止字符串拼接 |
+| TOC | 从正文标题自动生成目录和锚点 |
+| Sitemap | 自动输出首页、文章、分类、标签 URL |
+| 发布前检查 | 输出 Error、Warning、Passed 三类结果 |
+| 发布后监控 | 接入 GSC、GA4、站内点击和 AI 建议采纳率 |
 
-#### 实现内容
+### 3.2 产品定位
 
-- 新增后端规则文档或计划小节，明确：
-  - 首页：`/`
-  - 文章详情：`/<slug>/`
-  - 分类页：`/category/<slug>/`
-  - 标签页：`/tag/<slug>/`
-  - 搜索页：`/search/?q=...`，默认不进 Sitemap。
-  - 旧 slug：保持 301 到当前文章详情。
-  - canonical：默认使用当前站点绝对 URL + 标准路径，允许 SeoMetadata 覆盖。
-  - 多语言：MVP 不做。
-  - www / non-www：MVP 不在应用层强制，生产由反向代理或域名配置统一。
-  - http / https：开发用 http，生产由 `SECURE_PROXY_SSL_HEADER` 和代理负责 https。
-- 补充每类页面是否进入 Sitemap、是否输出 JSON-LD、是否允许 robots noindex。
+本产品不是传统 SEO 检查器。
 
-#### 验收标准
+传统 SEO 工具只告诉用户：
 
-- 文档清楚描述所有页面类型和 canonical 策略。
-- T02、T04、T01.5 可以直接引用这些规则，不再自行决策。
+```text
+标题太短
+缺少关键词
+没有内链
+```
 
-#### 测试方案
+本系统要做到：
 
-- 文档任务无需新增代码测试。
-- 执行：
-  - `docker compose exec -T web python manage.py check`
-  - `docker compose exec -T web python manage.py test`
+```text
+AI 直接进入编辑器，给出可采纳、可拒绝、可追踪来源的修改方案。
+```
 
----
+产品定位：
 
-### T01 - SEO 内容数据模型扩展
+```text
+AI Native CMS + SEO Publishing Workflow
+AI 原生内容发布基础设施
+```
 
-状态：`TODO`  
-目标：补齐文章 SEO 发布所需的结构化数据底座，并避免未来标签和 SEO 字段迁移痛点。  
-依赖：T00
+## 4. 总体架构
 
-#### 实现内容
+### 4.1 三端分工
 
-- 扩展 `Article`：
-  - `summary`：文章摘要，允许为空。
-  - `tags`：改为 `ManyToManyField(Tag, blank=True)`，不使用逗号字符串存储。
-- 新增 `Tag`：
-  - `name`：唯一，最大 64。
-  - `slug`：唯一，最大 80。
-  - `created_at`、`updated_at`。
-  - 后台支持按名称搜索。
-- 调整 `ArticleRevision`：
-  - 记录 `summary_snapshot`。
-  - 记录 `tags_snapshot`，使用文本快照保存当时标签名。
-- 新增 `SeoMetadata`：
-  - `article`：一对一关联 Article。
-  - `meta_title`、`meta_description`。
-  - `canonical_url`：人工覆盖用，允许为空。
-  - `og_title`、`og_description`、`og_image`。
-  - `robots`：默认 `index,follow`。
-  - `created_at`、`updated_at`。
-- 扩展 `ImageItem`：
-  - `alt_text`：图片 Alt 文本。
-  - `caption`：图片说明。
-- 新增 `FaqItem`：
-  - `article`、`question`、`answer`、`sort_order`、`is_active`。
-  - `source_type`：manual、ai、imported。
-  - `source_suggestion`：可为空，关联 AiSuggestion，后续 T07 接入。
-  - `created_by_ai`、`reviewed_by`、`reviewed_at`。
-- 更新 Admin：
-  - Article 编辑页显示 summary、tags。
-  - SEO 字段放在 SeoMetadata inline 中。
-  - FAQ 使用 inline 管理。
-  - ImageItem 显示 alt_text、caption。
-- 新增迁移。
+| 系统 | 角色 | 职责 |
+| --- | --- | --- |
+| Django CMS | 业务真相源 | 文章、权限、发布、SEO 渲染、API、数据落库 |
+| FastAPI AI/RAG Service | AI 大脑 | LangGraph、RAG、硅基流动模型调用、建议生成、Patch 生成 |
+| Next.js Studio | 运营工作台 | 写文章、TipTap 编辑、AI Diff、Accept/Reject、发布检查、数据面板 |
+| PostgreSQL + pgvector | 数据底座 | 业务数据、SEO 数据、AI 建议、知识切片、向量、监控快照 |
+| Redis + Worker | 异步任务 | RAG 重建、Embedding、AI 审核、监控同步 |
 
-#### 验收标准
+一句话架构原则：
 
-- 后台能维护 Article summary 和结构化 tags。
-- 后台能维护 SeoMetadata，不把 meta_title 放在 Article 本体。
-- 后台能维护 FAQ，并看到 FAQ 来源和审核信息。
-- 旧文章不需要手工补字段即可正常打开。
-- 所有新增字段允许空值，不破坏现有数据。
+```text
+Django 是业务真相
+FastAPI 是 AI 大脑
+Next.js 是编辑体验
+PostgreSQL 是统一数据底座
+```
 
-#### 测试方案
+### 4.2 总体架构图
 
-- 模型测试：
-  - Tag name/slug 唯一。
-  - Article 可关联多个 Tag。
-  - SeoMetadata 与 Article 一对一。
-  - FAQ 只属于指定文章。
-  - ImageItem alt_text 可保存。
-  - 旧文章无 SeoMetadata 时不报错。
-- 执行：
-  - `docker compose exec -T web python manage.py makemigrations --check --dry-run`
-  - `docker compose exec -T web python manage.py migrate`
-  - `docker compose exec -T web python manage.py test`
+```text
+┌────────────────────────────────────────────┐
+│              Next.js Studio                 │
+│                                            │
+│  - 文章编辑器                              │
+│  - TipTap 富文本编辑                       │
+│  - AI Diff 绿色新增/红色删除               │
+│  - Accept / Reject                         │
+│  - 发布前检查                              │
+│  - SEO 监控面板                            │
+└──────────────────────┬─────────────────────┘
+                       │
+                       │ REST API
+                       ▼
+┌────────────────────────────────────────────┐
+│                Django CMS                   │
+│                                            │
+│  - Article / FAQ / Tags                     │
+│  - SeoMetadata                              │
+│  - AiReviewRun / AiSuggestion / AiPatch     │
+│  - 权限控制                                 │
+│  - 发布状态                                 │
+│  - SEO HTML 渲染                            │
+│  - Sitemap / Canonical / JSON-LD            │
+└──────────────────────┬─────────────────────┘
+                       │
+                       │ Internal API
+                       ▼
+┌────────────────────────────────────────────┐
+│          FastAPI AI/RAG Service             │
+│                                            │
+│  - LangGraph 工作流                         │
+│  - RAG 检索                                 │
+│  - FAQ 生成                                 │
+│  - 内链推荐                                 │
+│  - 正文审核                                 │
+│  - Patch 生成                               │
+│  - Prompt 版本管理                          │
+└──────────────────────┬─────────────────────┘
+                       │
+                       ▼
+┌────────────────────────────────────────────┐
+│          PostgreSQL + pgvector              │
+│                                            │
+│  - 内容数据                                 │
+│  - SEO 数据                                 │
+│  - AI 建议数据                              │
+│  - Knowledge Chunks                         │
+│  - Embeddings                               │
+│  - Analytics Snapshot                       │
+└────────────────────────────────────────────┘
+```
 
----
+### 4.3 当前仓库到目标架构的迁移原则
 
-### T01.5 - SEO Context Contract
+| 当前事实 | 目标变化 |
+| --- | --- |
+| `Article.body` 是 CKEditor HTML | 增加 `content_json` 和 `content_html`，保留 `body` 作为兼容字段直到迁移完成 |
+| Django Admin 是主要工作台 | 保留给超级管理员，新增 Next.js Studio 给运营使用 |
+| SEO 字段混在 Article | 拆到 `SeoMetadata`，模板只消费 `seo_context` |
+| 没有结构化 Tag | 新增 `Tag`，Article 使用 ManyToMany |
+| 没有 RAG | 新增 `KnowledgeSource`、`KnowledgeChunk`、pgvector |
+| 没有 AI 审核 | 新增 `AiReviewRun`、`AiSuggestion`、`AiPatch` |
+| 没有独立 AI 服务 | 新增 `ai_service/` FastAPI + LangGraph |
+| 没有前端 Studio | 新增 `editor-web/` Next.js + TipTap |
 
-状态：`TODO`  
-目标：定义统一 SEO Context，所有模板只消费结构化结果，不在模板里散落判断逻辑。  
-依赖：T00、T01
+## 5. 系统职责边界
 
-#### 实现内容
+### 5.1 Django CMS 职责
 
-- 新增 `build_article_seo_context(article, request)`。
-- 返回结构必须固定：
+Django 继续作为主系统，负责所有核心业务数据和最终发布逻辑。
+
+| 模块 | 职责 |
+| --- | --- |
+| 内容管理 | Article、Category、Tag、FAQ、MediaAsset |
+| SEO 管理 | SeoMetadata、SEO Context、Schema、OG、Canonical |
+| AI 审核记录 | AiReviewRun、AiSuggestion、AiPatch 状态流转 |
+| 权限控制 | 用户、角色、文章权限、建议审核权限 |
+| 发布控制 | 草稿、发布、归档、定时发布、发布前检查 |
+| 页面渲染 | 公开文章页、分类页、标签页、Sitemap |
+| API | 对 Next.js 暴露 REST API，对 FastAPI 调用内部 API |
+| 审计 | 文章版本快照、建议采纳记录、Prompt 版本 |
+
+Django 不负责复杂 AI 推理，不在 Django 内实现 LangGraph、多步骤 RAG 编排或大模型 Patch 生成。
+
+### 5.2 FastAPI AI/RAG Service 职责
+
+FastAPI 是独立 AI 服务，只负责 AI 智能计算。
+
+| 模块 | 职责 |
+| --- | --- |
+| LangGraph | 编排文章审核、metadata、FAQ、内链、Patch 工作流 |
+| RAG | 检索公司已有文章、FAQ、产品页、术语库、SEO 规则 |
+| Provider | 调用硅基流动 Chat、Embedding、Rerank API |
+| Prompt | Prompt 模板、版本、变量注入、输出约束 |
+| Patch | 生成结构化正文修改建议，验证可应用性 |
+| 输出验证 | JSON Schema 校验、来源引用校验、安全校验 |
+
+FastAPI 不直接发布文章，不修改文章状态，不绕过 Django 权限，不生成最终技术 SEO 标签。
+
+### 5.3 Next.js Studio 职责
+
+Next.js 是运营人员真正使用的内部工作台，不是公开前台页面。
+
+| 模块 | 职责 |
+| --- | --- |
+| 文章列表 | 查询、筛选、草稿、发布状态 |
+| 文章编辑 | Title、Summary、Slug、Tags、封面、正文 |
+| TipTap 编辑器 | 结构化富文本、blockId、content_json |
+| AI 审核 | 触发审核、查看运行状态、展示建议 |
+| Diff 体验 | 绿色新增、红色删除、替换展示 |
+| 建议处理 | Accept、Reject、编辑后接受 |
+| 发布前检查 | 展示 Error、Warning、Passed |
+| 数据监控 | 展示 GSC、GA4、站内指标、AI 采纳率 |
+
+Django Admin 保留给超级管理员，Next.js Studio 给日常运营使用。
+
+## 6. 硅基流动模型与安全配置
+
+### 6.1 配置原则
+
+- 明文 API Key 只能放在本地 `.env` 或部署平台 Secret 中。
+- 文档、Git、测试日志、PR 描述禁止出现真实 Key。
+- 如果 API Key 已在聊天、日志或公开渠道出现，必须在硅基流动控制台轮换。
+- 所有真实调用必须记录 `provider`、`model`、`prompt_version`、`trace_id`、`token_usage`。
+
+### 6.2 环境变量
+
+```env
+AI_PROVIDER=siliconflow
+AI_MOCK_ENABLED=true
+AI_PROMPT_VERSION=v1
+
+SILICONFLOW_BASE_URL=https://api.siliconflow.cn/v1
+SILICONFLOW_API_KEY=
+SILICONFLOW_CHAT_MODEL=Pro/zai-org/GLM-4.7
+SILICONFLOW_FAST_MODEL=Qwen/Qwen3-32B
+SILICONFLOW_EMBEDDING_MODEL=Qwen/Qwen3-Embedding-4B
+SILICONFLOW_EMBEDDING_DIMENSIONS=1536
+SILICONFLOW_RERANK_MODEL=BAAI/bge-reranker-v2-m3
+```
+
+### 6.3 官方接口依据
+
+| 能力 | 接口 | 文档 |
+| --- | --- | --- |
+| 模型列表 | `GET /v1/models` | [SiliconFlow List Models](https://docs.siliconflow.cn/en/api-reference/models/get-model-list) |
+| Chat | `POST /v1/chat/completions` | [SiliconFlow Chat Completions](https://docs.siliconflow.cn/en/api-reference/chat-completions/chat-completions) |
+| Embedding | `POST /v1/embeddings` | [SiliconFlow Create Embeddings](https://docs.siliconflow.cn/en/api-reference/embeddings/create-embeddings) |
+| Rerank | `POST /v1/rerank` | [SiliconFlow Create Rerank](https://docs.siliconflow.cn/en/api-reference/rerank/create-rerank) |
+
+官方文档说明模型会周期性上下线或能力调整，所以生产代码必须支持通过配置切换模型，并通过 `/v1/models` 做启动前或运维验证。
+
+### 6.4 配置验证命令
+
+```bash
+curl -sS \
+  -H "Authorization: Bearer $SILICONFLOW_API_KEY" \
+  "$SILICONFLOW_BASE_URL/models?sub_type=chat"
+
+curl -sS \
+  -H "Authorization: Bearer $SILICONFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"Qwen/Qwen3-Embedding-4B","input":"SEO 测试文本","dimensions":1536}' \
+  "$SILICONFLOW_BASE_URL/embeddings"
+
+curl -sS \
+  -H "Authorization: Bearer $SILICONFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"BAAI/bge-reranker-v2-m3","query":"SEO","documents":["SEO 内容优化","无关文本"],"top_n":2,"return_documents":true}' \
+  "$SILICONFLOW_BASE_URL/rerank"
+```
+
+## 7. 核心业务流程
+
+### 7.1 文章创建流程
+
+```text
+运营进入 Next.js Studio
+点击新建文章
+填写 Title / Summary / Content
+TipTap 生成 content_json 和 content_html
+Next.js 调用 Django API 保存草稿
+Django 创建 Article 和版本快照
+Django 返回文章 ID
+进入编辑器页面
+```
+
+### 7.2 AI 审核流程
+
+```text
+运营点击 AI 审核
+Next.js 调用 Django API
+Django 校验权限
+Django 创建 AiReviewRun
+Django 调用 FastAPI Internal API
+FastAPI 执行 LangGraph 工作流
+RAG 检索相关知识
+AI 生成 FAQ / 内链 / Patch / SEO 建议
+FastAPI 返回结构化结果
+Django 校验并落库 AiSuggestion / AiPatch
+Next.js 获取建议
+编辑器展示绿色新增 / 红色删除
+```
+
+### 7.3 接受 AI 建议流程
+
+```text
+运营点击 Accept
+Next.js 调用 Django API
+Django 校验权限、建议状态、content_hash
+Django 标记建议 accepted
+Next.js 在 TipTap 编辑器中 apply patch
+Next.js 保存最新 content_json / content_html
+Django 创建文章版本快照
+```
+
+### 7.4 拒绝 AI 建议流程
+
+```text
+运营点击 Reject
+Next.js 调用 Django API
+Django 校验权限
+Django 标记建议 rejected
+Next.js 移除该建议 Diff 展示
+正文保持不变
+```
+
+### 7.5 发布流程
+
+```text
+运营点击发布
+Next.js 调用 Django 发布前检查 API
+Django 检查 Title / Description / Slug / FAQ / Alt / Canonical / Schema / 未处理建议
+存在 Error 时阻止发布
+仅 Warning 时允许继续发布
+Django 生成 SEO Metadata / Schema / OG / JSON-LD / Sitemap
+Django 文章状态改为 published
+前台输出 SEO Optimized HTML
+```
+
+### 7.6 发布后监控流程
+
+```text
+定时任务拉取 GSC / GA4 / 站内事件
+Django 写入 AnalyticsSnapshot
+Next.js Studio 展示趋势
+系统识别低 CTR / 排名下降 / 高曝光低点击文章
+运营发起二次 AI 审核
+形成持续优化闭环
+```
+
+## 8. LangGraph AI 工作流
+
+### 8.1 Article Review Graph
+
+```text
+输入 article_id
+load_article_node
+clean_content_node
+retrieve_context_node
+seo_rule_check_node
+generate_metadata_node
+generate_faq_node
+recommend_internal_links_node
+generate_semantic_keywords_node
+generate_patch_node
+validate_patch_node
+final_response_node
+```
+
+### 8.2 节点职责
+
+| 节点 | 职责 |
+| --- | --- |
+| `load_article_node` | 从 Django Internal API 读取标题、摘要、正文、标签、分类 |
+| `clean_content_node` | 清洗 HTML 或 TipTap JSON，转换为 AI 可理解文本 |
+| `retrieve_context_node` | 从 pgvector 检索历史文章、FAQ、产品页、术语库 |
+| `seo_rule_check_node` | 规则检查标题、描述、FAQ、内链、Alt、TOC |
+| `generate_metadata_node` | 生成 Title、Meta Description、Slug、Tags 建议 |
+| `generate_faq_node` | 生成 FAQ 建议，并引用检索来源 |
+| `recommend_internal_links_node` | 推荐真实存在的站内文章链接 |
+| `generate_semantic_keywords_node` | 生成语义关键词和内容缺口 |
+| `generate_patch_node` | 生成正文新增、删除、替换建议 |
+| `validate_patch_node` | 验证 Patch 是否可应用，避免错位和无效修改 |
+| `final_response_node` | 统一输出 suggestions、patches、usage、trace |
+
+### 8.3 输出结构
+
+FastAPI 必须返回结构化 JSON：
+
+```json
+{
+  "review_run_id": "run_123",
+  "provider": "siliconflow",
+  "model": "Pro/zai-org/GLM-4.7",
+  "prompt_version": "v1",
+  "suggestions": [],
+  "patches": [],
+  "source_chunks": [],
+  "usage": {},
+  "trace_id": "..."
+}
+```
+
+Django 必须再次校验该 JSON，不可信任 AI 服务返回值直接入库。
+
+## 9. RAG 设计
+
+### 9.1 RAG 的作用
+
+RAG 不是为了聊天问答，而是让 AI 知道公司已有内容。
+
+AI 依赖 RAG 完成：
+
+| 能力 | 说明 |
+| --- | --- |
+| 真实内链 | 只能推荐已发布文章 |
+| 避免重复 | 发现已有相似内容 |
+| 业务一致 | 保持品牌、术语、服务表达一致 |
+| FAQ 生成 | 基于真实业务内容生成问答 |
+| 语义关键词 | 补充实体、场景、长尾词 |
+| 内容缺口 | 指出当前文章缺少的主题 |
+
+### 9.2 数据源
+
+第一阶段必须接入：
+
+| 来源 | 说明 |
+| --- | --- |
+| 已发布文章 | 主要 RAG 来源 |
+| 草稿文章 | 只在内部审核场景使用，不做内链候选 |
+| FAQ | FAQ 内容和问答表达 |
+| 分类页 | 栏目语义和聚合信息 |
+| 标签页 | 语义标签 |
+| 产品页 | 公司产品和服务信息 |
+| 服务页 | 业务能力信息 |
+| 品牌介绍 | 品牌表达和禁用说法 |
+| 案例页 | 场景和客户问题 |
+| 标准术语库 | 统一专有名词 |
+| 禁用词库 | 风控和合规 |
+| SEO 规则库 | 标题、描述、Schema、内链规则 |
+
+### 9.3 入库流程
+
+```text
+文章保存或发布
+触发 reindex 任务
+抽取 title / summary / content / tags / url
+清洗 HTML 或 TipTap JSON
+按标题和段落切块
+调用 SiliconFlow Embedding
+写入 KnowledgeChunk.embedding
+必要时调用 Rerank 优化召回结果
+存入 PostgreSQL + pgvector
+```
+
+### 9.4 KnowledgeChunk 结构
+
+```text
+KnowledgeChunk
+- id
+- source
+- source_type
+- source_id
+- title
+- url
+- chunk_text
+- chunk_hash
+- embedding
+- embedding_model
+- embedding_dimensions
+- metadata
+- is_active
+- created_at
+- updated_at
+```
+
+### 9.5 检索流程
+
+```text
+当前文章内容
+生成 query embedding
+pgvector Top-K 相似度检索
+过滤无效来源
+可选 rerank
+返回 source_chunks
+交给 LLM 生成建议
+```
+
+### 9.6 RAG 安全原则
+
+- 内链只能推荐真实存在的 Article。
+- 内链只能推荐已发布且已到发布时间的文章。
+- 内链不能推荐当前文章自己。
+- AI 不能编造 URL。
+- 每条建议必须返回推荐原因。
+- 每条建议必须保留来源 chunk id。
+- 内链和 FAQ 必须人工确认后生效。
+
+## 10. AI Diff 编辑器设计
+
+### 10.1 技术选型
+
+编辑器采用：
+
+```text
+TipTap + ProseMirror
+```
+
+原因：
+
+| 能力 | 价值 |
+| --- | --- |
+| 结构化文档 | 能保存 `content_json` |
+| blockId | Patch 可以定位到稳定块 |
+| Decoration | 可渲染绿色新增、红色删除 |
+| 自定义 Node | 支持 FAQ、Callout、图片、TOC |
+| 协同扩展 | 后续可接实时保存和协作 |
+
+### 10.2 内容存储
+
+文章正文不能只存 HTML。目标结构：
+
+```text
+content_json：TipTap 结构化文档，作为编辑真相
+content_html：发布渲染 HTML，由 content_json 生成
+body：旧 CKEditor 字段，迁移完成前作为兼容字段
+```
+
+每个 block 必须有唯一 `blockId`：
+
+```json
+{
+  "type": "paragraph",
+  "attrs": {
+    "blockId": "blk_1029"
+  },
+  "content": [
+    {
+      "type": "text",
+      "text": "SEO 是搜索引擎优化..."
+    }
+  ]
+}
+```
+
+### 10.3 Patch 协议
+
+新增内容：
+
+```json
+{
+  "operation": "insert_after",
+  "target_block_id": "blk_1029",
+  "new_block": {
+    "type": "paragraph",
+    "text": "建议补充：SEO 不仅影响搜索排名，也影响 AI 搜索结果中的引用概率。"
+  },
+  "reason": "当前段落缺少 AI 搜索场景说明。"
+}
+```
+
+删除内容：
+
+```json
+{
+  "operation": "delete",
+  "target_block_id": "blk_2031",
+  "old_text": "SEO非常非常非常重要。",
+  "reason": "表达重复，信息密度较低。"
+}
+```
+
+替换内容：
+
+```json
+{
+  "operation": "replace_text",
+  "target_block_id": "blk_3111",
+  "old_text": "SEO很重要",
+  "new_text": "SEO 是提升搜索曝光、点击率和页面转化的重要基础能力",
+  "reason": "原句过于笼统，建议改为更具体的表达。"
+}
+```
+
+### 10.4 展示与交互
+
+| Patch 类型 | 展示 |
+| --- | --- |
+| 新增 | 绿色背景，左侧 `+` 标识 |
+| 删除 | 红色背景，删除线，左侧 `-` 标识 |
+| 替换 | 红色旧内容和绿色新内容同时展示 |
+
+每条建议必须提供：
+
+| 操作 | 说明 |
+| --- | --- |
+| 接受 | 应用 patch 并保存 |
+| 拒绝 | 移除 diff，不改正文 |
+| 查看原因 | 展示 AI reason 和来源 chunk |
+| 编辑后接受 | 用户微调后保存为 accepted edited |
+
+## 11. 数据模型设计
+
+### 11.1 内容模型
+
+```text
+Article
+- id
+- title
+- summary
+- slug
+- content_json
+- content_html
+- body
+- status
+- published_at
+- updated_at
+- author
+- category
+- tags
+- cover_image
+```
+
+```text
+Tag
+- id
+- name
+- slug
+- created_at
+- updated_at
+```
+
+```text
+SeoMetadata
+- id
+- article
+- meta_title
+- meta_description
+- canonical_url
+- og_title
+- og_description
+- og_image
+- twitter_title
+- twitter_description
+- twitter_image
+- robots
+- created_at
+- updated_at
+```
+
+```text
+FaqItem
+- id
+- article
+- question
+- answer
+- sort_order
+- is_active
+- source_type
+- ai_suggestion_id
+- reviewed_by
+- reviewed_at
+```
+
+```text
+MediaAsset
+- id
+- file
+- alt_text
+- caption
+- source_type
+```
+
+### 11.2 AI 数据模型
+
+```text
+AiReviewRun
+- id
+- article
+- status
+- started_at
+- completed_at
+- provider
+- model
+- prompt_version
+- request_payload
+- response_payload
+- token_usage
+- trace_id
+- error_message
+```
+
+```text
+AiSuggestion
+- id
+- review_run
+- article
+- type
+- severity
+- title
+- reason
+- status
+- payload
+- source_chunks
+- provider
+- model
+- prompt_version
+- raw_response
+- created_at
+- updated_at
+- reviewed_by
+- reviewed_at
+```
+
+建议类型：
+
+| type | 说明 |
+| --- | --- |
+| `metadata` | SEO 标题、描述、slug 建议 |
+| `faq` | FAQ 建议 |
+| `internal_link` | 内链建议 |
+| `semantic_keyword` | 语义关键词建议 |
+| `body_insert` | 正文新增建议 |
+| `body_delete` | 正文删除建议 |
+| `body_replace` | 正文替换建议 |
+| `alt_text` | 图片 Alt 建议 |
+
+建议状态：
+
+| status | 说明 |
+| --- | --- |
+| `pending` | 待处理 |
+| `accepted` | 已接受 |
+| `rejected` | 已拒绝 |
+| `edited` | 编辑后接受 |
+| `expired` | 因正文变化过期 |
+| `failed` | 生成或校验失败 |
+
+```text
+AiPatch
+- id
+- suggestion
+- operation
+- target_block_id
+- old_text
+- new_text
+- position
+- patch_json
+- content_hash
+- status
+```
+
+### 11.3 RAG 数据模型
+
+```text
+KnowledgeSource
+- id
+- source_type
+- source_id
+- title
+- url
+- content_hash
+- is_active
+- last_indexed_at
+```
+
+```text
+KnowledgeChunk
+- id
+- source
+- chunk_text
+- chunk_hash
+- embedding
+- embedding_model
+- embedding_dimensions
+- metadata
+- is_active
+- created_at
+- updated_at
+```
+
+### 11.4 监控数据模型
+
+```text
+AnalyticsSnapshot
+- id
+- article
+- date
+- impressions
+- clicks
+- ctr
+- average_position
+- indexed
+- pageviews
+- avg_time_on_page
+- internal_link_clicks
+- faq_expands
+- ai_acceptance_rate
+- source
+- raw_payload
+```
+
+## 12. API 设计
+
+### 12.1 Next.js 调用 Django API
+
+文章：
+
+```text
+GET    /api/articles/
+POST   /api/articles/
+GET    /api/articles/{id}/
+PATCH  /api/articles/{id}/
+POST   /api/articles/{id}/publish/
+POST   /api/articles/{id}/preview/
+POST   /api/articles/{id}/seo-check/
+```
+
+AI 审核：
+
+```text
+POST   /api/articles/{id}/ai-review/
+GET    /api/articles/{id}/ai-review-runs/
+GET    /api/ai-review-runs/{run_id}/suggestions/
+POST   /api/ai-suggestions/{id}/accept/
+POST   /api/ai-suggestions/{id}/reject/
+POST   /api/ai-patches/{id}/apply/
+```
+
+FAQ：
+
+```text
+GET    /api/articles/{id}/faqs/
+POST   /api/articles/{id}/faqs/
+PATCH  /api/faqs/{id}/
+DELETE /api/faqs/{id}/
+```
+
+媒体：
+
+```text
+POST   /api/media/upload/
+PATCH  /api/media/{id}/alt/
+POST   /api/media/{id}/generate-alt/
+```
+
+监控：
+
+```text
+GET    /api/articles/{id}/analytics/
+GET    /api/dashboard/seo-summary/
+GET    /api/dashboard/ai-suggestion-summary/
+```
+
+### 12.2 Django 调用 FastAPI 内部接口
+
+FastAPI 不直接暴露给浏览器。
+
+```text
+POST /internal/ai/review-article
+POST /internal/ai/generate-metadata
+POST /internal/ai/generate-faq
+POST /internal/ai/recommend-internal-links
+POST /internal/ai/generate-alt
+POST /internal/ai/generate-patches
+POST /internal/rag/reindex-article
+POST /internal/rag/search
+GET  /health
+```
+
+内部接口必须使用服务间密钥或内网访问控制，所有请求带 `X-Internal-Token`。
+
+## 13. SEO 技术输出设计
+
+### 13.1 发布时自动生成
+
+| 输出 | 生成位置 |
+| --- | --- |
+| Meta Title | Django `seo_context` |
+| Meta Description | Django `seo_context` |
+| Canonical | Django 统一规则 |
+| OG Tags | Django `seo_context` |
+| Twitter Card | Django `seo_context` |
+| Article Schema | Django Schema Builder |
+| FAQ Schema | Django Schema Builder |
+| Breadcrumb Schema | Django Schema Builder |
+| Image Alt | MediaAsset / fallback |
+| TOC | Django TOC Service |
+| Sitemap | Django Sitemap |
+| Robots | SeoMetadata |
+| JSON-LD | Python dict 序列化 |
+
+### 13.2 SEO Context Contract
+
+Django 统一实现：
+
+```python
+build_article_seo_context(article, request)
+```
+
+返回结构：
 
 ```python
 {
@@ -244,879 +1006,550 @@ docker compose exec -T web python manage.py rag_query "测试查询" --limit 5
         "url": "...",
         "type": "article",
     },
+    "twitter": {
+        "card": "summary_large_image",
+        "title": "...",
+        "description": "...",
+        "image": "...",
+    },
     "json_ld": [],
     "breadcrumbs": [],
 }
 ```
 
-- 字段优先级：
-  - title：`SeoMetadata.meta_title` > `Article.title`
-  - description：`SeoMetadata.meta_description` > `Article.meta_description` > `Article.summary` > 正文截断
-  - canonical：`SeoMetadata.canonical_url` > request 绝对地址 + `article.get_absolute_url()`
-  - og title：`SeoMetadata.og_title` > SEO title
-  - og description：`SeoMetadata.og_description` > SEO description
-  - og image：`SeoMetadata.og_image` > `Article.cover_image`
-- 模板只输出 `seo_context`，不直接判断 Article/SeoMetadata 字段。
-
-#### 验收标准
-
-- Article 详情页上下文中存在 `seo_context`。
-- 模板不再自行拼 canonical。
-- SeoMetadata 缺失时 fallback 正常。
-
-#### 测试方案
-
-- 服务测试：
-  - 无 SeoMetadata 时 fallback 正确。
-  - 有 SeoMetadata 时优先使用 SEO 字段。
-  - canonical override 生效。
-  - 封面图 fallback 到 og image。
-- 执行：
-  - `docker compose exec -T web python manage.py test`
-
----
-
-### T02 - 技术 SEO 输出引擎
-
-状态：`TODO`  
-目标：文章详情页自动输出标准 SEO HTML 头部和 JSON-LD。  
-依赖：T01.5
-
-#### 实现内容
-
-- 基于 `seo_context` 更新 `base.html` 和文章详情模板。
-- 输出：
-  - `<title>`
-  - `meta description`
-  - `meta robots`
-  - `link rel="canonical"`
-  - `og:title`
-  - `og:description`
-  - `og:image`
-  - `og:url`
-  - `og:type`
-  - `application/ld+json`
-- JSON-LD 使用规则生成：
-  - Article Schema。
-  - Breadcrumb Schema。
-  - FAQ Schema，存在启用 FAQ 时输出。
-- JSON-LD 必须通过 Python 结构序列化，禁止拼接 JSON 字符串。
-
-#### 验收标准
-
-- 文章详情页 HTML 包含标准 SEO 输出。
-- 草稿、归档、未来发布文章仍不可访问。
-- 旧 slug 仍 301 到新 slug。
-- FAQ Schema 与启用 FAQ 一致。
-
-#### 测试方案
-
-- 详情页测试：
-  - 无 SEO 字段时使用 fallback。
-  - 有 SEO 字段时使用显式字段。
-  - 有 FAQ 时输出 FAQ JSON-LD。
-  - 有封面图时输出 og:image。
-  - JSON-LD 可被 `json.loads` 解析。
-- 执行：
-  - `docker compose exec -T web python manage.py test`
-  - `curl -s http://127.0.0.1:8001/<article-slug>/ | grep -E "canonical|og:title|application/ld\\+json"`
-
----
-
-### T03 - TOC 自动目录
-
-状态：`TODO`  
-目标：根据正文 H2/H3 自动生成目录和稳定锚点。  
-依赖：T02
-
-#### 实现内容
-
-- 新增正文解析服务：
-  - 从 HTML 正文提取 H2/H3。
-  - 为缺少 `id` 的标题生成稳定锚点。
-  - 重复标题生成唯一锚点。
-  - 返回 TOC 数据和带锚点正文。
-- 文章详情页展示 TOC。
-- 目录仅在至少存在 2 个标题时展示。
-
-#### 验收标准
-
-- 正文包含多个 H2/H3 时详情页出现目录。
-- 点击目录锚点能跳转到对应标题。
-- 没有 H2/H3 的文章不展示空目录。
-- 目录生成不破坏正文。
-
-#### 测试方案
-
-- 服务测试：
-  - 能提取 H2/H3。
-  - 重复标题生成唯一锚点。
-  - 已有 id 不被覆盖。
-- 页面测试：
-  - 有标题时出现 TOC。
-  - 无标题时不出现 TOC。
-- 执行：
-  - `docker compose exec -T web python manage.py test`
-
----
-
-### T04 - Sitemap 输出
-
-状态：`TODO`  
-目标：搜索引擎能发现首页、已发布文章、分类页和标签页。  
-依赖：T00、T01、T02
-
-#### 实现内容
-
-- 使用 Django sitemap 框架或自定义 XML View。
-- 输出：
-  - 首页。
-  - 已发布且已到发布时间的文章详情页。
-  - 分类页。
-  - 标签页。
-- 不输出：
-  - 草稿文章。
-  - 归档文章。
-  - 未来发布时间文章。
-  - 搜索结果页。
-- 在 `config.urls` 暴露 `/sitemap.xml`。
-
-#### 验收标准
-
-- `GET /sitemap.xml` 返回 XML。
-- XML 包含已发布文章 URL。
-- XML 包含分类和标签 URL。
-- XML 不包含草稿和未来发布文章 URL。
-- 文章 `lastmod` 使用 `updated_at`。
-
-#### 测试方案
-
-- Sitemap 测试：
-  - 已发布文章存在。
-  - 草稿不存在。
-  - 未来发布文章不存在。
-  - 分类和标签存在。
-- 执行：
-  - `docker compose exec -T web python manage.py test`
-  - `curl -I http://127.0.0.1:8001/sitemap.xml`
-
----
-
-### T05 - 图片 Alt 发布闭环
-
-状态：`TODO`  
-目标：封面图和媒体库图片具备可维护 Alt，并在前台输出。  
-依赖：T01
-
-#### 实现内容
-
-- 文章列表和详情页封面图 alt 优先使用 `ImageItem.alt_text`，否则使用文章标题。
-- 后台图片库显示并可编辑 alt_text、caption。
-- 预留 AI 生成 Alt 的 AiSuggestion 类型，不在本任务接 Vision。
-
-#### 验收标准
-
-- 有 alt_text 时前台图片输出该值。
-- 无 alt_text 时 fallback 到文章标题。
-- 后台能编辑 alt_text。
-
-#### 测试方案
-
-- 模板响应测试：
-  - 有 alt_text 时 HTML 包含对应 alt。
-  - 无 alt_text 时 HTML 包含文章标题 alt。
-- 执行：
-  - `docker compose exec -T web python manage.py test`
-
----
-
-### T06 - Basic SEO Checklist
-
-状态：`TODO`  
-目标：在 M1 提前提供基础 SEO 检查，辅助演示和验收无 AI 发布闭环。  
-依赖：T01、T01.5、T02、T05
-
-#### 实现内容
-
-- 新增基础 SEO 检查服务：
-  - title 是否存在。
-  - description 是否可生成。
-  - slug 是否存在。
-  - canonical 是否可生成。
-  - robots 是否存在。
-  - 封面图 Alt 是否存在。
-  - 是否至少有一个 Tag。
-  - 是否至少有一个启用 FAQ。
-- 后台文章页展示检查结果。
-- 检查结果只提示，不阻塞保存或发布。
-
-#### 验收标准
-
-- 完整文章显示通过项。
-- 缺失 SEO 字段显示明确提示。
-- 检查不影响草稿保存。
-
-#### 测试方案
-
-- 服务测试：
-  - 空文章返回缺失项。
-  - 完整文章返回通过项。
-  - SeoMetadata 缺失时能使用 fallback 检查。
-- 执行：
-  - `docker compose exec -T web python manage.py test`
-
----
-
-### T07 - RAG 基础设施与 pgvector
-
-状态：`TODO`  
-目标：建立后端 RAG 知识库基础设施，支持历史文章、FAQ、分类和标签进入向量检索。  
-依赖：T01
-
-#### 实现内容
-
-- Docker 与依赖：
-  - 将 `docker-compose.yml` 的数据库镜像从 `postgres:15-alpine` 调整为 `pgvector/pgvector:pg15`。
-  - 新增 Python 依赖 `pgvector`。
-  - 新增迁移启用 `VectorExtension()`。
-- 配置项：
-  - `EMBEDDING_PROVIDER=mock`
-  - `EMBEDDING_MODEL=text-embedding-3-small`
-  - `EMBEDDING_DIMENSIONS=1536`
-  - `OPENAI_API_KEY=` 允许为空。
-- 新增 `apps.knowledge_base`：
-  - `KnowledgeDocument`：source_type、source_model、source_object_id、source_url、title、status、content_hash、last_indexed_at、metadata。
-  - `KnowledgeChunk`：document、chunk_index、text、token_count、content_hash、embedding、embedding_model、embedding_provider、embedded_at、metadata。
-- Embedding 字段：
-  - 使用 `VectorField(dimensions=1536)`。
-  - 默认 Mock Embedding 维度同样为 1536。
-- 索引策略：
-  - MVP 先用精确 cosine distance 查询。
-  - 数据量上来后再加 HNSW/IVFFlat 索引。
-- 新增管理命令：
-  - `rebuild_knowledge_index --dry-run`
-  - `rebuild_knowledge_index --source article`
-  - `embed_pending_chunks`
-  - `rag_query "<query>" --limit 5`
-
-#### 验收标准
-
-- 数据库启用 `vector` 扩展。
-- 能从已发布文章生成 KnowledgeDocument 和 KnowledgeChunk。
-- 草稿、归档、未来发布文章不进入可检索知识库。
-- Mock Embedding 不依赖外网。
-- `rag_query` 能返回相关 chunk 和来源文章。
-
-#### 测试方案
-
-- 模型测试：
-  - KnowledgeDocument 能关联文章来源。
-  - KnowledgeChunk embedding 维度为 1536。
-  - content_hash 相同时不重复生成 chunk。
-- 命令测试：
-  - dry-run 不写库。
-  - rebuild 只索引已发布文章。
-  - rag_query 返回 limit 内结果。
-- 执行：
-  - `docker compose down`
-  - `docker compose up -d --build`
-  - `docker compose exec -T web python manage.py migrate`
-  - `docker compose exec -T web python manage.py rebuild_knowledge_index --dry-run`
-  - `docker compose exec -T web python manage.py test`
-
----
-
-### T08 - RAG 内容抽取、切块与同步策略
-
-状态：`TODO`  
-目标：让 RAG 知识库可持续跟随 CMS 内容变化，而不是一次性脚本。  
-依赖：T07
-
-#### 实现内容
-
-- 新增内容抽取服务：
-  - Article：title、summary、正文纯文本、分类、标签、FAQ。
-  - Category：名称、SEO 描述、层级。
-  - Tag：名称、slug。
-  - FAQ：question、answer、关联文章。
-- 新增 HTML 清洗：
-  - 移除 script/style。
-  - 保留语义文本。
-  - 保留标题层级作为 metadata。
-- 新增切块策略：
-  - 每个 chunk 目标 500 到 900 中文字符。
-  - 保留 chunk_index 和上下文标题。
-  - 不跨文章混切。
-- 新增同步策略：
-  - Article 保存后标记知识文档需要重建。
-  - FAQ、Tag、Category 变化后标记相关文章需要重建。
-  - MVP 不做异步队列，由管理命令处理 pending 状态。
-
-#### 验收标准
-
-- 已发布文章更新后，相关 KnowledgeDocument 标记为 stale 或 pending。
-- 重新索引后 chunk 内容反映最新正文。
-- script/style 不进入 chunk。
-- FAQ 内容可以被检索到，并带回来源文章。
-
-#### 测试方案
-
-- 服务测试：
-  - HTML 清洗移除危险标签。
-  - 切块不产生空 chunk。
-  - FAQ 被纳入文章知识文本。
-  - 内容变化会改变 content_hash。
-- 命令测试：
-  - pending 文档可被重新嵌入。
-- 执行：
-  - `docker compose exec -T web python manage.py test`
-  - `docker compose exec -T web python manage.py rebuild_knowledge_index --source article`
-
----
-
-### T09 - RAG 检索服务与引用约束
-
-状态：`TODO`  
-目标：为 FAQ、标签、描述和内链建议提供可引用、可追踪的检索结果。  
-依赖：T07、T08
-
-#### 实现内容
-
-- 新增 `retrieve_context(query, filters=None, limit=5)`。
-- 返回结构固定：
-
-```python
-{
-    "query": "...",
-    "results": [
-        {
-            "chunk_id": 1,
-            "document_id": 1,
-            "source_type": "article",
-            "source_object_id": 1,
-            "title": "...",
-            "url": "...",
-            "text": "...",
-            "score": 0.87,
-            "metadata": {},
-        }
-    ],
-}
+模板只负责渲染 `seo_context`，不在模板里散落字段优先级判断。
+
+### 13.3 页面类型规则
+
+| 页面 | URL | Sitemap | JSON-LD | Robots |
+| --- | --- | --- | --- | --- |
+| 首页 | `/` | 是 | WebSite | index |
+| 文章详情 | `/<slug>/` | 是 | Article / FAQ / Breadcrumb | index |
+| 分类页 | `/category/<slug>/` | 是 | Breadcrumb | index |
+| 标签页 | `/tag/<slug>/` | 是 | Breadcrumb | index |
+| 搜索页 | `/search/?q=...` | 否 | 否 | noindex |
+| 旧 slug | 历史路径 | 否 | 否 | 301 |
+
+## 14. 发布前检查
+
+### 14.1 检查项
+
+| 检查项 | 等级 |
+| --- | --- |
+| 标题是否存在 | Error |
+| Slug 是否存在且唯一 | Error |
+| 正文是否存在 | Error |
+| Canonical 是否可生成 | Error |
+| Meta Description 是否存在或可生成 | Warning |
+| Summary 是否存在 | Warning |
+| 是否有 FAQ | Warning |
+| 是否有内链 | Warning |
+| 封面图是否有 Alt | Warning |
+| 是否生成 Schema | Error |
+| 是否生成 TOC | Warning |
+| 是否存在未处理 AI 建议 | Warning |
+
+### 14.2 结果等级
+
+| 等级 | 含义 | 是否阻止发布 |
+| --- | --- | --- |
+| `Error` | 严重问题 | 阻止 |
+| `Warning` | 建议修复 | 不阻止 |
+| `Passed` | 已通过 | 不阻止 |
+
+## 15. 发布后监控
+
+### 15.1 数据来源
+
+| 来源 | 指标 |
+| --- | --- |
+| Google Search Console | impressions、clicks、ctr、average_position、indexed |
+| GA4 | pageviews、avg_time_on_page、traffic_source |
+| 站内事件 | internal_link_clicks、faq_expands |
+| AI 审核数据 | ai_acceptance_rate、suggestion_type_stats |
+
+### 15.2 监控面板
+
+Next.js Studio 必须提供：
+
+| 面板 | 能力 |
+| --- | --- |
+| SEO 总览 | 曝光、点击、CTR、平均排名趋势 |
+| 文章表现 | 单篇文章趋势、收录状态、流量来源 |
+| 内容机会 | 高曝光低 CTR、排名下降、缺 FAQ、缺内链 |
+| AI 效果 | 建议生成量、采纳率、拒绝原因、类型分布 |
+| 再优化入口 | 对低表现文章一键发起新一轮 AI 审核 |
+
+## 16. 技术栈
+
+### 16.1 前端
+
+| 技术 | 用途 |
+| --- | --- |
+| Next.js | Studio 应用 |
+| TypeScript | 类型安全 |
+| TipTap | 富文本编辑器 |
+| ProseMirror | 文档模型和 Decoration |
+| Tailwind CSS | 样式系统 |
+| shadcn/ui | 基础组件 |
+| TanStack Query | 服务端状态 |
+| Zustand | 编辑器本地状态 |
+
+### 16.2 Django 主后端
+
+| 技术 | 用途 |
+| --- | --- |
+| Django | CMS 主系统 |
+| Django REST Framework | API |
+| PostgreSQL | 主数据库 |
+| pgvector | 向量检索 |
+| Celery | 异步任务 |
+| Redis | 缓存和队列 |
+| django-ckeditor | 旧内容兼容 |
+
+### 16.3 FastAPI AI Service
+
+| 技术 | 用途 |
+| --- | --- |
+| FastAPI | AI 服务 |
+| LangGraph | AI 工作流 |
+| Pydantic | 请求和响应校验 |
+| httpx | 调用 Django 和硅基流动 |
+| LlamaIndex | 可选 RAG 工具层 |
+| pytest | 服务测试 |
+
+### 16.4 AI 与 RAG
+
+| 能力 | 默认选择 |
+| --- | --- |
+| Chat Provider | SiliconFlow |
+| Chat Model | `Pro/zai-org/GLM-4.7` |
+| Fast Model | `Qwen/Qwen3-32B` |
+| Embedding | `Qwen/Qwen3-Embedding-4B` |
+| Embedding 维度 | `1536` |
+| Rerank | `BAAI/bge-reranker-v2-m3` |
+| Vector DB | PostgreSQL + pgvector |
+
+### 16.5 部署
+
+第一阶段使用 Docker Compose：
+
+| 服务 | 端口 | 说明 |
+| --- | --- | --- |
+| `web` | 8001 | Django |
+| `ai-service` | 8002 | FastAPI |
+| `editor-web` | 3000 | Next.js |
+| `db` | 5432 | PostgreSQL + pgvector |
+| `redis` | 6379 | Redis |
+| `worker` | 无 | Celery Worker |
+
+后期可迁移到 Kubernetes、ECS、Railway、Render 或 Fly.io。
+
+## 17. 推荐目录结构
+
+### 17.1 Django
+
+```text
+apps/simple_cms/
+├── models.py
+├── serializers.py
+├── views.py
+├── urls.py
+├── admin.py
+├── services/
+│   ├── seo_context.py
+│   ├── schema_builder.py
+│   ├── sitemap_builder.py
+│   ├── ai_client.py
+│   ├── suggestion_service.py
+│   ├── patch_service.py
+│   └── publish_service.py
+├── tasks.py
+└── tests/
 ```
 
-- 支持过滤：
-  - source_type。
-  - category。
-  - tag。
-  - published_only。
-- 内链场景必须把返回结果映射回真实 Article。
-- FAQ 和 metadata 场景必须保存使用过的 chunk ids。
-- 无检索结果时返回空列表，不让 AI 编造来源。
-
-#### 验收标准
-
-- 检索服务能按 query 返回相关 chunk。
-- filters 能限制来源范围。
-- 返回结果包含可追踪 source_object_id。
-- 无结果时 AI 建议服务能明确知道“证据不足”。
-
-#### 测试方案
-
-- 服务测试：
-  - limit 生效。
-  - published_only 生效。
-  - category/tag filter 生效。
-  - 无结果返回空列表。
-- 执行：
-  - `docker compose exec -T web python manage.py test`
-  - `docker compose exec -T web python manage.py rag_query "FAQ Schema" --limit 5`
-
----
-
-### T10 - AI 建议数据闭环
-
-状态：`TODO`  
-目标：建立 AI 生成内容的统一记录、审核、采纳、拒绝机制。  
-依赖：T01、T09
-
-#### 实现内容
-
-- 新增 `AiSuggestion`：
-  - `article`
-  - `suggestion_type`：metadata、tags、faq、internal_link、body_add、body_delete、body_replace、alt_text。
-  - `status`：pending、accepted、rejected、failed。
-  - `old_text`、`new_text`、`reason`、`error_message`。
-  - `payload = JSONField(default=dict, blank=True)`。
-  - `retrieval_payload = JSONField(default=dict, blank=True)`，保存 RAG query、chunk ids、scores。
-  - `provider`、`model_name`、`prompt_version`。
-  - `raw_response = JSONField(default=dict, blank=True)`。
-  - `token_usage = JSONField(default=dict, blank=True)`。
-  - `created_at`、`updated_at`、`reviewed_by`、`reviewed_at`。
-- 接受规则：
-  - metadata 建议写入 SeoMetadata。
-  - tags 建议创建或关联 Tag。
-  - FAQ 建议创建启用 FaqItem，并设置 source_suggestion。
-  - internal_link 建议创建或更新 InternalLinkSuggestion。
-  - 正文 diff 类建议 MVP 只记录，不自动改正文。
-- 已接受或已拒绝建议不能重复处理。
-
-#### 验收标准
-
-- AI 建议能创建、接受、拒绝。
-- payload 能承载不同类型结构。
-- 接受 metadata/tags/FAQ 后业务数据正确变化。
-- 所有建议保留 provider、model、prompt_version、raw_response。
-- 正文类建议不会自动修改正文。
-
-#### 测试方案
-
-- 服务测试：
-  - 接受 metadata 建议更新 SeoMetadata。
-  - 接受 tags 建议创建并关联 Tag。
-  - 接受 FAQ 建议创建 FaqItem。
-  - 重复接受被阻止。
-  - 拒绝后状态正确。
-- 执行：
-  - `docker compose exec -T web python manage.py test`
-
----
-
-### T11 - AI Provider 与 Prompt 版本管理
-
-状态：`TODO`  
-目标：打通 AI 调用边界和 Prompt 版本追踪，让 Mock、OpenAI、Anthropic 可替换。  
-依赖：T09、T10
-
-#### 实现内容
-
-- 配置项：
-  - `AI_PROVIDER=mock`
-  - `AI_MODEL=mock-seo-assistant`
-  - `AI_PROMPT_VERSION=v1`
-  - `OPENAI_API_KEY=`
-- 新增 Provider 接口：
-  - `generate_metadata(article, retrieval_context)`
-  - `generate_tags(article, retrieval_context)`
-  - `generate_faq(article, retrieval_context)`
-  - `review_body(article, retrieval_context)`
-- Mock Provider：
-  - 返回稳定结构，测试可断言。
-  - 不调用外网。
-- OpenAI Provider：
-  - 只预留接口和配置位，本任务可不默认启用真实调用。
-  - 真实调用必须记录 prompt_version、raw_response、token_usage。
-- Prompt 文件：
-  - 存放在后端可版本化路径。
-  - 每次变更 prompt_version。
-
-#### 验收标准
-
-- Mock Provider 能生成 metadata、tags、FAQ、正文审核建议。
-- 服务层把 Provider 输出转为 AiSuggestion。
-- 缺少真实 API Key 不影响系统运行。
-- Prompt version 写入 AiSuggestion。
-
-#### 测试方案
-
-- Provider 测试：
-  - mock metadata 输出固定结构。
-  - mock tags 输出固定结构。
-  - mock FAQ 输出固定结构。
-  - 服务层把 mock 输出转为 AiSuggestion。
-- 执行：
-  - `docker compose exec -T web python manage.py test`
-
----
-
-### T12 - 内链推荐基础版
-
-状态：`TODO`  
-目标：基于真实已发布文章和 RAG 结果生成可审核的站内内链建议。  
-依赖：T09、T10
-
-#### 实现内容
-
-- 新增 `InternalLinkSuggestion`：
-  - `source_article`
-  - `target_article`
-  - `suggested_anchor_text`
-  - `suggested_context_text`
-  - `suggested_sentence`
-  - `position_hint`
-  - `reason`
-  - `status`：pending、accepted、rejected。
-  - `source_suggestion`：关联 AiSuggestion，可为空。
-  - `retrieval_payload`
-  - `created_at`、`updated_at`、`reviewed_by`、`reviewed_at`。
-- 推荐服务：
-  - 候选仅来自 `Article.objects.published()`。
-  - 排除当前文章。
-  - 优先用 RAG 检索相关已发布文章。
-  - fallback 使用标题、分类、标签、摘要关键词相关度。
-- 接受建议：
-  - 不自动改正文。
-  - 记录 accepted 状态。
-  - 给运营可复制的 `suggested_sentence`。
-
-#### 验收标准
-
-- 内链建议目标一定是已发布文章。
-- 不推荐当前文章自己。
-- 草稿、归档、未来发布文章不会作为目标。
-- 建议包含锚文本、插入位置提示和可复制句子。
-- 接受/拒绝状态可保存。
-
-#### 测试方案
-
-- 服务测试：
-  - 只返回已发布目标。
-  - 不返回当前文章。
-  - 无候选文章时返回空列表。
-  - suggested_sentence 不为空。
-- 模型测试：
-  - 状态流转可保存。
-- 执行：
-  - `docker compose exec -T web python manage.py test`
-
----
-
-### T13 - FAQ 正文与 Schema 闭环
-
-状态：`TODO`  
-目标：FAQ 被接受后既能在页面展示，也能进入 FAQ Schema，并能追踪来源建议。  
-依赖：T02、T10、T11
-
-#### 实现内容
-
-- 文章详情页在正文后展示启用 FAQ。
-- FAQ 顺序按 `sort_order`。
-- FAQ JSON-LD 只包含启用 FAQ。
-- 后台支持 FAQ 启用/停用和排序。
-- 接受 FAQ AI 建议时：
-  - 自动创建启用 FaqItem。
-  - 设置 `source_suggestion`。
-  - 设置 `created_by_ai=True`。
-  - 设置 reviewed_by、reviewed_at。
-
-#### 验收标准
-
-- 前台文章详情能看到 FAQ 模块。
-- FAQ JSON-LD 与页面展示 FAQ 一致。
-- 停用 FAQ 不展示，也不进入 JSON-LD。
-- FAQ 可追溯到 AiSuggestion。
-
-#### 测试方案
-
-- 详情页测试：
-  - 启用 FAQ 展示。
-  - 停用 FAQ 不展示。
-  - JSON-LD 只包含启用 FAQ。
-- 服务测试：
-  - 接受 FAQ 建议后 source_suggestion 正确。
-- 执行：
-  - `docker compose exec -T web python manage.py test`
-
----
-
-### T14 - 后台 AI 发布工作台 MVP
-
-状态：`TODO`  
-目标：让运营在 Django Admin 中完成生成建议、查看建议、接受和拒绝。  
-依赖：T10、T11、T12、T13
-
-#### 实现内容
-
-- Django Admin 只做 MVP 操作：
-  - 生成 metadata 建议。
-  - 生成 tags 建议。
-  - 生成 FAQ 建议。
-  - 生成内链建议。
-  - 查看建议列表。
-  - 接受单条建议。
-  - 拒绝单条建议。
-- 不在 Admin 做复杂正文 inline diff。
-- 建议列表显示：
-  - 类型、状态、摘要、理由、RAG 来源数量、Provider、Prompt 版本、操作按钮。
-- 所有操作必须：
-  - 仅管理员或有文章变更权限用户可用。
-  - 具备 CSRF 保护。
-  - 通过 `message_user` 返回结果。
-
-#### 验收标准
-
-- 管理员能在文章页触发 AI 建议生成。
-- 生成后能看到建议列表。
-- 单条建议能接受或拒绝。
-- 接受 metadata/tags/FAQ/内链建议后对应业务数据变化。
-- 未登录访问重定向。
-- 无权限用户无法执行建议操作。
-
-#### 测试方案
-
-- Admin view 测试：
-  - 未登录访问重定向。
-  - 无权限用户被拒绝。
-  - 管理员触发生成建议成功。
-  - 管理员接受建议成功。
-  - 管理员拒绝建议成功。
-- 手工验收：
-  - 登录 `http://127.0.0.1:8001/django-admin/`
-  - 创建文章。
-  - 触发 AI 建议。
-  - 接受一条 metadata 或 FAQ 建议。
-- 执行：
-  - `docker compose exec -T web python manage.py test`
-
----
-
-### T15 - SEO Quality Checker
-
-状态：`TODO`  
-目标：在 Basic SEO Checklist 基础上增加更完整的发布质量提示。  
-依赖：T06、T12、T13
-
-#### 实现内容
-
-- 扩展 SEO 检查服务：
-  - 标题长度建议。
-  - Description 长度建议。
-  - 是否有 TOC。
-  - 是否有 FAQ。
-  - 是否有标签。
-  - 是否有已接受内链建议。
-  - 是否有封面图 Alt。
-  - 是否有 RAG 可检索相关内容。
-  - 是否有 canonical。
-  - 是否有 JSON-LD。
-- 后台文章页展示检查结果和建议级别：
-  - pass
-  - warning
-  - missing
-- 检查结果只提示，不阻塞保存或发布。
-
-#### 验收标准
-
-- 完整文章显示多数通过项。
-- 缺失 SEO 字段显示明确提示。
-- 检查不影响草稿保存。
-- 检查结果不依赖真实 AI Provider。
-
-#### 测试方案
-
-- 服务测试：
-  - 空文章返回 missing 项。
-  - 完整文章返回 pass 项。
-  - 有内链建议时检查通过。
-  - 无 RAG 内容时返回 warning。
-- 执行：
-  - `docker compose exec -T web python manage.py test`
-
----
-
-### T16 - 安全与内容风控
-
-状态：`TODO`  
-目标：AI 和 RAG 进入发布流程后，保证不会绕过权限、注入危险内容或生成不可信链接。  
-依赖：T10、T11、T12、T14
-
-#### 实现内容
-
-- AI 输出安全：
-  - FAQ answer 不允许 script/style。
-  - JSON-LD 只通过结构化序列化输出。
-  - AI 建议中的 HTML 默认按纯文本处理。
-  - 正文 diff 建议不自动执行。
-- 链接安全：
-  - 内链 target_article 必须来自已发布 Article。
-  - suggested_sentence 中链接 URL 必须匹配 target_article.get_absolute_url()。
-  - 不接受外链作为内链建议。
-- 权限安全：
-  - AI 生成、接受、拒绝必须使用 Admin 权限。
-  - 接受建议不能绕过文章修改权限。
-- Slug 安全：
-  - AI slug 建议必须经过现有唯一 slug 规则。
-  - 不能覆盖历史 slug。
-
-#### 验收标准
-
-- 恶意 script 不会进入 FAQ 展示和 JSON-LD。
-- 内链建议不能指向草稿或外部 URL。
-- 无权限用户不能调用 AI 建议操作。
-- AI slug 建议不破坏现有 slug 唯一性。
-
-#### 测试方案
-
-- 安全测试：
-  - FAQ answer 中 script 被清洗或拒绝。
-  - 内链外部 URL 被拒绝。
-  - 无权限用户接受建议失败。
-  - slug 冲突时生成唯一 slug 或拒绝。
-- 执行：
-  - `docker compose exec -T web python manage.py test`
-
----
-
-### T17 - 发布监控数据模型占位
-
-状态：`TODO`  
-目标：为后续 GSC/GA4 接入预留后端数据结构和后台展示入口。  
-依赖：T01
-
-#### 实现内容
-
-- 新增 `AnalyticsSnapshot`：
-  - `article`
-  - `date`
-  - `impressions`
-  - `clicks`
-  - `ctr`
-  - `average_position`
-  - `pageviews`
-  - `source`：manual、gsc、ga4。
-  - `raw_payload`
-- 后台文章页只读展示最近数据。
-- 新增管理入口用于手工查看快照。
-- 不在本阶段接 OAuth 或自动同步。
-
-#### 验收标准
-
-- 可以在后台创建和查看快照。
-- 文章页能展示最近快照。
-- 没有快照时页面不报错。
-- 同一文章同一天同来源唯一。
-
-#### 测试方案
-
-- 模型测试：
-  - 唯一约束生效。
-  - 无快照不影响文章详情。
-- Admin 测试：
-  - 快照可查看。
-- 执行：
-  - `docker compose exec -T web python manage.py test`
-
----
-
-### T18 - 文档、运维与交付闭环
-
-状态：`TODO`  
-目标：让新工程师或 Code Agent 能按文档启动、开发、索引 RAG、验证和交付。  
-依赖：T00-T17
-
-#### 实现内容
-
-- 更新 `README.md`：
-  - 本地启动。
-  - 测试命令。
-  - 后台账号创建方式。
-  - AI Provider 配置。
-  - Embedding Provider 配置。
-  - RAG 索引命令。
-  - 常见问题：pgvector、CKEditor 警告、端口 8001。
-- 更新本文档状态。
-- 补充“发布前检查清单”。
-- 补充“RAG 重建索引操作手册”。
-
-#### 验收标准
-
-- 文档能指导从空环境启动项目。
-- 文档能指导执行 RAG 索引和检索。
-- 所有任务状态与实际代码一致。
-- 开发者能按文档跑通测试。
-
-#### 测试方案
-
-- 从当前环境执行：
-  - `docker compose down`
-  - `docker compose up -d --build`
-  - `docker compose exec -T web python manage.py migrate`
-  - `docker compose exec -T web python manage.py rebuild_knowledge_index --dry-run`
-  - `docker compose exec -T web python manage.py test`
-  - `curl -I http://127.0.0.1:8001/`
-
-## 5. 里程碑安排
-
-### M1 - 技术 SEO 发布闭环
-
-包含：T00、T01、T01.5、T02、T03、T04、T05、T06  
-验收目标：即使没有 AI，也能发布一个标准 SEO 页面，具备结构化标签、SEO metadata、canonical、OG、JSON-LD、TOC、Sitemap、图片 Alt 和基础 SEO 检查。
-
-### M2 - RAG 知识库闭环
-
-包含：T07、T08、T09  
-验收目标：历史文章、FAQ、分类、标签能进入 pgvector 知识库，支持可追踪检索结果，AI 不再无来源生成建议。
-
-### M3 - AI 建议审核闭环
-
-包含：T10、T11、T12、T13、T14、T16  
-验收目标：AI 能基于 RAG 生成 metadata、tags、FAQ、内链建议，运营能在 Admin 接受/拒绝，所有建议可审计、可追踪、可风控。
-
-### M4 - 质量检查与监控占位
-
-包含：T15、T17、T18  
-验收目标：后台具备 SEO 质量检查，发布后数据模型占位完成，文档可指导后续持续开发。
-
-### M5 - 独立 AI 编辑器前端
-
-本阶段只规划，不在当前后端闭环中实现。后续可单独立项：
-
-- Next.js。
-- TipTap。
-- 绿色新增、红色删除。
-- 正文 inline diff。
-- Accept / Reject。
-- 类 Cursor 编辑体验。
-
-## 6. AI 功能优先级
-
-### P0
-
-- AI 生成 meta title。
-- AI 生成 meta description。
-- AI 生成 FAQ。
-- AI 生成 tags。
-
-### P1
-
-- AI 内链推荐。
-- AI 正文审核建议。
-- AI summary 优化。
-
-### P2
-
-- AI alt 生成。
-- AI rewrite。
-- AI diff patch。
-
-### P3
-
-- 复杂 RAG 策略。
-- pgvector HNSW/IVFFlat 性能优化。
-- GSC/GA4 自动同步。
-- GEO 监控。
-- AI citation 监控。
-
-## 7. PR 与提交规范
-
-- 每个任务优先独立提交。
-- Commit Message 使用中文：
-  - `feat: 增加结构化标签模型`
-  - `feat: 增加 RAG 知识库索引`
-  - `fix: 修复 canonical 生成规则`
-  - `test: 补充 FAQ Schema 回归测试`
-  - `docs: 更新 AI SEO 发布计划状态`
-- 每个 PR 描述必须包含：
-  - 变更内容。
-  - 数据库迁移说明。
-  - RAG 索引影响。
-  - 测试命令和结果。
-  - 未解决风险。
-
-## 8. 当前已知风险
-
-- `django-ckeditor` 使用 CKEditor 4.22.1，`manage.py check` 会提示维护和安全风险。后续如重做 AI 编辑器，应评估 CKEditor 5、TipTap 或其他编辑器。
-- 当前项目使用 Django Admin 作为运营工作台，适合 MVP，但不适合复杂正文 inline diff。
-- pgvector 会改变本地 PostgreSQL 镜像，已有开发数据库卷可能需要重建或迁移前备份。
-- 真实 OpenAI Embedding 依赖 API Key 和网络，测试必须使用 Mock Embedding。
-- RAG 检索质量依赖切块和内容清洗，M2 必须先追求可追踪和可回归，再追求复杂召回效果。
-- 当前 Docker Compose 使用本机 `8001`，因为 `8000` 已被其他 Docker 服务占用。
+### 17.2 FastAPI AI Service
+
+```text
+ai_service/
+├── main.py
+├── core/
+│   ├── config.py
+│   ├── security.py
+│   └── logging.py
+├── graphs/
+│   ├── article_review_graph.py
+│   ├── metadata_graph.py
+│   └── internal_link_graph.py
+├── nodes/
+│   ├── load_article.py
+│   ├── retrieve_context.py
+│   ├── analyze_seo.py
+│   ├── generate_metadata.py
+│   ├── generate_faq.py
+│   ├── recommend_links.py
+│   ├── generate_patches.py
+│   └── validate_output.py
+├── rag/
+│   ├── chunker.py
+│   ├── indexer.py
+│   └── retriever.py
+├── providers/
+│   ├── base.py
+│   ├── mock_provider.py
+│   └── siliconflow_provider.py
+├── schemas/
+│   ├── article.py
+│   ├── suggestion.py
+│   └── patch.py
+└── tests/
+```
+
+### 17.3 Next.js Studio
+
+```text
+editor-web/
+├── app/
+│   ├── studio/
+│   │   ├── articles/
+│   │   ├── analytics/
+│   │   └── settings/
+├── components/
+│   ├── editor/
+│   ├── ai-diff/
+│   ├── metadata-form/
+│   ├── publish-checklist/
+│   └── analytics/
+├── lib/
+│   ├── api-client.ts
+│   ├── patch-apply.ts
+│   └── editor-schema.ts
+└── stores/
+    ├── editor-store.ts
+    └── ai-review-store.ts
+```
+
+## 18. 开发里程碑
+
+### Phase 0：三端架构基础
+
+状态：`TODO`
+
+目标：
+
+```text
+Django API、FastAPI AI Service、Next.js Studio、Docker Compose、认证和文章读取保存跑通。
+```
+
+交付：
+
+| 模块 | 内容 |
+| --- | --- |
+| Django | DRF、文章 API、认证、内部 API Token |
+| FastAPI | 服务骨架、健康检查、内部鉴权、Mock Provider |
+| Next.js | Studio 骨架、登录态、文章列表、文章编辑页 |
+| Docker | 新增 `ai-service`、`editor-web`、`worker` |
+
+验收：
+
+```bash
+docker compose up -d --build
+curl -s http://127.0.0.1:8002/health
+curl -I http://127.0.0.1:3000/studio/articles
+docker compose exec -T web python manage.py test
+```
+
+### Phase 1：SEO 数据与发布输出
+
+状态：`TODO`
+
+目标：
+
+```text
+无 AI 也能发布标准 SEO 页面。
+```
+
+交付：
+
+| 模块 | 内容 |
+| --- | --- |
+| 数据模型 | Tag、SeoMetadata、FaqItem、MediaAsset alt |
+| SEO Context | title、description、canonical、robots、OG、Twitter |
+| Schema | Article、FAQ、Breadcrumb JSON-LD |
+| 页面输出 | TOC、Sitemap、Canonical、OG、Alt |
+| 发布检查 | Error、Warning、Passed |
+
+验收：
+
+```bash
+docker compose exec -T web python manage.py migrate
+docker compose exec -T web python manage.py test
+curl -s http://127.0.0.1:8001/<article-slug>/ | grep -E "canonical|og:title|application/ld\\+json"
+curl -I http://127.0.0.1:8001/sitemap.xml
+```
+
+### Phase 2：RAG 知识库
+
+状态：`TODO`
+
+目标：
+
+```text
+AI 能检索公司已有内容，所有建议有来源。
+```
+
+交付：
+
+| 模块 | 内容 |
+| --- | --- |
+| pgvector | 数据库镜像、VectorExtension、VectorField |
+| Knowledge | KnowledgeSource、KnowledgeChunk |
+| Indexer | 内容抽取、HTML 清洗、切块、hash |
+| Embedding | SiliconFlow Embedding、Mock Embedding |
+| Retriever | pgvector 检索、过滤、rerank |
+
+验收：
+
+```bash
+docker compose exec -T web python manage.py rebuild_knowledge_index --dry-run
+docker compose exec -T web python manage.py rebuild_knowledge_index --source article
+docker compose exec -T web python manage.py rag_query "SEO Schema" --limit 5
+docker compose exec -T web python manage.py test
+```
+
+### Phase 3：FastAPI AI 建议引擎
+
+状态：`TODO`
+
+目标：
+
+```text
+FastAPI + LangGraph 能基于 RAG 生成可审核建议。
+```
+
+交付：
+
+| 模块 | 内容 |
+| --- | --- |
+| Provider | SiliconFlow Chat、Embedding、Rerank、Mock |
+| LangGraph | Article Review Graph |
+| 建议 | Metadata、FAQ、内链、语义关键词、Alt |
+| 审计 | AiReviewRun、AiSuggestion、AiPatch |
+| 安全 | JSON Schema、来源校验、内容清洗 |
+
+验收：
+
+```bash
+curl -s http://127.0.0.1:8002/health
+docker compose exec -T web python manage.py test
+docker compose exec -T ai-service pytest
+```
+
+### Phase 4：Next.js + TipTap AI Diff Studio
+
+状态：`TODO`
+
+目标：
+
+```text
+实现 Cursor/Codex 风格 AI 编辑体验。
+```
+
+交付：
+
+| 模块 | 内容 |
+| --- | --- |
+| Editor | TipTap、blockId、content_json、content_html |
+| Diff | 绿色新增、红色删除、替换展示 |
+| 操作 | Accept、Reject、编辑后接受 |
+| 状态 | TanStack Query、Zustand、自动保存 |
+| 冲突 | content_hash、expired patch、版本快照 |
+
+验收：
+
+```bash
+cd editor-web
+npm run lint
+npm run test
+npm run build
+```
+
+浏览器验收：
+
+```text
+打开 /studio/articles
+新建文章
+保存草稿
+触发 AI 审核
+看到绿色新增/红色删除 Diff
+接受一条建议
+拒绝一条建议
+保存并刷新后内容状态正确
+```
+
+### Phase 5：发布与监控闭环
+
+状态：`TODO`
+
+目标：
+
+```text
+发布前知道 SEO 是否合格，发布后知道页面效果。
+```
+
+交付：
+
+| 模块 | 内容 |
+| --- | --- |
+| 发布检查 | 阻止 Error，展示 Warning |
+| GSC | impressions、clicks、ctr、average_position |
+| GA4 | pageviews、avg_time_on_page |
+| 站内事件 | 内链点击、FAQ 展开 |
+| Dashboard | SEO 趋势、文章表现、AI 采纳率 |
+
+验收：
+
+```bash
+docker compose exec -T web python manage.py test
+cd editor-web && npm run build
+```
+
+手工验收：
+
+```text
+发布文章前能看到检查结果
+存在 Error 时不能发布
+发布后 AnalyticsSnapshot 可展示趋势
+低 CTR 文章可以发起二次 AI 审核
+```
+
+## 19. 风险与解决方案
+
+### 风险 1：Diff 编辑器复杂度高
+
+问题：
+
+```text
+段落新增、删除、文本替换、列表修改、图片插入、用户同时编辑都会导致 patch 错位。
+```
+
+解决方案：
+
+| 措施 | 说明 |
+| --- | --- |
+| blockId | 每个块稳定定位 |
+| content_hash | 接受前校验正文版本 |
+| Decoration | 只渲染建议，不立即改正文 |
+| Accept 后应用 | 用户确认后才修改文档 |
+| expired 状态 | 正文变化后旧 Patch 失效 |
+
+### 风险 2：RAG 推荐不准
+
+问题：
+
+```text
+AI 可能推荐不相关内容或错误内链。
+```
+
+解决方案：
+
+| 措施 | 说明 |
+| --- | --- |
+| published only | 内链只来自已发布文章 |
+| source_chunks | 每条建议保存来源 |
+| rerank | 用 rerank 提升相关性 |
+| 人工确认 | 不自动写入正文 |
+| 空结果保护 | 无来源时不生成内链 |
+
+### 风险 3：AI 生成质量不稳定
+
+问题：
+
+```text
+AI 可能生成泛化 FAQ、低质量改写、品牌表达不一致。
+```
+
+解决方案：
+
+| 措施 | 说明 |
+| --- | --- |
+| Prompt 版本 | 每次变更可追溯 |
+| 输出 Schema | 强制结构化 |
+| RAG 来源 | 建议必须有依据 |
+| 人工审核 | 保留接受/拒绝 |
+| 重新生成 | 支持二次审核 |
+
+### 风险 4：SEO 技术输出错误
+
+问题：
+
+```text
+Schema、Canonical、Sitemap 如果交给 AI 生成，容易出错。
+```
+
+解决方案：
+
+| 措施 | 说明 |
+| --- | --- |
+| Django 规则生成 | 技术 SEO 不由 AI 决定 |
+| JSON 序列化 | 禁止字符串拼接 JSON-LD |
+| 单元测试 | 覆盖 fallback 和边界 |
+| curl 验证 | 验证真实 HTML 输出 |
+
+### 风险 5：API Key 泄漏
+
+问题：
+
+```text
+真实 API Key 可能被写入文档、日志、提交历史或前端包。
+```
+
+解决方案：
+
+| 措施 | 说明 |
+| --- | --- |
+| 环境变量 | 只用 `SILICONFLOW_API_KEY` |
+| 后端调用 | 前端永不接触 Key |
+| 日志脱敏 | 输出只保留 trace_id |
+| 密钥轮换 | 已暴露 Key 必须轮换 |
+| CI 检查 | 增加 secret scan |
+
+## 20. 最终架构结论
+
+本项目最终采用：
+
+```text
+Django CMS
++
+FastAPI LangGraph AI Service
++
+Next.js TipTap Studio
++
+PostgreSQL pgvector
++
+SiliconFlow AI Provider
+```
+
+分工：
+
+| 系统 | 职责 |
+| --- | --- |
+| Django | 内容、权限、发布、SEO 渲染、数据落库 |
+| FastAPI | AI、RAG、LangGraph、Patch 生成 |
+| Next.js | 运营编辑器、Diff 体验、发布工作台、监控面板 |
+| PostgreSQL | 业务数据、向量数据、AI 建议数据 |
+| SiliconFlow | Chat、Embedding、Rerank 模型能力 |
+
+最终闭环：
+
+```text
+运营输入内容
+AI 基于 RAG 理解公司知识库
+AI 生成 FAQ、内链、语义关键词、正文 Patch
+运营在编辑器中逐条接受或拒绝
+系统自动生成 Schema、OG、Canonical、JSON-LD、TOC、Sitemap
+前台渲染 SEO Optimized HTML
+数据监控持续反馈优化
+```
+
+这套架构保留现有 Django CMS 的稳定性，同时完整实现现代 AI 编辑器体验和 SEO 发布闭环，是当前最稳妥、最可扩展、也最符合目标产品定位的方案。
