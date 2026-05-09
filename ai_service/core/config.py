@@ -8,6 +8,13 @@ def _env_bool(name: str, default: str = "false") -> bool:
     return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _internal_token_default() -> str:
+    # 本地开发未提供服务间令牌时，回退到固定测试值，避免联调直接失败。
+    if _env_bool("DEBUG", "false"):
+        return "dev-internal-token"
+    return ""
+
+
 @dataclass(frozen=True)
 class Settings:
     ai_provider: str
@@ -30,7 +37,7 @@ settings = Settings(
     ai_provider=os.getenv("AI_PROVIDER", "mock"),
     ai_model=os.getenv("AI_MODEL", "mock-reviewer"),
     ai_prompt_version=os.getenv("AI_PROMPT_VERSION", "v1"),
-    internal_api_token=os.getenv("INTERNAL_API_TOKEN", ""),
+    internal_api_token=os.getenv("INTERNAL_API_TOKEN", _internal_token_default()),
     siliconflow_base_url=os.getenv("SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1"),
     service_name=os.getenv("SERVICE_NAME", "ai-service"),
     enable_response_headers=_env_bool("ENABLE_RESPONSE_HEADERS", "true"),

@@ -53,7 +53,7 @@
 2. 构建并启动全部服务：
    ```bash
    cd editor-web && npm install && cd ..
-   COMPOSE_DOCKER_CLI_BUILD=0 DOCKER_BUILDKIT=0 docker compose up -d --build
+   ./scripts/dev-rebuild.sh
    ```
 3. 初始化数据库：
    ```bash
@@ -77,7 +77,7 @@
 
 ```bash
 cd editor-web && npm install && cd ..
-COMPOSE_DOCKER_CLI_BUILD=0 DOCKER_BUILDKIT=0 docker compose up -d --build
+./scripts/dev-rebuild.sh
 docker compose exec -T web python manage.py check
 docker compose exec -T web python manage.py test
 curl -s http://127.0.0.1:8001/api/health/
