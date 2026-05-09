@@ -3,14 +3,15 @@ from datetime import timedelta
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import Client, TestCase
+from django.test.utils import override_settings
 from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils import timezone
 
 from apps.media_library.models import ImageItem
 
-from .models import Article, Category, FaqItem, KnowledgeChunk, KnowledgeSource, SeoMetadata, Tag
+from .models import AiReviewRun, AiSuggestion, Article, Category, FaqItem, KnowledgeChunk, KnowledgeSource, SeoMetadata, Tag
 from .rag import deterministic_embedding, search_knowledge
 
 
@@ -115,6 +116,7 @@ class ArticleVisibilityTests(TestCase):
         self.assertEqual(article.revisions.count(), 2)
         latest = article.revisions.first()
         self.assertIn("body", latest.changed_fields)
+
     def test_search_filters_results(self):
         self.create_article("alpha", "published")
         self.create_article("beta", "published")
@@ -138,6 +140,96 @@ class ArticleVisibilityTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "ok")
+
+    def test_ai_review_api_creates_run_and_suggestions(self):
+        article = self.create_article("ai-review", "draft")
+
+        response = self.client.post(
+            f"/api/articles/{article.id}/ai-review/",
+            data={"reason": "smoke"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 202)
+        payload = response.json()
+        self.assertEqual(payload["article_id"], article.id)
+        self.assertIn("run", payload)
+        self.assertIn("suggestions", payload)
+        self.assertEqual(payload["run"]["schema_version"], "v1")
+        self.assertEqual(payload["run"]["article_id"], article.id)
+        self.assertEqual(payload["suggestions"][0]["schema_version"], "v1")
+        self.assertEqual(payload["suggestions"][0]["status"], "pending")
+        self.assertEqual(payload["suggestions"][0]["patches"][0]["patch_schema_version"], "v1")
+        self.assertTrue(payload["suggestions"][0]["patches"][0]["content_hash"].startswith("sha256:"))
+        self.assertEqual(AiReviewRun.objects.filter(article=article).count(), 1)
+        self.assertEqual(AiSuggestion.objects.filter(article=article).count(), 1)
+
+    def test_ai_review_runs_api_lists_history(self):
+        article = self.create_article("ai-review-history", "draft")
+        self.client.post(f"/api/articles/{article.id}/ai-review/", data={}, content_type="application/json")
+
+        response = self.client.get(f"/api/articles/{article.id}/ai-review-runs/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["article_id"], article.id)
+        self.assertEqual(len(payload["runs"]), 1)
+        self.assertEqual(payload["runs"][0]["status"], "completed")
+
+    def test_ai_review_run_suggestions_api_lists_suggestions(self):
+        article = self.create_article("ai-review-suggestions", "draft")
+        create_response = self.client.post(
+            f"/api/articles/{article.id}/ai-review/",
+            data={},
+            content_type="application/json",
+        )
+        run_id = create_response.json()["run"]["run_id"]
+
+        response = self.client.get(f"/api/ai-review-runs/{run_id}/suggestions/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["run_id"], run_id)
+        self.assertEqual(len(payload["suggestions"]), 1)
+        self.assertEqual(payload["suggestions"][0]["type"], "body_replace")
+
+    def test_accept_and_reject_suggestion_api_updates_status(self):
+        article = self.create_article("ai-review-status", "draft")
+        create_response = self.client.post(
+            f"/api/articles/{article.id}/ai-review/",
+            data={},
+            content_type="application/json",
+        )
+        suggestion_id = create_response.json()["suggestions"][0]["suggestion_id"]
+
+        accept_response = self.client.post(f"/api/ai-suggestions/{suggestion_id}/accept/")
+        self.assertEqual(accept_response.status_code, 200)
+        self.assertEqual(accept_response.json()["suggestion"]["status"], "accepted")
+
+        reject_response = self.client.post(f"/api/ai-suggestions/{suggestion_id}/reject/")
+        self.assertEqual(reject_response.status_code, 200)
+        self.assertEqual(reject_response.json()["suggestion"]["status"], "rejected")
+
+        suggestion = AiSuggestion.objects.get(suggestion_id=suggestion_id)
+        self.assertEqual(suggestion.status, "rejected")
+
+    def test_ai_review_api_returns_not_found_for_missing_article(self):
+        response = self.client.post("/api/articles/999999/ai-review/", data={}, content_type="application/json")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["error"]["code"], "article_not_found")
+
+    def test_ai_review_api_allows_direct_post_without_csrf_cookie(self):
+        article = self.create_article("ai-review-csrf", "draft")
+        csrf_client = Client(enforce_csrf_checks=True)
+
+        response = csrf_client.post(
+            f"/api/articles/{article.id}/ai-review/",
+            data=json.dumps({"reason": "csrf-smoke"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 202)
 
 
 class ContentSeoModelTests(TestCase):

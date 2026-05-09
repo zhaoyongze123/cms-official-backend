@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils import timezone
 
-from .models import Article, ArticleRevision, Category, FaqItem, KnowledgeChunk, KnowledgeSource, SeoMetadata, Tag
+from .models import AiPatch, AiReviewRun, AiSuggestion, Article, ArticleRevision, Category, FaqItem, KnowledgeChunk, KnowledgeSource, SeoMetadata, Tag
 
 
 class ArticleRevisionInline(admin.TabularInline):
@@ -45,6 +45,107 @@ class SeoMetadataInline(admin.StackedInline):
         "og_title",
         "og_description",
         "og_image",
+    )
+
+
+class AiPatchInline(admin.TabularInline):
+    model = AiPatch
+    extra = 0
+    fields = ("patch_id", "patch_schema_version", "operation", "target_block_id", "content_hash")
+    readonly_fields = fields
+    can_delete = False
+    ordering = ("-created_at",)
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+class AiSuggestionInline(admin.StackedInline):
+    model = AiSuggestion
+    extra = 0
+    fields = (
+        "suggestion_id",
+        "schema_version",
+        "type",
+        "status",
+        "severity",
+        "title",
+        "reason",
+        "payload",
+        "source_chunks",
+    )
+    readonly_fields = fields
+    can_delete = False
+    inlines = (AiPatchInline,)
+    ordering = ("-created_at",)
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(AiReviewRun)
+class AiReviewRunAdmin(admin.ModelAdmin):
+    list_display = ("run_id", "article", "status", "provider", "model", "prompt_version", "created_at", "completed_at")
+    list_filter = ("status", "provider", "model", "created_at")
+    search_fields = ("run_id", "article__title", "article__slug", "trace_id")
+    readonly_fields = (
+        "run_id",
+        "article",
+        "schema_version",
+        "status",
+        "provider",
+        "model",
+        "prompt_version",
+        "trace_id",
+        "token_usage",
+        "error",
+        "created_at",
+        "completed_at",
+    )
+    inlines = (AiSuggestionInline,)
+
+
+@admin.register(AiSuggestion)
+class AiSuggestionAdmin(admin.ModelAdmin):
+    list_display = ("suggestion_id", "article", "run", "type", "status", "severity", "created_at")
+    list_filter = ("type", "status", "severity", "created_at")
+    search_fields = ("suggestion_id", "title", "reason", "article__title", "run__run_id")
+    readonly_fields = (
+        "suggestion_id",
+        "article",
+        "run",
+        "schema_version",
+        "type",
+        "status",
+        "severity",
+        "title",
+        "reason",
+        "payload",
+        "source_chunks",
+        "created_at",
+        "updated_at",
+    )
+    inlines = (AiPatchInline,)
+
+
+@admin.register(AiPatch)
+class AiPatchAdmin(admin.ModelAdmin):
+    list_display = ("patch_id", "suggestion", "operation", "target_block_id", "created_at")
+    list_filter = ("operation", "created_at")
+    search_fields = ("patch_id", "target_block_id", "content_hash", "suggestion__suggestion_id")
+    readonly_fields = (
+        "patch_id",
+        "suggestion",
+        "patch_schema_version",
+        "operation",
+        "target_block_id",
+        "content_hash",
+        "old_text",
+        "new_text",
+        "new_block",
+        "position",
+        "reason",
+        "created_at",
     )
 
 
@@ -161,7 +262,3 @@ class KnowledgeChunkAdmin(admin.ModelAdmin):
     list_filter = ("is_active", "source__source_type")
     search_fields = ("chunk_text", "source__title", "chunk_hash")
     readonly_fields = ("created_at", "updated_at")
-
-
-
-

@@ -17,6 +17,47 @@ class ArticleQuerySet(models.QuerySet):
         )
 
 
+class AiReviewRunStatus(models.TextChoices):
+    PENDING = "pending", "等待中"
+    RUNNING = "running", "运行中"
+    COMPLETED = "completed", "已完成"
+    FAILED = "failed", "失败"
+    CANCELLED = "cancelled", "已取消"
+
+
+class AiSuggestionType(models.TextChoices):
+    METADATA = "metadata", "SEO 元数据"
+    FAQ = "faq", "FAQ"
+    INTERNAL_LINK = "internal_link", "内链"
+    SEMANTIC_KEYWORD = "semantic_keyword", "语义关键词"
+    BODY_INSERT = "body_insert", "正文插入"
+    BODY_DELETE = "body_delete", "正文删除"
+    BODY_REPLACE = "body_replace", "正文替换"
+    ALT_TEXT = "alt_text", "图片 Alt"
+
+
+class AiSuggestionStatus(models.TextChoices):
+    PENDING = "pending", "待处理"
+    ACCEPTED = "accepted", "已接受"
+    REJECTED = "rejected", "已拒绝"
+    EDITED = "edited", "已编辑"
+    EXPIRED = "expired", "已过期"
+    FAILED = "failed", "失败"
+
+
+class AiSuggestionSeverity(models.TextChoices):
+    LOW = "low", "低"
+    MEDIUM = "medium", "中"
+    HIGH = "high", "高"
+
+
+class AiPatchOperation(models.TextChoices):
+    INSERT_AFTER = "insert_after", "插入后面"
+    DELETE = "delete", "删除"
+    REPLACE_TEXT = "replace_text", "替换文本"
+    ALT_TEXT = "alt_text", "Alt 文本"
+
+
 class Category(models.Model):
     name = models.CharField("分类名称", max_length=100)
     slug = models.SlugField("URL缩略名", unique=True)
@@ -242,6 +283,83 @@ class SeoMetadata(models.Model):
         return f"SEO: {self.article.title}"
 
 
+class AiReviewRun(models.Model):
+    run_id = models.CharField("审核运行 ID", max_length=64, unique=True, db_index=True)
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="ai_review_runs", verbose_name="文章")
+    schema_version = models.CharField("契约版本", max_length=10, default="v1")
+    status = models.CharField("状态", max_length=20, choices=AiReviewRunStatus.choices)
+    provider = models.CharField("提供方", max_length=100)
+    model = models.CharField("模型", max_length=100)
+    prompt_version = models.CharField("Prompt 版本", max_length=50)
+    trace_id = models.CharField("追踪 ID", max_length=128, blank=True, null=True)
+    token_usage = models.JSONField("Token 使用量", default=dict, blank=True)
+    error = models.JSONField("错误详情", blank=True, null=True)
+    created_at = models.DateTimeField("创建时间", auto_now_add=True)
+    completed_at = models.DateTimeField("完成时间", blank=True, null=True)
+
+    class Meta:
+        verbose_name = "AI 审核运行"
+        verbose_name_plural = "AI 审核运行"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.run_id} ({self.article_id})"
+
+
+class AiSuggestion(models.Model):
+    suggestion_id = models.CharField("建议 ID", max_length=64, unique=True, db_index=True)
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="ai_suggestions", verbose_name="文章")
+    run = models.ForeignKey(AiReviewRun, on_delete=models.CASCADE, related_name="suggestions", verbose_name="审核运行")
+    schema_version = models.CharField("契约版本", max_length=10, default="v1")
+    type = models.CharField("建议类型", max_length=50, choices=AiSuggestionType.choices)
+    status = models.CharField("状态", max_length=20, choices=AiSuggestionStatus.choices)
+    severity = models.CharField("严重级别", max_length=20, choices=AiSuggestionSeverity.choices)
+    title = models.CharField("标题", max_length=255)
+    reason = models.TextField("原因")
+    payload = models.JSONField("结构化负载", default=dict, blank=True)
+    source_chunks = models.JSONField("来源片段", default=list, blank=True)
+    created_at = models.DateTimeField("创建时间", auto_now_add=True)
+    updated_at = models.DateTimeField("更新时间", auto_now=True)
+
+    class Meta:
+        verbose_name = "AI 建议"
+        verbose_name_plural = "AI 建议"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["article", "status"], name="simple_cms__article_9d7804_idx"),
+            models.Index(fields=["run", "status"], name="simple_cms__run_id_1c08bb_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.suggestion_id} ({self.title})"
+
+
+class AiPatch(models.Model):
+    patch_id = models.CharField("补丁 ID", max_length=64, unique=True, db_index=True)
+    suggestion = models.ForeignKey(AiSuggestion, on_delete=models.CASCADE, related_name="patches", verbose_name="建议")
+    patch_schema_version = models.CharField("补丁契约版本", max_length=10, default="v1")
+    operation = models.CharField("操作", max_length=20, choices=AiPatchOperation.choices)
+    target_block_id = models.CharField("目标块 ID", max_length=100)
+    content_hash = models.CharField("内容哈希", max_length=255)
+    old_text = models.TextField("旧文本", blank=True, null=True)
+    new_text = models.TextField("新文本", blank=True, null=True)
+    new_block = models.JSONField("新块内容", blank=True, null=True)
+    position = models.IntegerField("插入位置", blank=True, null=True)
+    reason = models.TextField("说明", blank=True, null=True)
+    created_at = models.DateTimeField("创建时间", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "AI 补丁"
+        verbose_name_plural = "AI 补丁"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["suggestion", "operation"], name="simple_cms__suggest_509502_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.patch_id} ({self.operation})"
+
+
 class KnowledgeSource(models.Model):
     SOURCE_TYPE_CHOICES = (
         ("article", "文章"),
@@ -357,8 +475,3 @@ class ArticleRevision(models.Model):
 
     def __str__(self):
         return f"{self.article.title} @ {self.created_at:%Y-%m-%d %H:%M}"
-
-
-
-
-

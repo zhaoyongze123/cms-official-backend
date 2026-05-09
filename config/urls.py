@@ -24,6 +24,7 @@ def health_view(request):
 urlpatterns = [
     path("django-admin/", admin.site.urls),
     path("api/health/", health_view, name="health"),
+    path("api/", include("apps.simple_cms.api_urls")),
     path(
         "sitemap.xml",
         sitemap,
