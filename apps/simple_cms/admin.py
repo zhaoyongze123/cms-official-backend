@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils import timezone
 
-from .models import AiPatch, AiReviewRun, AiSuggestion, Article, ArticleRevision, Category, FaqItem, KnowledgeChunk, KnowledgeSource, SeoMetadata, Tag
+from .models import AiPatch, AiReviewRun, AiSuggestion, AnalyticsSnapshot, Article, ArticleRevision, Category, FaqItem, KnowledgeChunk, KnowledgeSource, SeoMetadata, Tag
 
 
 class ArticleRevisionInline(admin.TabularInline):
@@ -262,3 +262,44 @@ class KnowledgeChunkAdmin(admin.ModelAdmin):
     list_filter = ("is_active", "source__source_type")
     search_fields = ("chunk_text", "source__title", "chunk_hash")
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(AnalyticsSnapshot)
+class AnalyticsSnapshotAdmin(admin.ModelAdmin):
+    list_display = (
+        "article",
+        "source",
+        "snapshot_date",
+        "impressions",
+        "clicks",
+        "pageviews",
+        "internal_clicks",
+        "ai_acceptance_rate",
+    )
+    list_filter = ("source", "snapshot_date")
+    search_fields = ("article__title", "article__slug")
+    readonly_fields = (
+        "article",
+        "schema_version",
+        "source",
+        "snapshot_date",
+        "impressions",
+        "clicks",
+        "ctr",
+        "average_position",
+        "pageviews",
+        "avg_time_on_page",
+        "bounce_rate",
+        "conversions",
+        "internal_clicks",
+        "ai_acceptance_rate",
+        "payload",
+        "created_at",
+        "updated_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

@@ -13,7 +13,7 @@ type StudioShellProps = {
 const navigationItems = [
   { href: "/studio" as Route, label: "工作台总览" },
   { href: "/studio/articles" as Route, label: "文章列表" },
-  { href: "/studio/analytics" as Route, label: "监控占位" },
+  { href: "/studio/analytics" as Route, label: "监控面板" },
   { href: "/studio/settings" as Route, label: "设置占位" }
 ];
 
@@ -27,7 +27,7 @@ export function StudioShell({ children }: StudioShellProps) {
         <div className="studio-brand">
           <span className="eyebrow">AI SEO Studio</span>
           <strong className="studio-title">运营工作台</strong>
-          <span className="studio-subtitle">A07 提供登录态、列表页、编辑基础页与 Mock API。</span>
+          <span className="studio-subtitle">A11 已接入监控面板 Mock 数据，继续沿用 Studio Shell 工作流。</span>
         </div>
 
         <div className="studio-user">

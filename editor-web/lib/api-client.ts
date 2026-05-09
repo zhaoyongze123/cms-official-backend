@@ -1,4 +1,4 @@
-import type { ArticleRecord } from "./mock-api";
+import type { ArticleAnalyticsRecord, ArticleRecord, SeoSummaryRecord } from "./mock-api";
 
 async function readJson<T>(response: Response) {
   if (!response.ok) {
@@ -47,4 +47,22 @@ export async function updateArticleDraft(
   });
 
   return readJson<ArticleRecord>(response);
+}
+
+export async function fetchArticleAnalytics(articleId: number) {
+  const response = await fetch(`/api/articles/${articleId}/analytics`, {
+    method: "GET",
+    cache: "no-store"
+  });
+
+  return readJson<ArticleAnalyticsRecord>(response);
+}
+
+export async function fetchSeoSummary() {
+  const response = await fetch("/api/dashboard/seo-summary", {
+    method: "GET",
+    cache: "no-store"
+  });
+
+  return readJson<SeoSummaryRecord>(response);
 }

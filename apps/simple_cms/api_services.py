@@ -7,7 +7,7 @@ from typing import Any
 from django.db import transaction
 from django.utils import timezone
 
-from .models import AiPatch, AiReviewRun, AiSuggestion, Article
+from .models import AiPatch, AiReviewRun, AiSuggestion, AnalyticsSnapshot, Article
 
 
 class ApiError(ValueError):
@@ -184,3 +184,158 @@ def reject_suggestion(suggestion: AiSuggestion) -> AiSuggestion:
     suggestion.status = "rejected"
     suggestion.save(update_fields=["status", "updated_at"])
     return suggestion
+
+
+def _round_metric(value: float) -> float:
+    return round(value, 4)
+
+
+def serialize_analytics_snapshot(snapshot: AnalyticsSnapshot) -> dict[str, Any]:
+    return {
+        "source": snapshot.source,
+        "schema_version": snapshot.schema_version,
+        "snapshot_date": snapshot.snapshot_date.isoformat(),
+        "impressions": snapshot.impressions,
+        "clicks": snapshot.clicks,
+        "ctr": _round_metric(snapshot.ctr),
+        "average_position": _round_metric(snapshot.average_position),
+        "pageviews": snapshot.pageviews,
+        "avg_time_on_page": snapshot.avg_time_on_page,
+        "bounce_rate": _round_metric(snapshot.bounce_rate),
+        "conversions": snapshot.conversions,
+        "internal_clicks": snapshot.internal_clicks,
+        "ai_acceptance_rate": _round_metric(snapshot.ai_acceptance_rate),
+        "payload": snapshot.payload,
+    }
+
+
+def get_article_analytics(article: Article) -> dict[str, Any]:
+    snapshots = list(article.analytics_snapshots.order_by("snapshot_date", "source"))
+    latest_by_source: dict[str, AnalyticsSnapshot] = {}
+    timeline_map: dict[str, dict[str, Any]] = {}
+    for snapshot in snapshots:
+        latest_by_source[snapshot.source] = snapshot
+        date_key = snapshot.snapshot_date.isoformat()
+        entry = timeline_map.setdefault(
+            date_key,
+            {
+                "snapshot_date": date_key,
+                "impressions": 0,
+                "clicks": 0,
+                "pageviews": 0,
+                "internal_clicks": 0,
+                "conversions": 0,
+                "average_position_values": [],
+                "ctr_values": [],
+                "ai_acceptance_rate_values": [],
+            },
+        )
+        entry["impressions"] += snapshot.impressions
+        entry["clicks"] += snapshot.clicks
+        entry["pageviews"] += snapshot.pageviews
+        entry["internal_clicks"] += snapshot.internal_clicks
+        entry["conversions"] += snapshot.conversions
+        entry["average_position_values"].append(snapshot.average_position)
+        entry["ctr_values"].append(snapshot.ctr)
+        entry["ai_acceptance_rate_values"].append(snapshot.ai_acceptance_rate)
+
+    source_items = {source: serialize_analytics_snapshot(snapshot) for source, snapshot in latest_by_source.items()}
+    overview = {
+        "published": article.status == "published",
+        "snapshot_count": len(snapshots),
+        "tracked_sources": sorted(source_items.keys()),
+        "total_impressions": sum(item["impressions"] for item in source_items.values()),
+        "total_clicks": sum(item["clicks"] for item in source_items.values()),
+        "total_pageviews": sum(item["pageviews"] for item in source_items.values()),
+        "total_internal_clicks": sum(item["internal_clicks"] for item in source_items.values()),
+        "total_conversions": sum(item["conversions"] for item in source_items.values()),
+        "average_ai_acceptance_rate": _round_metric(
+            sum(item["ai_acceptance_rate"] for item in source_items.values()) / len(source_items)
+        )
+        if source_items
+        else 0,
+    }
+    timeline = []
+    for date_key in sorted(timeline_map.keys()):
+        item = timeline_map[date_key]
+        timeline.append(
+            {
+                "snapshot_date": date_key,
+                "impressions": item["impressions"],
+                "clicks": item["clicks"],
+                "pageviews": item["pageviews"],
+                "internal_clicks": item["internal_clicks"],
+                "conversions": item["conversions"],
+                "average_position": _round_metric(
+                    sum(item["average_position_values"]) / len(item["average_position_values"])
+                ),
+                "ctr": _round_metric(sum(item["ctr_values"]) / len(item["ctr_values"])),
+                "ai_acceptance_rate": _round_metric(
+                    sum(item["ai_acceptance_rate_values"]) / len(item["ai_acceptance_rate_values"])
+                ),
+            }
+        )
+
+    return {
+        "article_id": article.id,
+        "article_title": article.title,
+        "article_slug": article.slug,
+        "generated_at": timezone.now().isoformat(),
+        "overview": overview,
+        "sources": source_items,
+        "timeline": timeline,
+    }
+
+
+def get_seo_summary() -> dict[str, Any]:
+    published_articles = list(Article.objects.filter(status="published").order_by("id"))
+    article_payloads = [get_article_analytics(article) for article in published_articles]
+    totals = {
+        "published_articles": len(published_articles),
+        "tracked_articles": sum(1 for payload in article_payloads if payload["overview"]["snapshot_count"] > 0),
+        "total_impressions": sum(payload["overview"]["total_impressions"] for payload in article_payloads),
+        "total_clicks": sum(payload["overview"]["total_clicks"] for payload in article_payloads),
+        "total_pageviews": sum(payload["overview"]["total_pageviews"] for payload in article_payloads),
+        "total_internal_clicks": sum(payload["overview"]["total_internal_clicks"] for payload in article_payloads),
+        "total_conversions": sum(payload["overview"]["total_conversions"] for payload in article_payloads),
+        "average_ai_acceptance_rate": _round_metric(
+            sum(payload["overview"]["average_ai_acceptance_rate"] for payload in article_payloads) / len(article_payloads)
+        )
+        if article_payloads
+        else 0,
+    }
+    top_articles = sorted(
+        [
+            {
+                "article_id": payload["article_id"],
+                "title": payload["article_title"],
+                "slug": payload["article_slug"],
+                "pageviews": payload["overview"]["total_pageviews"],
+                "clicks": payload["overview"]["total_clicks"],
+                "impressions": payload["overview"]["total_impressions"],
+                "ai_acceptance_rate": payload["overview"]["average_ai_acceptance_rate"],
+            }
+            for payload in article_payloads
+        ],
+        key=lambda item: (item["pageviews"], item["clicks"], item["impressions"]),
+        reverse=True,
+    )[:5]
+    source_health = []
+    for source in ("gsc", "ga4", "internal"):
+        source_snapshots = AnalyticsSnapshot.objects.filter(source=source)
+        latest_snapshot_date = source_snapshots.order_by("-snapshot_date").values_list("snapshot_date", flat=True).first()
+        source_health.append(
+            {
+                "source": source,
+                "snapshot_count": source_snapshots.count(),
+                "article_count": source_snapshots.values("article_id").distinct().count(),
+                "latest_snapshot_date": latest_snapshot_date.isoformat() if latest_snapshot_date else None,
+            }
+        )
+
+    return {
+        "generated_at": timezone.now().isoformat(),
+        "totals": totals,
+        "top_articles": top_articles,
+        "source_health": source_health,
+    }

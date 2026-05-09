@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from apps.media_library.models import ImageItem
 
-from .models import AiReviewRun, AiSuggestion, Article, Category, FaqItem, KnowledgeChunk, KnowledgeSource, SeoMetadata, Tag
+from .models import AiReviewRun, AiSuggestion, AnalyticsSnapshot, Article, Category, FaqItem, KnowledgeChunk, KnowledgeSource, SeoMetadata, Tag
 from .rag import deterministic_embedding, search_knowledge
 
 
@@ -532,3 +532,96 @@ class RagIndexTests(TestCase):
                 chunks.append(value)
 
         return Writer()
+
+
+class AnalyticsApiTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name="Analytics", slug="analytics")
+        self.article = Article.objects.create(
+            category=self.category,
+            title="A11 监控基线",
+            slug="a11-monitoring-baseline",
+            body="<p>analytics body</p>",
+            status="published",
+        )
+        self.other_article = Article.objects.create(
+            category=self.category,
+            title="A11 次级文章",
+            slug="a11-monitoring-secondary",
+            body="<p>secondary body</p>",
+            status="published",
+        )
+        snapshots = [
+            AnalyticsSnapshot(
+                article=self.article,
+                source="gsc",
+                snapshot_date=timezone.datetime(2026, 5, 8).date(),
+                impressions=1000,
+                clicks=120,
+                ctr=0.12,
+                average_position=7.2,
+                ai_acceptance_rate=0.55,
+                payload={"indexed": True},
+            ),
+            AnalyticsSnapshot(
+                article=self.article,
+                source="ga4",
+                snapshot_date=timezone.datetime(2026, 5, 8).date(),
+                pageviews=640,
+                avg_time_on_page=185,
+                bounce_rate=0.31,
+                conversions=12,
+                ai_acceptance_rate=0.62,
+                payload={"channel": "organic"},
+            ),
+            AnalyticsSnapshot(
+                article=self.article,
+                source="internal",
+                snapshot_date=timezone.datetime(2026, 5, 8).date(),
+                internal_clicks=48,
+                ai_acceptance_rate=0.58,
+                payload={"faq_expands": 11},
+            ),
+            AnalyticsSnapshot(
+                article=self.other_article,
+                source="gsc",
+                snapshot_date=timezone.datetime(2026, 5, 8).date(),
+                impressions=800,
+                clicks=80,
+                ctr=0.1,
+                average_position=9.1,
+                ai_acceptance_rate=0.49,
+            ),
+        ]
+        AnalyticsSnapshot.objects.bulk_create(snapshots)
+
+    def test_article_analytics_api_returns_aggregated_payload(self):
+        response = self.client.get(f"/api/articles/{self.article.id}/analytics/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["article_id"], self.article.id)
+        self.assertEqual(payload["overview"]["snapshot_count"], 3)
+        self.assertEqual(payload["overview"]["total_impressions"], 1000)
+        self.assertEqual(payload["overview"]["total_clicks"], 120)
+        self.assertEqual(payload["overview"]["total_pageviews"], 640)
+        self.assertEqual(payload["overview"]["total_internal_clicks"], 48)
+        self.assertEqual(len(payload["timeline"]), 1)
+        self.assertEqual(payload["sources"]["gsc"]["payload"]["indexed"], True)
+
+    def test_dashboard_seo_summary_api_returns_totals_and_top_articles(self):
+        response = self.client.get("/api/dashboard/seo-summary/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["totals"]["published_articles"], 2)
+        self.assertEqual(payload["totals"]["tracked_articles"], 2)
+        self.assertEqual(payload["totals"]["total_impressions"], 1800)
+        self.assertEqual(payload["top_articles"][0]["article_id"], self.article.id)
+        self.assertEqual(len(payload["source_health"]), 3)
+
+    def test_article_analytics_api_returns_not_found_for_missing_article(self):
+        response = self.client.get("/api/articles/999999/analytics/")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["error"]["code"], "article_not_found")

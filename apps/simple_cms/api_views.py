@@ -13,7 +13,9 @@ from .api_services import (
     ensure_article,
     ensure_review_run,
     ensure_suggestion,
+    get_article_analytics,
     get_mock_ai_client,
+    get_seo_summary,
     list_article_review_runs,
     list_review_run_suggestions,
     reject_suggestion,
@@ -109,3 +111,16 @@ def ai_suggestion_reject_api(request, suggestion_id: str):
     suggestion = ensure_suggestion(suggestion_id)
     reject_suggestion(suggestion)
     return _success({"suggestion": serialize_ai_suggestion(suggestion)})
+
+
+@require_http_methods(["GET"])
+@_handle_api_error
+def article_analytics_api(request, article_id: int):
+    article = ensure_article(article_id)
+    return _success(get_article_analytics(article))
+
+
+@require_http_methods(["GET"])
+@_handle_api_error
+def dashboard_seo_summary_api(request):
+    return _success(get_seo_summary())

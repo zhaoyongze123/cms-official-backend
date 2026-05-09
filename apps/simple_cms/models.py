@@ -58,6 +58,12 @@ class AiPatchOperation(models.TextChoices):
     ALT_TEXT = "alt_text", "Alt 文本"
 
 
+class AnalyticsSource(models.TextChoices):
+    GSC = "gsc", "Google Search Console"
+    GA4 = "ga4", "Google Analytics 4"
+    INTERNAL = "internal", "站内事件"
+
+
 class Category(models.Model):
     name = models.CharField("分类名称", max_length=100)
     slug = models.SlugField("URL缩略名", unique=True)
@@ -440,6 +446,41 @@ class FaqItem(models.Model):
 
     def __str__(self):
         return self.question
+
+
+class AnalyticsSnapshot(models.Model):
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="analytics_snapshots", verbose_name="文章")
+    schema_version = models.CharField("契约版本", max_length=10, default="v1")
+    source = models.CharField("数据来源", max_length=20, choices=AnalyticsSource.choices)
+    snapshot_date = models.DateField("快照日期")
+    impressions = models.PositiveIntegerField("展示次数", default=0)
+    clicks = models.PositiveIntegerField("点击次数", default=0)
+    ctr = models.FloatField("点击率", default=0)
+    average_position = models.FloatField("平均排名", default=0)
+    pageviews = models.PositiveIntegerField("浏览量", default=0)
+    avg_time_on_page = models.PositiveIntegerField("平均停留秒数", default=0)
+    bounce_rate = models.FloatField("跳出率", default=0)
+    conversions = models.PositiveIntegerField("转化次数", default=0)
+    internal_clicks = models.PositiveIntegerField("站内点击", default=0)
+    ai_acceptance_rate = models.FloatField("AI 建议采纳率", default=0)
+    payload = models.JSONField("扩展负载", default=dict, blank=True)
+    created_at = models.DateTimeField("创建时间", auto_now_add=True)
+    updated_at = models.DateTimeField("更新时间", auto_now=True)
+
+    class Meta:
+        verbose_name = "监控快照"
+        verbose_name_plural = "监控快照"
+        ordering = ["-snapshot_date", "article_id", "source"]
+        constraints = [
+            models.UniqueConstraint(fields=["article", "source", "snapshot_date"], name="uniq_analytics_article_source_date"),
+        ]
+        indexes = [
+            models.Index(fields=["snapshot_date", "source"], name="analytics_date_src_idx"),
+            models.Index(fields=["article", "snapshot_date"], name="analytics_art_date_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.article_id}:{self.source}:{self.snapshot_date}"
 
 
 class ArticleSlugHistory(models.Model):
