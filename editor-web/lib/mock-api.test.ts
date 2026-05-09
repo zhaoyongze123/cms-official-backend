@@ -30,6 +30,25 @@ describe("mock api helpers", () => {
     expect(updated.updated_at).not.toBe(article!.updated_at);
   });
 
+  it("normalizes content_json blockId during update", () => {
+    const article = getMockArticleById(101);
+
+    const updated = updateMockArticlePayload(article!, {
+      content_json: {
+        tiptap_schema_version: "v1",
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "新的正文" }],
+          },
+        ],
+      },
+    });
+
+    expect(updated.content_json.content[0].attrs?.blockId).toMatch(/^blk_/);
+  });
+
   it("creates draft helpers for new article flow", () => {
     const created = createMockArticle("A07 Mock Article");
     const storageKey = buildDraftStorageKey(created.article_id);

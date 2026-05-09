@@ -31,10 +31,9 @@ export default async function ArticleDetailPage({
         <span className="eyebrow">Article Editor</span>
         <h1>{article.title}</h1>
         <p>
-          这是 A07 的基础编辑页。当前保存行为会调用
+          当前页面已经进入 A08。保存行为会调用
           <code> PATCH /api/articles/:id </code>
-          ，
-          同时把草稿缓存到浏览器本地，为 A08 的 `content_json` 持久化流程预留入口。
+          ，同步生成 TipTap `content_json`、补齐 `blockId`，并缓存可渲染的 `content_html`。
         </p>
         <div className="cta-row">
           <Link className="cta" href="/studio/articles">
