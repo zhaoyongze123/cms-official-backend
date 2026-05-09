@@ -41,6 +41,9 @@ class Category(models.Model):
             return f"{self.parent.name} -> {self.name}"
         return self.name
 
+    def get_absolute_url(self):
+        return reverse("simple_cms:category_list", kwargs={"slug": self.slug})
+
 
 class Tag(models.Model):
     name = models.CharField("标签名称", max_length=100, unique=True)
@@ -54,6 +57,9 @@ class Tag(models.Model):
 
     def __str__(self):
         return self.name
+
+    def get_absolute_url(self):
+        return reverse("simple_cms:tag_list", kwargs={"slug": self.slug})
 
 
 class Article(models.Model):
@@ -285,7 +291,6 @@ class ArticleRevision(models.Model):
 
     def __str__(self):
         return f"{self.article.title} @ {self.created_at:%Y-%m-%d %H:%M}"
-
 
 
 

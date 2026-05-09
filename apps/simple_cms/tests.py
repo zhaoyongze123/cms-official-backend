@@ -2,6 +2,7 @@
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -201,3 +202,161 @@ class ContentSeoModelTests(TestCase):
         self.assertEqual(image.alt_text, "内容模型封面图")
 
 
+class ArticleSeoRendererTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(
+            name="SEO 渲染",
+            slug="seo-renderer",
+            seo_title="SEO 渲染",
+            seo_keywords="SEO, 渲染",
+            seo_description="用于验证 SEO 输出的分类",
+        )
+
+    def create_published_article(self, title, slug, body, publish_date=None):
+        return Article.objects.create(
+            category=self.category,
+            title=title,
+            slug=slug,
+            body=body,
+            status="published",
+            publish_date=publish_date,
+        )
+
+    def test_detail_page_exposes_seo_context_for_renderer(self):
+        article = self.create_published_article(
+            title="SEO 详情页",
+            slug="seo-detail",
+            body="<h2>概览</h2><p>正文内容。</p>",
+        )
+        SeoMetadata.objects.create(
+            article=article,
+            meta_title="SEO 详情页标题",
+            meta_description="SEO 详情页描述",
+            canonical_url="https://example.com/seo-detail/",
+            robots="index,follow",
+            og_title="SEO 详情页 OG 标题",
+            og_description="SEO 详情页 OG 描述",
+        )
+
+        response = self.client.get(reverse("simple_cms:article_detail", kwargs={"slug": article.slug}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("seo_context", response.context)
+        self.assertEqual(response.context["seo_context"]["title"], "SEO 详情页标题")
+        self.assertEqual(response.context["seo_context"]["description"], "SEO 详情页描述")
+        self.assertEqual(response.context["seo_context"]["canonical"], "https://example.com/seo-detail/")
+        self.assertEqual(response.context["seo_context"]["robots"], "index,follow")
+        self.assertIn("og", response.context["seo_context"])
+        self.assertIn("twitter", response.context["seo_context"])
+        self.assertIn("json_ld", response.context["seo_context"])
+
+    def test_detail_page_renders_canonical_robots_og_and_json_ld(self):
+        article = self.create_published_article(
+            title="页面级 SEO",
+            slug="page-seo",
+            body="<h2>一级标题</h2><p>正文内容。</p>",
+        )
+        SeoMetadata.objects.create(
+            article=article,
+            meta_title="页面级 SEO 标题",
+            meta_description="页面级 SEO 描述",
+            canonical_url="https://example.com/page-seo/",
+            robots="index,follow",
+            og_title="页面级 OG 标题",
+            og_description="页面级 OG 描述",
+        )
+
+        response = self.client.get(reverse("simple_cms:article_detail", kwargs={"slug": article.slug}))
+
+        self.assertContains(response, '<link rel="canonical"', html=False)
+        self.assertContains(response, '<meta name="robots" content="index,follow"', html=False)
+        self.assertContains(response, 'property="og:title"', html=False)
+        self.assertContains(response, 'property="og:description"', html=False)
+        self.assertContains(response, 'property="og:url"', html=False)
+        self.assertContains(response, 'property="og:type"', html=False)
+        self.assertContains(response, 'application/ld+json', html=False)
+
+    def test_detail_page_renders_faq_schema_when_faq_items_exist(self):
+        article = self.create_published_article(
+            title="FAQ 详情页",
+            slug="faq-detail",
+            body="<h2>常见问题</h2><p>正文内容。</p>",
+        )
+        FaqItem.objects.create(article=article, question="如何开始？", answer="先完成基础配置。", sort_order=10)
+        FaqItem.objects.create(article=article, question="如何发布？", answer="审核通过后发布。", sort_order=20)
+
+        response = self.client.get(reverse("simple_cms:article_detail", kwargs={"slug": article.slug}))
+
+        self.assertContains(response, '"@type": "FAQPage"', html=False)
+        self.assertContains(response, "如何开始？", html=False)
+        self.assertContains(response, "如何发布？", html=False)
+        self.assertContains(response, "application/ld+json", html=False)
+
+    def test_detail_page_exposes_toc_items_for_heading_rendering(self):
+        article = self.create_published_article(
+            title="TOC 详情页",
+            slug="toc-detail",
+            body="<h2>第一节</h2><p>正文内容。</p><h3>第二节</h3><p>更多内容。</p>",
+        )
+
+        response = self.client.get(reverse("simple_cms:article_detail", kwargs={"slug": article.slug}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("toc_items", response.context)
+        self.assertEqual(len(response.context["toc_items"]), 2)
+        self.assertEqual(response.context["toc_items"][0]["title"], "第一节")
+        self.assertEqual(response.context["toc_items"][1]["title"], "第二节")
+
+    @override_settings(APPEND_SLASH=False)
+    def test_sitemap_xml_only_includes_published_articles(self):
+        published = self.create_published_article(
+            title="已发布页面",
+            slug="published-page",
+            body="<p>已发布内容。</p>",
+        )
+        self.create_published_article(
+            title="未来页面",
+            slug="future-page",
+            body="<p>未来内容。</p>",
+            publish_date=timezone.now() + timedelta(days=1),
+        )
+        Article.objects.create(
+            category=self.category,
+            title="草稿页面",
+            slug="draft-page",
+            body="<p>草稿内容。</p>",
+            status="draft",
+        )
+
+        response = self.client.get("/sitemap.xml")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"].split(";")[0], "application/xml")
+        self.assertContains(response, published.get_absolute_url(), html=False)
+        self.assertNotContains(response, "future-page")
+        self.assertNotContains(response, "draft-page")
+
+    def test_old_slug_redirect_keeps_detail_page_accessible(self):
+        article = self.create_published_article(
+            title="旧链接文章",
+            slug="old-slug-article",
+            body="<p>正文内容。</p>",
+        )
+        old_slug = article.slug
+
+        article.slug = "new-slug-article"
+        article.save()
+
+        response = self.client.get(reverse("simple_cms:article_detail", kwargs={"slug": old_slug}))
+        follow_response = self.client.get(
+            reverse("simple_cms:article_detail", kwargs={"slug": old_slug}),
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(
+            response.headers["Location"],
+            reverse("simple_cms:article_detail", kwargs={"slug": "new-slug-article"}),
+        )
+        self.assertEqual(follow_response.status_code, 200)
+        self.assertContains(follow_response, "旧链接文章")

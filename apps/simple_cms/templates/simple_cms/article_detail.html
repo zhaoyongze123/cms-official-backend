@@ -1,13 +1,30 @@
 {% extends "base.html" %}
 
-{% block meta_description %}{% if article.meta_description %}{{ article.meta_description }}{% else %}{{ article.body|striptags|truncatewords:30 }}{% endif %}{% endblock %}
+{% block meta_description %}{{ seo_context.description }}{% endblock %}
 
 {% block meta_keywords %}{{ article.category.name|default:article.title }}{% endblock %}
 
-{% block title %}{{ article.title }}{% endblock %}
+{% block title %}{{ seo_context.title }}{% endblock %}
+
+{% block title_suffix %}{% endblock %}
+
+{% block seo_meta %}
+  <meta name="robots" content="{{ seo_context.robots }}" />
+  <meta property="og:title" content="{{ seo_context.og.title }}" />
+  <meta property="og:description" content="{{ seo_context.og.description }}" />
+  <meta property="og:url" content="{{ seo_context.og.url }}" />
+  <meta property="og:type" content="{{ seo_context.og.type }}" />
+  {% if seo_context.og.image %}<meta property="og:image" content="{{ seo_context.og.image }}" />{% endif %}
+  <meta name="twitter:card" content="{{ seo_context.twitter.card }}" />
+  <meta name="twitter:title" content="{{ seo_context.twitter.title }}" />
+  <meta name="twitter:description" content="{{ seo_context.twitter.description }}" />
+  {% if seo_context.twitter.site %}<meta name="twitter:site" content="{{ seo_context.twitter.site }}" />{% endif %}
+  {% if seo_context.twitter.image %}<meta name="twitter:image" content="{{ seo_context.twitter.image }}" />{% endif %}
+{% endblock %}
 
 {% block extra_head %}
-  <link rel="canonical" href="{{ request.build_absolute_uri|add:article.get_absolute_url }}" />
+  <link rel="canonical" href="{{ seo_context.canonical }}" />
+  <script type="application/ld+json">{{ seo_context.json_ld_markup|safe }}</script>
 {% endblock %}
 
 {% block content %}
@@ -31,9 +48,44 @@
 
             <div class="row justify-content-center">
                 <div class="col-md-10 col-lg-9">
+                    {% if toc_items %}
+                    <aside class="toc-card mb-4">
+                        <h2 class="toc-title">目录</h2>
+                        <ul class="toc-list">
+                            {% for item in toc_items %}
+                            <li class="toc-level-{{ item.level }}">
+                                <a href="#{{ item.anchor }}">{{ item.title }}</a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </aside>
+                    {% endif %}
+
+                    {% if seo_context.breadcrumbs %}
+                    <section class="breadcrumb-row mb-4" aria-label="面包屑">
+                        {% for item in seo_context.breadcrumbs %}
+                          <a href="{{ item.item }}">{{ item.name }}</a>{% if not forloop.last %}<span>/</span>{% endif %}
+                        {% endfor %}
+                    </section>
+                    {% endif %}
+
                     <div class="rich-content">
-                        {{ article.body|safe }}
+                        {{ rendered_body|safe }}
                     </div>
+
+                    {% if faq_items %}
+                    <section class="faq-section mt-5">
+                        <h2>常见问题</h2>
+                        <div class="faq-list">
+                            {% for item in faq_items %}
+                            <article class="faq-item">
+                                <h3>{{ item.question }}</h3>
+                                <p>{{ item.answer }}</p>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </section>
+                    {% endif %}
 
                     <div class="mt-5 pt-5 border-top d-flex justify-content-between align-items-center flex-wrap">
                         {% if prev_article %}
@@ -63,6 +115,16 @@
 .rich-content { border-radius: var(--radius-lg); background: white; padding: 2rem 0; }
 .rich-content p { font-size: 1.2rem; line-height: 2; margin-bottom: 2rem; color: var(--color-text-secondary); }
 .rich-content h2, .rich-content h3 { margin-top: 4rem; margin-bottom: 1.5rem; color: var(--color-text); position: relative; }
+.toc-card { border: 1px solid var(--color-border-light); border-radius: var(--radius-lg); background: #fff; padding: 1.25rem 1.5rem; }
+.toc-title { font-size: 1.1rem; margin-bottom: 1rem; }
+.toc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; }
+.toc-list a { color: var(--color-text); text-decoration: none; }
+.toc-level-3 { padding-left: 1rem; }
+.toc-level-4 { padding-left: 2rem; }
+.breadcrumb-row { display: flex; gap: 0.5rem; flex-wrap: wrap; color: var(--color-text-secondary); font-size: 0.95rem; }
+.faq-section { border-top: 1px solid var(--color-border-light); padding-top: 2rem; }
+.faq-list { display: grid; gap: 1.25rem; }
+.faq-item { padding: 1rem 1.25rem; border-radius: var(--radius-md); background: #fff; border: 1px solid var(--color-border-light); }
 .rich-content h2::before {
     content: "";
     position: absolute;
