@@ -22,7 +22,7 @@
 | A01 | DONE | `feature/contracts-v1` | OpenAPI、JSON Schema、Mock 示例、错误结构 | A00 | 2026-05-09 已完成 `contracts/` JSON Schema 校验、OpenAPI YAML 解析、契约边界文档落库 |
 | A02 | REVIEW | `feature/django-content-seo-models` | Tag、SeoMetadata、FaqItem、Media Alt、Article content_json 字段 | A01 | 2026-05-09 已验证 `python manage.py check`、`migrate`、`test apps.simple_cms`；全量 `makemigrations --check --dry-run` 受 `aliyun_monitor` 既有迁移漂移影响 |
 | A03 | TODO | `feature/django-seo-renderer` | SEO Context、Schema、OG、Canonical、TOC、Sitemap | A02 | curl 可验证 SEO 输出 |
-| A04 | TODO | `feature/fastapi-langgraph-ai-service` | FastAPI 骨架、Mock Provider、SiliconFlow Provider、LangGraph Review Graph | A01 | FastAPI 测试通过 |
+| A04 | REVIEW | `feature/fastapi-langgraph-ai-service` | FastAPI 骨架、Mock Provider、SiliconFlow Provider、LangGraph Review Graph | A01 | 2026-05-09 已验证 `docker compose run --rm --no-deps ai-service python -m pytest ai_service/tests/test_ai_service_contract.py -q` 18 通过，`GET /health` 返回成功；`POST /internal/rag/search` 因 `.env` 中 `INTERNAL_API_TOKEN` 为空未完成 HTTP 验证 |
 | A05 | TODO | `feature/rag-pgvector` | pgvector、KnowledgeSource、KnowledgeChunk、Indexer、Retriever、Rerank | A02 | RAG 命令可检索 |
 | A06 | TODO | `feature/django-ai-review-models` | AiReviewRun、AiSuggestion、AiPatch、Suggestion API、Mock AI Client | A01、A02 | DRF API 测试通过 |
 | A07 | TODO | `feature/nextjs-studio-shell` | Next.js Studio、登录态、文章列表、文章编辑基础页、Mock API | A01 | 本地页面可访问 |
