@@ -25,7 +25,7 @@
 | A04 | REVIEW | `feature/fastapi-langgraph-ai-service` | FastAPI 骨架、Mock Provider、SiliconFlow Provider、LangGraph Review Graph | A01 | 2026-05-09 已验证 `docker compose run --rm --no-deps ai-service python -m pytest ai_service/tests/test_ai_service_contract.py -q` 18 通过，`GET /health` 返回成功；`POST /internal/rag/search` 因 `.env` 中 `INTERNAL_API_TOKEN` 为空未完成 HTTP 验证 |
 | A05 | TODO | `feature/rag-pgvector` | pgvector、KnowledgeSource、KnowledgeChunk、Indexer、Retriever、Rerank | A02 | RAG 命令可检索 |
 | A06 | TODO | `feature/django-ai-review-models` | AiReviewRun、AiSuggestion、AiPatch、Suggestion API、Mock AI Client | A01、A02 | DRF API 测试通过 |
-| A07 | TODO | `feature/nextjs-studio-shell` | Next.js Studio、登录态、文章列表、文章编辑基础页、Mock API | A01 | 本地页面可访问 |
+| A07 | IN_PROGRESS | `feature/nextjs-studio-shell` | Next.js Studio、登录态、文章列表、文章编辑基础页、Mock API | A01 | 2026-05-09 已完成 Mock 登录页、Studio Shell、文章列表、编辑基础页、Mock API；已验证 `cd editor-web && npm run lint && npm run test && npm run build` 通过，`next start --port 3101` 下 `GET /login` 返回 200、`GET /api/articles` 返回 JSON、未登录访问 `GET /studio/articles` 返回 307 跳转 `/login`；尚未 push/创建 PR/合入 develop |
 | A08 | TODO | `feature/tiptap-editor-basic` | TipTap 文档结构、blockId、content_json 保存、content_html 渲染 | A01、A07 | 编辑保存刷新正常 |
 | A09 | TODO | `feature/tiptap-diff-editor` | AI Diff 渲染、Accept、Reject、编辑后接受、content_hash 冲突 | A06、A08 | Patch UI 验收通过 |
 | A10 | TODO | `feature/publish-flow` | 发布前检查、发布 API、Error 阻断、Warning 提示 | A03、A06、A09 | 发布流程可跑通 |
