@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cms.local/contracts/article.schema.json",
+  "title": "Article",
+  "type": "object",
+  "required": [
+    "article_id",
+    "schema_version",
+    "title",
+    "slug",
+    "status",
+    "content_json",
+    "content_html",
+    "updated_at"
+  ],
+  "properties": {
+    "article_id": {
+      "type": "integer"
+    },
+    "schema_version": {
+      "type": "string",
+      "const": "v1"
+    },
+    "title": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "published", "archived"]
+    },
+    "category": {
+      "type": ["object", "null"],
+      "properties": {
+        "category_id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["tag_id", "name", "slug"],
+        "properties": {
+          "tag_id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "content_json": {
+      "type": "object"
+    },
+    "content_html": {
+      "type": "string"
+    },
+    "content_hash": {
+      "type": "string"
+    },
+    "published_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

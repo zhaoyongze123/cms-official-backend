@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cms.local/contracts/seo-context.schema.json",
+  "title": "SeoContext",
+  "type": "object",
+  "required": [
+    "seo_context_schema_version",
+    "title",
+    "description",
+    "canonical",
+    "robots",
+    "og",
+    "json_ld"
+  ],
+  "properties": {
+    "seo_context_schema_version": {
+      "type": "string",
+      "const": "v1"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "canonical": {
+      "type": "string"
+    },
+    "robots": {
+      "type": "string"
+    },
+    "og": {
+      "type": "object",
+      "required": ["title", "description", "image", "url", "type"],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "twitter": {
+      "type": "object"
+    },
+    "json_ld": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "breadcrumbs": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "additionalProperties": false
+}

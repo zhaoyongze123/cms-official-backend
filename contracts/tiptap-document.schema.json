@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cms.local/contracts/tiptap-document.schema.json",
+  "title": "TipTapDocument",
+  "type": "object",
+  "required": ["tiptap_schema_version", "type", "content"],
+  "properties": {
+    "tiptap_schema_version": {
+      "type": "string",
+      "const": "v1"
+    },
+    "type": {
+      "type": "string",
+      "const": "doc"
+    },
+    "content": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "attrs"],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "attrs": {
+            "type": "object",
+            "required": ["blockId"],
+            "properties": {
+              "blockId": {
+                "type": "string",
+                "pattern": "^blk_[A-Za-z0-9_-]+$"
+              }
+            },
+            "additionalProperties": true
+          },
+          "content": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false
+}
