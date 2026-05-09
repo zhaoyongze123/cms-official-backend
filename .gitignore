@@ -77,3 +77,11 @@ output/
 
 # Project Notes
 TODO.md
+.playwright-cli/
+
+# Next.js
+!editor-web/lib/
+!editor-web/lib/**
+editor-web/.next/
+editor-web/node_modules/
+editor-web/coverage/
