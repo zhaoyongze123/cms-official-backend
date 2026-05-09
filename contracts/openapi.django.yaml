@@ -1,0 +1,132 @@
+openapi: 3.1.0
+info:
+  title: AI SEO Django API
+  version: v1
+  description: Next.js Studio 调用 Django CMS 的公开 API 契约。
+servers:
+  - url: http://127.0.0.1:8001
+paths:
+  /api/articles/:
+    get:
+      summary: 获取文章列表
+      responses:
+        "200":
+          description: 文章列表
+    post:
+      summary: 新建文章
+      responses:
+        "201":
+          description: 文章已创建
+  /api/articles/{id}/:
+    get:
+      summary: 获取文章详情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 文章详情
+    patch:
+      summary: 更新文章
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 文章已更新
+  /api/articles/{id}/ai-review/:
+    post:
+      summary: 触发 AI 审核
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "202":
+          description: 审核任务已创建
+  /api/ai-review-runs/{run_id}/suggestions/:
+    get:
+      summary: 获取 AI 建议
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 建议列表
+  /api/ai-suggestions/{id}/accept/:
+    post:
+      summary: 接受 AI 建议
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 建议已接受
+  /api/ai-suggestions/{id}/reject/:
+    post:
+      summary: 拒绝 AI 建议
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 建议已拒绝
+  /api/articles/{id}/publish/:
+    post:
+      summary: 发布文章
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 文章已发布
+  /api/articles/{id}/seo-check/:
+    post:
+      summary: 发布前 SEO 检查
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 检查结果
+  /api/articles/{id}/analytics/:
+    get:
+      summary: 获取单篇文章监控数据
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 监控数据
+  /api/dashboard/seo-summary/:
+    get:
+      summary: 获取 SEO 总览
+      responses:
+        "200":
+          description: SEO 总览
