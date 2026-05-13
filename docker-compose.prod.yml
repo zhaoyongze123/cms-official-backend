@@ -1,0 +1,201 @@
+x-backend-image: &backend-image
+  image: cms-backend:prod
+
+services:
+  db:
+    image: pgvector/pgvector:pg15
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:15432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:16379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    <<: *backend-image
+    restart: unless-stopped
+    working_dir: /app/apps/cms-api
+    command: ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "120"]
+    env_file:
+      - .env.prod
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      PYTHONPATH: /app/apps/cms-api:/app
+      http_proxy: ""
+      https_proxy: ""
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      all_proxy: ""
+      ALL_PROXY: ""
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s = socket.create_connection(('127.0.0.1', 8000), 5); s.close()"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - media_data:/app/apps/cms-api/media
+      - static_data:/app/apps/cms-api/staticfiles
+    ports:
+      - "127.0.0.1:18001:8000"
+
+  ai-service:
+    <<: *backend-image
+    restart: unless-stopped
+    entrypoint: []
+    working_dir: /app/apps/ai-service
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    env_file:
+      - .env.prod
+    environment:
+      PYTHONPATH: /app/apps/ai-service:/app
+      http_proxy: ""
+      https_proxy: ""
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      all_proxy: ""
+      ALL_PROXY: ""
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:18002:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    <<: *backend-image
+    restart: unless-stopped
+    entrypoint: []
+    working_dir: /app/apps/ai-service
+    command: ["python", "-m", "app.worker_stub"]
+    env_file:
+      - .env.prod
+    environment:
+      PYTHONPATH: /app/apps/ai-service:/app/apps/cms-api:/app
+      http_proxy: ""
+      https_proxy: ""
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      all_proxy: ""
+      ALL_PROXY: ""
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  editor-web:
+    image: node:22-bookworm
+    restart: unless-stopped
+    working_dir: /app/apps/studio-web
+    command:
+      [
+        "sh",
+        "-c",
+        "npm ci --include=dev && npm install --include=dev /app/packages/editor-protocol && npm run build && npm run start -- --hostname 0.0.0.0 --port 3000",
+      ]
+    env_file:
+      - .env.prod
+    environment:
+      NODE_ENV: production
+      NEXT_EDITOR_DEV_ORIGIN: ${CMS_SITE_URL}
+      http_proxy: ""
+      https_proxy: ""
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      all_proxy: ""
+      ALL_PROXY: ""
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/django-admin/next-editor/login').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))"]
+      interval: 20s
+      timeout: 10s
+      retries: 20
+    volumes:
+      - ./apps/studio-web:/app/apps/studio-web
+      - ./packages:/app/packages:ro
+      - editor_web_node_modules:/app/apps/studio-web/node_modules
+      - editor_web_next_cache:/app/apps/studio-web/.next
+    ports:
+      - "127.0.0.1:13000:3000"
+
+  public-web:
+    image: node:22-bookworm
+    restart: unless-stopped
+    working_dir: /app/apps/public-web
+    command:
+      [
+        "sh",
+        "-c",
+        "npm ci --include=dev && npm run build && npm run start -- --hostname 0.0.0.0 --port 3003",
+      ]
+    env_file:
+      - .env.prod
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL: ${CMS_SITE_URL}
+      NEXT_PUBLIC_SITE_URL: ${CMS_SITE_URL}
+      http_proxy: ""
+      https_proxy: ""
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      all_proxy: ""
+      ALL_PROXY: ""
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3003/solutions').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))"]
+      interval: 20s
+      timeout: 10s
+      retries: 20
+    volumes:
+      - ./apps/public-web:/app/apps/public-web
+      - public_web_node_modules:/app/apps/public-web/node_modules
+      - public_web_next_cache:/app/apps/public-web/.next
+    ports:
+      - "127.0.0.1:13003:3003"
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_data:
+  static_data:
+  editor_web_node_modules:
+  editor_web_next_cache:
+  public_web_node_modules:
+  public_web_next_cache:

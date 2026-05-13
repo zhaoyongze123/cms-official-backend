@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
+  <rect width="900" height="520" fill="#f7f7f7"/>
+  <text x="40" y="55" font-size="30" font-family="Arial" font-weight="700">社区智能回收站试点：现场照片</text>
+  <rect x="40" y="85" width="820" height="360" rx="18" fill="#d9e6d2"/>
+  <rect x="90" y="170" width="150" height="210" rx="12" fill="#6ca36f"/>
+  <rect x="260" y="170" width="150" height="210" rx="12" fill="#4d86c6"/>
+  <rect x="430" y="170" width="150" height="210" rx="12" fill="#d19a3a"/>
+  <rect x="600" y="170" width="150" height="210" rx="12" fill="#b65c5c"/>
+  <text x="117" y="235" font-size="24" font-family="Arial" fill="white" font-weight="700">厨余</text>
+  <text x="288" y="235" font-size="24" font-family="Arial" fill="white" font-weight="700">可回收</text>
+  <text x="465" y="235" font-size="24" font-family="Arial" fill="white" font-weight="700">纸类</text>
+  <text x="635" y="235" font-size="24" font-family="Arial" fill="white" font-weight="700">有害</text>
+  <circle cx="690" cy="135" r="34" fill="#ffcc55"/>
+  <path d="M100 410 C220 385,330 400,460 385 C580 370,700 388,810 360" fill="none" stroke="#777" stroke-width="5"/>
+  <text x="58" y="475" font-size="20" font-family="Arial">图1：东门站点，设备编号：A-17；照片时间：2026-04-28 07:42</text>
+</svg>

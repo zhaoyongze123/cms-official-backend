@@ -48,6 +48,7 @@ db_dump.sql
 .env.*.local
 .env.development
 .env.production
+.env.prod
 
 # IDEs / Editors
 .idea/
@@ -74,6 +75,22 @@ docker-compose.override.yml
 jazzmin_change_form.html
 # Playwright artifacts
 output/
+.vendor-wheels/
 
 # Project Notes
 TODO.md
+.playwright-cli/
+AI_Native_SEO_Publishing_OS_Professional_PRD.docx
+index.html
+
+# Next.js
+!editor-web/lib/
+!editor-web/lib/**
+editor-web/.next/
+editor-web/node_modules/
+editor-web/coverage/
+
+# Monorepo local artifacts
+apps/**/__pycache__/
+node_modules/
+output/

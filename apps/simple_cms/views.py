@@ -1,10 +1,11 @@
 from django.db.models import Count, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
+from django.conf import settings
 from django.utils import timezone
 from django.views.generic import DetailView, ListView
 
-from .models import Article, ArticleSlugHistory, Category
+from cms_apps.articles.models import Article, ArticleSlugHistory, Category
 
 
 def get_category_queryset():
@@ -24,6 +25,10 @@ class ArticleListView(ListView):
     template_name = "simple_cms/article_list.html"
     context_object_name = "articles"
     paginate_by = 10
+
+    def dispatch(self, request, *args, **kwargs):
+        public_web_url = getattr(settings, "PUBLIC_WEB_BASE_URL", "http://127.0.0.1:3003").rstrip("/")
+        return redirect(public_web_url)
 
     def get_queryset(self):
         return Article.objects.published()

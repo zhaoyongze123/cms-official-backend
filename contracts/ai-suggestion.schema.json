@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cms.local/contracts/ai-suggestion.schema.json",
+  "title": "AiSuggestion",
+  "type": "object",
+  "required": [
+    "suggestion_id",
+    "schema_version",
+    "article_id",
+    "type",
+    "status",
+    "severity",
+    "title",
+    "reason",
+    "patches",
+    "source_chunks"
+  ],
+  "properties": {
+    "suggestion_id": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string",
+      "const": "v1"
+    },
+    "article_id": {
+      "type": "integer"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "metadata",
+        "faq",
+        "internal_link",
+        "semantic_keyword",
+        "body_insert",
+        "body_delete",
+        "body_replace",
+        "alt_text"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "accepted", "rejected", "edited", "expired", "failed"]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "title": {
+      "type": "string"
+    },
+    "reason": {
+      "type": "string"
+    },
+    "payload": {
+      "type": "object"
+    },
+    "patches": {
+      "type": "array",
+      "items": {
+        "$ref": "ai-patch.schema.json"
+      }
+    },
+    "source_chunks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["chunk_id", "source_type", "source_id", "title", "url", "score"],
+        "properties": {
+          "chunk_id": {
+            "type": "string"
+          },
+          "source_type": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

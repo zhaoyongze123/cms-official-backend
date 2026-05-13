@@ -1,0 +1,1 @@
+from cms_apps.knowledge.management.commands.rebuild_knowledge_index import Command

@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+cd /app/apps/cms-api
+
 python manage.py migrate --noinput
 
 # Do not block app startup if cron is unavailable in the runtime.

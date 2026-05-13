@@ -1,0 +1,4 @@
+packages:
+  - 'packages/*'
+  - 'apps/studio-web'
+  - 'apps/public-web'

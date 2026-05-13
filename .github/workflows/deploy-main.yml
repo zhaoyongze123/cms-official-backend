@@ -1,0 +1,90 @@
+name: Deploy Main To Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Write production env
+        run: |
+          cat > .env.prod <<'EOF'
+          DJANGO_SETTINGS_MODULE=${{ secrets.PROD_DJANGO_SETTINGS_MODULE }}
+          SECRET_KEY=${{ secrets.PROD_SECRET_KEY }}
+          DEBUG=False
+          ALLOWED_HOSTS=${{ secrets.PROD_ALLOWED_HOSTS }}
+          CSRF_TRUSTED_ORIGINS=${{ secrets.PROD_CSRF_TRUSTED_ORIGINS }}
+          CMS_SITE_URL=${{ secrets.PROD_CMS_SITE_URL }}
+          POSTGRES_DB=${{ secrets.PROD_POSTGRES_DB }}
+          POSTGRES_USER=${{ secrets.PROD_POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.PROD_POSTGRES_PASSWORD }}
+          POSTGRES_HOST=db
+          POSTGRES_PORT=5432
+          REDIS_URL=redis://redis:6379/0
+          INTERNAL_API_TOKEN=${{ secrets.PROD_INTERNAL_API_TOKEN }}
+          AI_PROVIDER=${{ secrets.PROD_AI_PROVIDER }}
+          AI_PROMPT_VERSION=${{ secrets.PROD_AI_PROMPT_VERSION }}
+          AI_SERVICE_URL=http://ai-service:8000
+          DJANGO_INTERNAL_BASE_URL=http://web:8000
+          NEXT_PUBLIC_DJANGO_BASE_URL=${{ secrets.PROD_NEXT_PUBLIC_DJANGO_BASE_URL }}
+          NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL=${{ secrets.PROD_NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL }}
+          NEXT_PUBLIC_EDITOR_BASE_URL=${{ secrets.PROD_NEXT_PUBLIC_EDITOR_BASE_URL }}
+          NEXT_PUBLIC_SITE_URL=${{ secrets.PROD_NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_AUTH_MODE=django-session
+          SILICONFLOW_BASE_URL=${{ secrets.PROD_SILICONFLOW_BASE_URL }}
+          SILICONFLOW_API_KEY=${{ secrets.PROD_SILICONFLOW_API_KEY }}
+          SILICONFLOW_CHAT_MODEL=${{ secrets.PROD_SILICONFLOW_CHAT_MODEL }}
+          SILICONFLOW_FAST_MODEL=${{ secrets.PROD_SILICONFLOW_FAST_MODEL }}
+          SILICONFLOW_EMBEDDING_MODEL=${{ secrets.PROD_SILICONFLOW_EMBEDDING_MODEL }}
+          SILICONFLOW_EMBEDDING_DIMENSIONS=${{ secrets.PROD_SILICONFLOW_EMBEDDING_DIMENSIONS }}
+          SILICONFLOW_RERANK_MODEL=${{ secrets.PROD_SILICONFLOW_RERANK_MODEL }}
+          RAG_PROVIDER=${{ secrets.PROD_RAG_PROVIDER }}
+          RAG_DATABASE_URL=${{ secrets.PROD_RAG_DATABASE_URL }}
+          RAG_CHUNK_TABLE=${{ secrets.PROD_RAG_CHUNK_TABLE }}
+          RAG_SOURCE_TABLE=${{ secrets.PROD_RAG_SOURCE_TABLE }}
+          RAG_SOURCE_TYPE=${{ secrets.PROD_RAG_SOURCE_TYPE }}
+          RAG_ENABLE_RERANK=${{ secrets.PROD_RAG_ENABLE_RERANK }}
+          RAG_FORCE_MOCK=${{ secrets.PROD_RAG_FORCE_MOCK }}
+          RAG_VECTOR_DIMENSIONS=${{ secrets.PROD_RAG_VECTOR_DIMENSIONS }}
+          RAG_CHUNK_SIZE=${{ secrets.PROD_RAG_CHUNK_SIZE }}
+          RAG_CHUNK_OVERLAP=${{ secrets.PROD_RAG_CHUNK_OVERLAP }}
+          ALIYUN_ACCESS_KEY_ID=${{ secrets.PROD_ALIYUN_ACCESS_KEY_ID }}
+          ALIYUN_ACCESS_KEY_SECRET=${{ secrets.PROD_ALIYUN_ACCESS_KEY_SECRET }}
+          ALIYUN_REGION=${{ secrets.PROD_ALIYUN_REGION }}
+          ALIYUN_DNS_REGION=${{ secrets.PROD_ALIYUN_DNS_REGION }}
+          ALIYUN_DNS_DOMAINS=${{ secrets.PROD_ALIYUN_DNS_DOMAINS }}
+          ALIYUN_CMS_NAMESPACE=${{ secrets.PROD_ALIYUN_CMS_NAMESPACE }}
+          ALIYUN_CMS_METRICS=${{ secrets.PROD_ALIYUN_CMS_METRICS }}
+          EOF
+
+      - name: Sync repository to server
+        env:
+          SSHPASS: ${{ secrets.PROD_SERVER_PASSWORD }}
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=no root@${{ secrets.PROD_SERVER_HOST }} "mkdir -p /root/cms官网后台"
+          sshpass -e rsync -az --delete \
+            --exclude '.git' \
+            --exclude 'node_modules' \
+            --exclude '.next' \
+            --exclude '.venv' \
+            --exclude '.pytest_cache' \
+            --exclude 'apps/cms-api/media' \
+            ./ root@${{ secrets.PROD_SERVER_HOST }}:/root/cms官网后台/
+          sshpass -e scp -o StrictHostKeyChecking=no .env.prod root@${{ secrets.PROD_SERVER_HOST }}:/root/cms官网后台/.env.prod
+          sshpass -e scp -o StrictHostKeyChecking=no deploy/nginx/cms.conf root@${{ secrets.PROD_SERVER_HOST }}:/root/cms官网后台/deploy/nginx/cms.conf
+
+      - name: Deploy on server
+        env:
+          SSHPASS: ${{ secrets.PROD_SERVER_PASSWORD }}
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=no root@${{ secrets.PROD_SERVER_HOST }} \
+            "cd /root/cms官网后台 && chmod +x scripts/deploy_prod.sh && ./scripts/deploy_prod.sh && cp deploy/nginx/cms.conf /www/server/panel/vhost/nginx/yuncan.com.conf && nginx -t && /etc/init.d/nginx reload"

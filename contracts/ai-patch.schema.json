@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cms.local/contracts/ai-patch.schema.json",
+  "title": "AiPatch",
+  "type": "object",
+  "required": [
+    "patch_id",
+    "patch_schema_version",
+    "operation",
+    "target_block_id",
+    "content_hash"
+  ],
+  "properties": {
+    "patch_id": {
+      "type": "string"
+    },
+    "patch_schema_version": {
+      "type": "string",
+      "const": "v1"
+    },
+    "operation": {
+      "type": "string",
+      "enum": ["insert_after", "delete", "replace_text", "alt_text"]
+    },
+    "target_block_id": {
+      "type": "string",
+      "pattern": "^blk_[A-Za-z0-9_-]+$"
+    },
+    "old_text": {
+      "type": "string"
+    },
+    "new_text": {
+      "type": "string"
+    },
+    "new_block": {
+      "type": "object"
+    },
+    "position": {
+      "type": ["integer", "null"]
+    },
+    "content_hash": {
+      "type": "string"
+    },
+    "reason": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

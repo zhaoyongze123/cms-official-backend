@@ -1,235 +1,80 @@
-# 🚀 CMS 官网后台
+# 企业内容管理平台（CMS 官网后台）
 
-> 面向企业官网内容生产、SEO 发布、运营协作与监控分析的一体化内容平台。
+本仓库当前以 `feature/django-admin-next-editor-embed` 的最终版本为基线，代码结构已经收口为：
 
-[![Main Deploy](https://img.shields.io/github/actions/workflow/status/zhaoyongze123/cms-official-backend/deploy-main.yml?branch=main&label=main%20deploy)](https://github.com/zhaoyongze123/cms-official-backend/actions/workflows/deploy-main.yml)
-[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Django](https://img.shields.io/badge/Django-CMS-0C4B33?logo=django&logoColor=white)](https://www.djangoproject.com/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-AI%20Service-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Next.js](https://img.shields.io/badge/Next.js-Studio%20%26%20Public-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+- `apps/cms-api`：Django CMS 主应用
+- `apps/ai-service`：FastAPI AI / RAG 服务
+- `apps/studio-web`：Next.js 内部编辑器
+- `apps/public-web`：Next.js 对外站点
 
-线上生产站点： [yuncan.com](https://yuncan.com)
+当前仓库同时提供两套 Docker Compose：
 
-## ✨ 项目简介
+- `docker-compose.dev.yml`：本地开发热更新
+- `docker-compose.prod.yml`：生产部署
 
-这是一个围绕企业官网内容运营构建的 monorepo，当前包含四个核心应用：
+默认 `docker-compose.yml` 通过 `include` 指向开发版，因此本地继续执行 `docker compose ...` 即可。
 
-- `Django CMS`：内容、后台、发布、SEO 真相源
-- `FastAPI AI Service`：AI / RAG / 工作流能力
-- `Next.js Studio`：内部编辑与监控工作台
-- `Next.js Public Web`：对外官网展示站点
-
-适合以下场景：
-
-- 企业官网后台重构与统一部署
-- 内容编辑、SEO 配置、监控分析一体化
-- Django 后台与现代前端工作台并行协作
-- 基于 Docker Compose 的可复制生产部署
-
-## 🧭 快速导航
-
-- [项目概览](#项目概览)
-- [技术栈](#技术栈)
-- [仓库结构](#仓库结构)
-- [本地开发](#本地开发)
-- [测试与质量校验](#测试与质量校验)
-- [生产部署](#生产部署)
-- [GitHub Actions 自动部署](#github-actions-自动部署)
-- [API 与路由概览](#api-与路由概览)
-- [常见运维命令](#常见运维命令)
-- [安全说明](#安全说明)
-
-## 📦 项目概览
-
-- `apps/cms-api`：Django 主应用，负责内容、后台、发布、SEO 渲染、媒体与对内对外 API。
-- `apps/ai-service`：FastAPI AI/RAG 服务，负责 AI 调用、检索与工作流编排。
-- `apps/studio-web`：Next.js 内部编辑工作台，承接文章编辑、SEO 监控、后台嵌入页面。
-- `apps/public-web`：Next.js 对外站点，承接官网公开展示页。
-- `packages/editor-protocol`：前后端共享的编辑协议包。
-
-当前仓库同时维护开发环境与生产环境两套 Docker Compose，并提供 `main` 分支自动部署工作流。
-
-## 🛠️ 技术栈
-
-- 后端：Python 3.12、Django、Gunicorn
-- AI 服务：FastAPI、Pytest
-- 前端：Next.js 15、React 19、TypeScript
-- 编辑器：TipTap
-- 数据库：PostgreSQL 15 + pgvector
-- 缓存：Redis 7
-- 生产部署：Docker Compose、Nginx、GitHub Actions
-
-## 🗂️ 仓库结构
+## 1. 仓库目录
 
 ```text
-.
-├── apps/
-│   ├── ai-service/          FastAPI AI/RAG 服务
-│   ├── aliyun_monitor/      阿里云监控相关能力
-│   ├── cms-api/             Django 主应用
-│   ├── media_library/       媒体库
-│   ├── public-web/          Next.js 对外站点
-│   ├── simple_cms/          Django CMS 业务模块
-│   ├── studio-web/          Next.js 内部工作台
-│   ├── sys_settings/        系统设置
-│   └── users/               用户与权限
-├── contracts/               OpenAPI / JSON Schema 契约
-├── deploy/
-│   └── nginx/               生产 Nginx 模板
-├── docker/                  镜像入口与计划任务配置
-├── packages/                共享包
-├── scripts/                 部署与验证脚本
-├── .github/workflows/       GitHub Actions 工作流
-├── docker-compose.dev.yml   开发环境 Compose
-├── docker-compose.prod.yml  生产环境 Compose
-└── Dockerfile               后端基础镜像
+apps/
+  cms-api/        Django CMS
+  ai-service/     FastAPI AI/RAG
+  studio-web/     Next.js 编辑器
+  public-web/     Next.js 公开站
+deploy/
+  nginx/          生产 Nginx 配置
+scripts/
+  deploy_prod.sh  生产部署脚本
+.github/workflows/
+  deploy-main.yml main 自动部署工作流
 ```
 
-## 🌟 核心能力
+## 2. 开发环境
 
-- 📝 Django Admin 后台与内容管理
-- 🧩 文章创建、编辑、发布与 SEO 元数据维护
-- 🖥️ Next.js 编辑器嵌入 Django Admin
-- 🌐 对外公开站渲染与内容展示
-- 🤖 AI 审核、生成与 RAG 检索服务骨架
-- 📈 SEO 监控面板与站点健康数据接口
-- 🚢 Docker 化开发、生产部署与自动化发布
+### 2.1 环境变量
 
-## 🧱 系统架构
-
-```text
-Browser / Operator
-        │
-        ├── Public Web (Next.js)
-        │        │
-        │        └── Django API
-        │
-        ├── Studio Web (Next.js)
-        │        │
-        │        ├── Django API
-        │        └── Django Admin Embed Proxy
-        │
-        ├── Django CMS
-        │        │
-        │        ├── PostgreSQL + pgvector
-        │        ├── Redis
-        │        └── FastAPI AI Service
-        │
-        └── Nginx / GitHub Actions / Docker Compose
-```
-
-## 💻 本地开发
-
-### 环境要求
-
-- Docker / Docker Compose
-- Node.js 22
-- Python 3.12
-
-### 环境变量
-
-复制示例配置：
+复制根目录 `.env.example`：
 
 ```bash
 cp .env.example .env
 ```
 
-`.env.example` 已包含开发环境所需的核心变量：
-
-- Django：`SECRET_KEY`、`DEBUG`、`ALLOWED_HOSTS`
-- PostgreSQL：`POSTGRES_DB`、`POSTGRES_USER`、`POSTGRES_PASSWORD`
-- Redis：`REDIS_URL`
-- 内部服务：`AI_SERVICE_URL`、`DJANGO_INTERNAL_BASE_URL`
-- 前端：`NEXT_PUBLIC_DJANGO_BASE_URL`、`NEXT_PUBLIC_EDITOR_BASE_URL`
-- AI / RAG：`AI_PROVIDER`、`RAG_PROVIDER`
-- 阿里云：`ALIYUN_*`
-
-### 启动开发环境
+### 2.2 启动开发环境
 
 ```bash
-COMPOSE_DOCKER_CLI_BUILD=0 DOCKER_BUILDKIT=0 docker compose -f docker-compose.dev.yml up -d --build
+COMPOSE_DOCKER_CLI_BUILD=0 DOCKER_BUILDKIT=0 docker compose up -d --build
 ```
 
-### 开发环境端口
+开发环境默认暴露：
 
 - Django：`http://127.0.0.1:8001`
 - Django Health：`http://127.0.0.1:8001/api/health/`
-- FastAPI Health：`http://127.0.0.1:8002/health`
 - Studio Web：`http://127.0.0.1:3000/django-admin/next-editor/login`
 - Public Web：`http://127.0.0.1:3003/solutions`
-- PostgreSQL：`127.0.0.1:15432`
-- Redis：`127.0.0.1:16379`
+- AI Service Health：`http://127.0.0.1:8002/health`
 
-### 开发环境最小验证
+### 2.3 开发环境最小验证
 
 ```bash
-docker compose -f docker-compose.dev.yml ps
-docker compose -f docker-compose.dev.yml exec -T web python manage.py check
+docker compose ps
+docker compose exec -T web python manage.py check
 curl -I http://127.0.0.1:8001/api/health/
-curl -I http://127.0.0.1:8002/health
 curl -I http://127.0.0.1:3000/django-admin/next-editor/login
 curl -I http://127.0.0.1:3003/solutions
 ```
 
-## ✅ 测试与质量校验
+## 3. 生产环境
 
-### Django
+### 3.1 生产 Compose
 
-```bash
-docker compose -f docker-compose.dev.yml exec -T web python manage.py check
-docker compose -f docker-compose.dev.yml exec -T web python manage.py test
-docker compose -f docker-compose.dev.yml exec -T web python manage.py makemigrations --check --dry-run
-```
-
-### FastAPI
-
-```bash
-curl -s http://127.0.0.1:8002/health
-docker compose -f docker-compose.dev.yml exec -T ai-service pytest
-```
-
-### Studio Web
-
-```bash
-cd apps/studio-web
-npm ci
-npm run lint
-npm run test
-npm run build
-```
-
-### Public Web
-
-```bash
-cd apps/public-web
-npm ci
-npm run build
-```
-
-### 契约校验
-
-```bash
-python3 -m json.tool contracts/article.schema.json > /dev/null
-python3 -m json.tool contracts/ai-review.schema.json > /dev/null
-python3 -m json.tool contracts/ai-suggestion.schema.json > /dev/null
-python3 -m json.tool contracts/ai-patch.schema.json > /dev/null
-python3 -m json.tool contracts/rag-search.schema.json > /dev/null
-python3 -m json.tool contracts/seo-context.schema.json > /dev/null
-python3 -m json.tool contracts/tiptap-document.schema.json > /dev/null
-```
-
-## 🚀 生产部署
-
-### 生产 Compose
-
-生产环境使用独立 Compose 文件：
+生产环境使用：
 
 ```bash
 docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 ```
 
-生产服务包括：
+生产版包含：
 
 - `db`
 - `redis`
@@ -239,209 +84,158 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 - `editor-web`
 - `public-web`
 
-### 生产内部端口
+- 生产环境不再使用容器内 Nginx 抢占宿主机 `80/443`
+- 统一改为 Docker 服务监听宿主机 `127.0.0.1` 高位端口，再由服务器现有 BT/nginx 反代
+
+生产内部端口：
 
 - Django：`127.0.0.1:18001`
 - FastAPI：`127.0.0.1:18002`
-- Studio Web：`127.0.0.1:13000`
+- Studio：`127.0.0.1:13000`
 - Public Web：`127.0.0.1:13003`
-- PostgreSQL：`127.0.0.1:15432`
+- Postgres：`127.0.0.1:15432`
 - Redis：`127.0.0.1:16379`
 
-### Nginx 反向代理
-
-生产环境默认由宿主机 Nginx 转发到 Compose 内服务，当前站点规则对应：
+BT/nginx 反代规则：
 
 - `/` -> `public-web`
 - `/api/` -> Django
 - `/django-admin/` -> Django Admin
-- `/django-admin/next-editor/` -> Studio Web
-- `/django/static/` -> Django 静态文件
-- `/django/media/` -> Django 媒体文件
+- `/django-admin/next-editor/` -> Studio
+- 生产域名：`https://yuncan.com`
 
-生产 Nginx 模板位于：
+### 3.2 生产环境变量
 
-- [`deploy/nginx/cms.conf`](deploy/nginx/cms.conf)
+先复制模板：
 
-### 生产环境变量
+```bash
+cp deploy/env.prod.example .env.prod
+```
 
-生产环境需要根目录 `.env.prod`。至少应包含：
+至少补齐：
 
 - `SECRET_KEY`
 - `ALLOWED_HOSTS`
 - `CSRF_TRUSTED_ORIGINS`
 - `CMS_SITE_URL`
-- `POSTGRES_DB`
-- `POSTGRES_USER`
 - `POSTGRES_PASSWORD`
-- `REDIS_URL`
 - `INTERNAL_API_TOKEN`
-- `AI_PROVIDER`
-- `AI_SERVICE_URL`
-- `DJANGO_INTERNAL_BASE_URL`
-- `NEXT_PUBLIC_DJANGO_BASE_URL`
-- 所有真实 AI、RAG、阿里云相关凭证
+- 所有真实 AI / 阿里云凭证
 
-注意：
-
-- 不要把 `.env.prod` 提交到 Git。
-- GitHub Actions 使用 `PROD_ENV_FILE` Secret 下发完整 `.env.prod`。
-
-### 部署脚本
-
-生产部署脚本位于：
-
-- [`scripts/deploy_prod.sh`](scripts/deploy_prod.sh)
-
-脚本核心行为：
-
-1. 构建后端镜像 `cms-backend:prod`
-2. 执行 `docker compose ... up -d --build --remove-orphans`
-3. 执行 Django 数据库迁移
-4. 执行 `collectstatic`
-5. 输出容器状态
-6. 可选更新服务器 Nginx 配置并重载
-
-本地在生产服务器执行：
+### 3.3 生产部署命令
 
 ```bash
 chmod +x scripts/deploy_prod.sh
 ./scripts/deploy_prod.sh
 ```
 
-## 🔁 GitHub Actions 自动部署
-
-工作流文件：
-
-- [`.github/workflows/deploy-main.yml`](.github/workflows/deploy-main.yml)
-
-触发条件：
-
-- `push` 到 `main`
-- 手动 `workflow_dispatch`
-
-### CI 校验内容
-
-`verify` 阶段会执行：
-
-- Django `check`
-- Django `test`
-- FastAPI `pytest`
-- Studio Web `lint`
-- Studio Web `test`
-- Studio Web `build`
-- Public Web `build`
-- `contracts/` JSON Schema 校验
-- 后端 Docker 镜像构建
-
-### 部署阶段行为
-
-`deploy` 阶段会：
-
-1. 安装 SSH 私钥
-2. 通过 `PROD_ENV_FILE` Secret 写入 `.env.prod`
-3. 打包当前仓库代码
-4. 上传部署包到服务器目录
-5. 远程执行 `scripts/deploy_prod.sh`
-
-### 需要配置的 GitHub Secrets
-
-- `PROD_SERVER_HOST`
-- `PROD_SERVER_USER`
-- `PROD_SSH_PRIVATE_KEY`
-- `PROD_DEPLOY_PATH`
-- `PROD_NGINX_SITE_PATH`
-- `PROD_ENV_FILE`
-
-推荐说明：
-
-- `PROD_SERVER_HOST`：生产服务器 IP 或域名
-- `PROD_SERVER_USER`：部署 SSH 用户
-- `PROD_DEPLOY_PATH`：服务器上的部署目录
-- `PROD_NGINX_SITE_PATH`：宿主机 Nginx 站点配置路径
-- `PROD_ENV_FILE`：完整 `.env.prod` 内容
-
-## 🔌 API 与路由概览
-
-### Django 关键入口
-
-- `/api/health/`
-- `/api/articles/`
-- `/api/articles/{id}/`
-- `/api/articles/{id}/analytics/`
-- `/api/dashboard/seo-summary/`
-- `/django-admin/`
-- `/django-admin/analytics`
-- `/django-admin/next-editor/*`
-- `/sitemap.xml`
-
-### FastAPI 关键入口
-
-- `/health`
-
-### Studio Web 关键入口
-
-- `/django-admin/next-editor/login`
-- `/django-admin/next-editor/django-admin/analytics`
-- `/django-admin/next-editor/studio/articles`
-
-### Public Web 关键入口
-
-- `/solutions`
-
-## 🧠 运行机制说明
-
-### Django 与 Studio Web 的关系
-
-- Django Admin 提供后台与业务真相。
-- Studio Web 通过 Django 暴露的 API 获取内容与监控数据。
-- `/django-admin/next-editor/*` 通过 Django 代理到 Next.js。
-
-### 生产环境代理策略
-
-- Django 容器通过 `NEXT_EDITOR_INTERNAL_URL=http://editor-web:3000` 访问编辑器服务。
-- Studio Web 在生产 SSR 场景优先通过 `NEXT_PUBLIC_DJANGO_BASE_URL` 访问公网 Django 基地址。
-- 这一组合用于避免容器内 SSR 取数与宿主机 Nginx 路径前缀不一致的问题。
-
-## 🧰 常见运维命令
-
-### 查看生产容器状态
+脚本会执行：
 
 ```bash
+docker build -t cms-backend:prod .
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --no-build
+docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T web python manage.py migrate --noinput
+docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T web python manage.py collectstatic --noinput
 docker compose --env-file .env.prod -f docker-compose.prod.yml ps
 ```
 
-### 查看生产日志
+## 4. GitHub Actions 自动部署
 
-```bash
-docker logs -f cms-web-1
-docker logs -f cms-editor-web-1
-docker logs -f cms-public-web-1
-docker logs -f cms-ai-service-1
-```
+已提供工作流：
 
-### 重建单个生产服务
+- `.github/workflows/deploy-main.yml`
 
-```bash
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --force-recreate web
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --force-recreate editor-web
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --force-recreate public-web
-```
+触发条件：
 
-### 执行 Django 管理命令
+- `main` 分支收到 `push`
 
-```bash
-docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T web python manage.py migrate --noinput
-docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T web python manage.py collectstatic --noinput
-docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T web python manage.py createsuperuser
-```
+工作流行为：
 
-## 🔐 安全说明
+1. 在 GitHub Actions 中生成 `.env.prod`
+2. 通过 `rsync` 同步仓库到生产机 `/root/cms官网后台`
+3. 上传 `.env.prod`
+4. 在服务器执行 `./scripts/deploy_prod.sh`，脚本会显式使用 `.env.prod`
+5. 将 `deploy/nginx/cms.conf` 安装为 `yuncan.com` 的 BT/nginx 站点配置并重载 nginx
 
-- 不要提交 `.env`、`.env.prod`、私钥、Token、真实密码。
-- GitHub Actions 不应打印 `PROD_ENV_FILE` 内容。
-- 所有生产敏感信息请只保存在 GitHub Secrets 或服务器环境文件中。
+### 4.1 需要配置的 GitHub Secrets
 
-## 📄 许可证
+服务器：
 
-当前仓库未声明开源许可证。如需对外开源，请补充 `LICENSE` 文件并在 README 中明确授权方式。
+- `PROD_SERVER_HOST`
+- `PROD_SERVER_PASSWORD`
+
+Django / 站点：
+
+- `PROD_DJANGO_SETTINGS_MODULE`
+- `PROD_SECRET_KEY`
+- `PROD_ALLOWED_HOSTS`
+- `PROD_CSRF_TRUSTED_ORIGINS`
+- `PROD_CMS_SITE_URL`
+- `PROD_INTERNAL_API_TOKEN`
+
+数据库：
+
+- `PROD_POSTGRES_DB`
+- `PROD_POSTGRES_USER`
+- `PROD_POSTGRES_PASSWORD`
+
+前端：
+
+- `PROD_NEXT_PUBLIC_DJANGO_BASE_URL`
+- `PROD_NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL`
+- `PROD_NEXT_PUBLIC_EDITOR_BASE_URL`
+- `PROD_NEXT_PUBLIC_SITE_URL`
+
+AI / RAG：
+
+- `PROD_AI_PROVIDER`
+- `PROD_AI_PROMPT_VERSION`
+- `PROD_SILICONFLOW_BASE_URL`
+- `PROD_SILICONFLOW_API_KEY`
+- `PROD_SILICONFLOW_CHAT_MODEL`
+- `PROD_SILICONFLOW_FAST_MODEL`
+- `PROD_SILICONFLOW_EMBEDDING_MODEL`
+- `PROD_SILICONFLOW_EMBEDDING_DIMENSIONS`
+- `PROD_SILICONFLOW_RERANK_MODEL`
+- `PROD_RAG_PROVIDER`
+- `PROD_RAG_DATABASE_URL`
+- `PROD_RAG_CHUNK_TABLE`
+- `PROD_RAG_SOURCE_TABLE`
+- `PROD_RAG_SOURCE_TYPE`
+- `PROD_RAG_ENABLE_RERANK`
+- `PROD_RAG_FORCE_MOCK`
+- `PROD_RAG_VECTOR_DIMENSIONS`
+- `PROD_RAG_CHUNK_SIZE`
+- `PROD_RAG_CHUNK_OVERLAP`
+
+阿里云：
+
+- `PROD_ALIYUN_ACCESS_KEY_ID`
+- `PROD_ALIYUN_ACCESS_KEY_SECRET`
+- `PROD_ALIYUN_REGION`
+- `PROD_ALIYUN_DNS_REGION`
+- `PROD_ALIYUN_DNS_DOMAINS`
+- `PROD_ALIYUN_CMS_NAMESPACE`
+- `PROD_ALIYUN_CMS_METRICS`
+
+## 5. 服务器部署目标
+
+当前生产目标服务器：
+
+- 主机：`139.224.245.94`
+- 部署目录：`/root/cms官网后台`
+
+服务器当前已确认：
+
+- Docker / Compose 可用
+- 宿主机 `80/443` 已被 BT/nginx 占用
+- 宿主机 `6379` 已被现有 redis 占用
+
+因此生产部署必须走“高位本地端口 + BT/nginx 反代”，不能直接占用 `80/443/6379`
+
+## 6. 当前状态
+
+- `https://yuncan.com/`、`https://yuncan.com/solutions`、`https://yuncan.com/django-admin/next-editor/login` 已切到当前新站。
+- `main` 自动部署工作流现在对齐 `yuncan.com` 的 BT/nginx 配置文件。
+- GitHub Actions 自动部署依赖服务器 SSH 密码可正常登录；若服务器密码或 SSH 配置不正确，工作流会失败。
+- 当前 `main` 自动部署工作流是“部署 main 到服务器”，不会自动合并任何其他分支。

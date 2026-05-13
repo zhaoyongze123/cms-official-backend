@@ -1,0 +1,313 @@
+openapi: 3.1.0
+info:
+  title: AI SEO Django API
+  version: v1
+  description: Next.js Studio 调用 Django CMS 的公开 API 契约。
+servers:
+  - url: http://127.0.0.1:8001
+paths:
+  /api/ai/settings/generation/:
+    get:
+      summary: 获取 AI 四项生成模型、API Key 状态与 Prompt 配置
+      responses:
+        "200":
+          description: 当前配置
+    patch:
+      summary: 更新 AI 四项生成模型、API Key 与 Prompt 配置
+      responses:
+        "200":
+          description: 配置已更新
+  /api/articles/:
+    get:
+      summary: 获取文章列表
+      responses:
+        "200":
+          description: 文章列表
+    post:
+      summary: 新建文章
+      responses:
+        "201":
+          description: 文章已创建
+  /api/articles/{id}/:
+    get:
+      summary: 获取文章详情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 文章详情
+    patch:
+      summary: 更新文章
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 文章已更新
+  /api/public/articles/:
+    get:
+      summary: 获取公开已发布文章列表
+      responses:
+        "200":
+          description: 公开文章列表
+  /api/public/articles/{slug}/:
+    get:
+      summary: 按 slug 获取公开已发布文章详情
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 公开文章详情
+        "301":
+          description: slug 已变更，返回新 slug 跳转位置
+        "404":
+          description: 公开文章不存在
+  /api/articles/{id}/ai-review/:
+    post:
+      summary: 触发 AI 审核
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "202":
+          description: 审核任务已创建
+  /api/ai-review-runs/{run_id}/suggestions/:
+    get:
+      summary: 获取 AI 建议
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 建议列表
+  /api/ai-suggestions/{id}/accept/:
+    post:
+      summary: 接受 AI 建议
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 建议已接受
+  /api/ai-suggestions/{id}/reject/:
+    post:
+      summary: 拒绝 AI 建议
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 建议已拒绝
+  /api/articles/{id}/publish/:
+    post:
+      summary: 发布文章
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 文章已发布
+  /api/articles/{id}/seo-check/:
+    post:
+      summary: 发布前 SEO 检查
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 检查结果
+  /api/articles/{id}/analytics/:
+    get:
+      summary: 获取单篇文章监控数据
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 监控数据
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  article:
+                    type: object
+                    properties:
+                      article_id:
+                        type: integer
+                      title:
+                        type: string
+                      slug:
+                        type: string
+                      status:
+                        type: string
+                      published_at:
+                        type: string
+                        nullable: true
+                  latest_snapshot:
+                    type: object
+                    nullable: true
+                    properties:
+                      snapshot_id:
+                        type: integer
+                      snapshot_date:
+                        type: string
+                      source:
+                        type: string
+                      impressions:
+                        type: integer
+                      clicks:
+                        type: integer
+                      average_position:
+                        type: number
+                      ctr:
+                        type: number
+                      sessions:
+                        type: integer
+                      users:
+                        type: integer
+                      bounce_rate:
+                        type: number
+                      avg_engagement_seconds:
+                        type: integer
+                      conversions:
+                        type: integer
+                      notes:
+                        type: string
+                      updated_at:
+                        type: string
+                  snapshots:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        snapshot_id:
+                          type: integer
+                        snapshot_date:
+                          type: string
+                        source:
+                          type: string
+                        impressions:
+                          type: integer
+                        clicks:
+                          type: integer
+                        average_position:
+                          type: number
+                        ctr:
+                          type: number
+                        sessions:
+                          type: integer
+                        users:
+                          type: integer
+                        bounce_rate:
+                          type: number
+                        avg_engagement_seconds:
+                          type: integer
+                        conversions:
+                          type: integer
+                        notes:
+                          type: string
+                        updated_at:
+                          type: string
+  /api/dashboard/seo-summary/:
+    get:
+      summary: 获取 SEO 总览
+      responses:
+        "200":
+          description: SEO 总览
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totals:
+                    type: object
+                    properties:
+                      total_articles:
+                        type: integer
+                      published_articles:
+                        type: integer
+                      draft_articles:
+                        type: integer
+                      archived_articles:
+                        type: integer
+                      articles_with_seo_metadata:
+                        type: integer
+                      articles_with_faq:
+                        type: integer
+                      articles_with_analytics:
+                        type: integer
+                  performance:
+                    type: object
+                    properties:
+                      tracked_impressions:
+                        type: integer
+                      tracked_clicks:
+                        type: integer
+                      tracked_sessions:
+                        type: integer
+                      tracked_users:
+                        type: integer
+                      tracked_conversions:
+                        type: integer
+                      average_position:
+                        type: number
+                      average_ctr:
+                        type: number
+                  top_articles:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        article_id:
+                          type: integer
+                        title:
+                          type: string
+                        slug:
+                          type: string
+                        status:
+                          type: string
+                        impressions:
+                          type: integer
+                        clicks:
+                          type: integer
+                        sessions:
+                          type: integer
+                        average_position:
+                          type: number
+                        ctr:
+                          type: number
+                        snapshot_date:
+                          type: string

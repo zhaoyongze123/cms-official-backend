@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560">
+  <rect width="900" height="560" fill="white"/>
+  <text x="40" y="50" font-size="30" font-family="Arial" font-weight="700">四周试点数据看板</text>
+  <line x1="90" y1="460" x2="840" y2="460" stroke="#333" stroke-width="2"/>
+  <line x1="90" y1="120" x2="90" y2="460" stroke="#333" stroke-width="2"/>
+  <text x="34" y="125" font-size="16" font-family="Arial">1000kg</text>
+  <text x="48" y="295" font-size="16" font-family="Arial">500kg</text>
+  <text x="58" y="465" font-size="16" font-family="Arial">0</text>
+  <rect x="140" y="280" width="70" height="180" fill="#6ca36f"/><text x="142" y="274" font-size="18" font-family="Arial">530</text>
+  <rect x="230" y="235" width="70" height="225" fill="#4d86c6"/><text x="232" y="229" font-size="18" font-family="Arial">662</text>
+  <rect x="320" y="190" width="70" height="270" fill="#d19a3a"/><text x="322" y="184" font-size="18" font-family="Arial">794</text>
+  <rect x="410" y="142" width="70" height="318" fill="#b65c5c"/><text x="412" y="136" font-size="18" font-family="Arial">936</text>
+  <polyline points="570,405 660,360 750,302 830,250" fill="none" stroke="#222" stroke-width="5"/>
+  <circle cx="570" cy="405" r="8" fill="#222"/><circle cx="660" cy="360" r="8" fill="#222"/>
+  <circle cx="750" cy="302" r="8" fill="#222"/><circle cx="830" cy="250" r="8" fill="#222"/>
+  <text x="125" y="495" font-size="18" font-family="Arial">第1周</text><text x="215" y="495" font-size="18" font-family="Arial">第2周</text>
+  <text x="305" y="495" font-size="18" font-family="Arial">第3周</text><text x="395" y="495" font-size="18" font-family="Arial">第4周</text>
+  <text x="560" y="495" font-size="18" font-family="Arial">扫码参与人数：184 → 427</text>
+  <text x="40" y="535" font-size="18" font-family="Arial">图2：柱形为回收总量；折线为扫码参与人数。第4周较第1周回收量增加76.6%。</text>
+</svg>

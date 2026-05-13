@@ -1,7 +1,11 @@
 from django.contrib import admin
+from django.urls import reverse
 from django.utils import timezone
 
-from .models import Article, ArticleRevision, Category
+from cms_apps.articles.models import Article, ArticleRevision, Category, Tag
+from cms_apps.faq.models import FaqItem
+from cms_apps.knowledge.models import KnowledgeChunk, KnowledgeSource
+from cms_apps.seo.models import SeoMetadata
 
 
 class ArticleRevisionInline(admin.TabularInline):
@@ -25,6 +29,36 @@ class ArticleRevisionInline(admin.TabularInline):
         return False
 
 
+class FaqItemInline(admin.TabularInline):
+    model = FaqItem
+    extra = 0
+    fields = ("sort_order", "question", "answer")
+    ordering = ("sort_order", "id")
+
+
+class SeoMetadataInline(admin.StackedInline):
+    model = SeoMetadata
+    extra = 0
+    max_num = 1
+    fields = (
+        "meta_title",
+        "meta_description",
+        "meta_keywords",
+        "canonical_url",
+        "robots",
+        "og_title",
+        "og_description",
+        "og_image",
+    )
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug", "created_at")
+    search_fields = ("name", "slug")
+    prepopulated_fields = {"slug": ("name",)}
+
+
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ("name", "parent", "slug")
@@ -36,26 +70,29 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
+    add_form_template = "admin/simple_cms/article_editor_workspace.html"
+    change_form_template = "admin/simple_cms/article_editor_workspace.html"
     list_display = ("title", "category", "status", "publish_date", "created_at", "updated_at")
     list_filter = ("status", "category", "created_at")
-    search_fields = ("title", "slug", "body")
+    search_fields = ("title", "slug", "body", "content_html")
     date_hierarchy = "created_at"
     prepopulated_fields = {"slug": ("title",)}
-    inlines = (ArticleRevisionInline,)
+    filter_horizontal = ("tags",)
+    inlines = (SeoMetadataInline, FaqItemInline, ArticleRevisionInline)
     actions = ("action_publish_now", "action_move_to_draft", "action_archive")
 
     fieldsets = (
         (
             "基础信息",
             {
-                "fields": ("title", "slug", "category", "cover_image"),
+                "fields": ("title", "slug", "category", "cover_image", "tags"),
                 "classes": ("wide", "admin-section"),
             },
         ),
         (
             "正文内容",
             {
-                "fields": ("body",),
+                "fields": ("body", "content_json", "content_html"),
                 "classes": ("admin-section",),
             },
         ),
@@ -84,6 +121,20 @@ class ArticleAdmin(admin.ModelAdmin):
 
     class Media:
         js = ("js/admin_article_draft_guard.js",)
+
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        extra_context = extra_context or {}
+        extra_context["next_editor_url"] = reverse("next_editor_proxy_root") + f"studio/articles/{object_id}/"
+        extra_context["workspace_mode"] = "change"
+        extra_context["workspace_title"] = "编辑文章"
+        return super().change_view(request, object_id, form_url, extra_context=extra_context)
+
+    def add_view(self, request, form_url="", extra_context=None):
+        extra_context = extra_context or {}
+        extra_context["next_editor_url"] = reverse("next_editor_proxy_root") + "studio/articles/new/"
+        extra_context["workspace_mode"] = "add"
+        extra_context["workspace_title"] = "新建文章"
+        return super().add_view(request, form_url, extra_context=extra_context)
 
     @admin.action(description="批量发布（立即生效）")
     def action_publish_now(self, request, queryset):
@@ -116,6 +167,17 @@ class ArticleAdmin(admin.ModelAdmin):
         self.message_user(request, f"已归档 {count} 篇文章")
 
 
+@admin.register(KnowledgeSource)
+class KnowledgeSourceAdmin(admin.ModelAdmin):
+    list_display = ("source_type", "source_id", "title", "is_active", "last_indexed_at", "updated_at")
+    list_filter = ("source_type", "is_active")
+    search_fields = ("title", "url")
+    readonly_fields = ("created_at", "updated_at", "last_indexed_at")
 
 
-
+@admin.register(KnowledgeChunk)
+class KnowledgeChunkAdmin(admin.ModelAdmin):
+    list_display = ("id", "source", "chunk_index", "embedding_dimensions", "is_active", "updated_at")
+    list_filter = ("is_active", "source__source_type")
+    search_fields = ("chunk_text", "source__title", "chunk_hash")
+    readonly_fields = ("created_at", "updated_at")
