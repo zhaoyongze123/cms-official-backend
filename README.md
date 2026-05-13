@@ -1,98 +1,217 @@
-# 企业内容管理平台 (CMS)
+# 企业内容管理平台（CMS 官网后台）
 
-基于 Django 构建的企业内容管理系统，当前以前后台一体的 Django 站点为唯一对外入口，并保留 FastAPI AI/RAG Service 与仅用于文章编辑区的 Next.js Studio 作为内部服务。仓库默认运行方式已经收口为开发热更新模式，不再维护单独的 compose dev 覆盖文件。
+本仓库当前以 `feature/django-admin-next-editor-embed` 的最终版本为基线，代码结构已经收口为：
 
-## 1. 当前底座能力
+- `apps/cms-api`：Django CMS 主应用
+- `apps/ai-service`：FastAPI AI / RAG 服务
+- `apps/studio-web`：Next.js 内部编辑器
+- `apps/public-web`：Next.js 对外站点
 
-- `web`：Django CMS，运行入口收口到 `apps/cms-api/`，负责内容、权限和公开页面。
-- `ai-service`：FastAPI 骨架，负责 AI/RAG 服务健康检查和后续内部接口。
-- `studio-web`：Next.js 内部编辑器服务，运行入口位于 `apps/studio-web/`，仅承接文章编辑区，由 Django Admin 同域嵌入。
-- `public-web`：Next.js 公开站点工程，运行入口位于 `apps/public-web/`，当前已纳入仓库与 compose，但是否完全接管公开站仍以 PR-21 cutover 验收结果为准。
-- `db`：PostgreSQL 15。
-- `redis`：Redis 7。
-- `worker`：异步任务占位 worker，后续承接 Celery 或队列消费。
+当前仓库同时提供两套 Docker Compose：
 
-## 2. 关键文档
+- `docker-compose.dev.yml`：本地开发热更新
+- `docker-compose.prod.yml`：生产部署
 
-- 计划文档：`docs/AI_SEO_PUBLISHING_PLAN.md`
-- 执行规则：`AGENTS.md`
-- 契约包：`contracts/README.md`
+默认 `docker-compose.yml` 通过 `include` 指向开发版，因此本地继续执行 `docker compose ...` 即可。
 
-## 3. 环境要求
+## 1. 仓库目录
 
-- Docker Engine 20.10+
-- Docker Compose v2
-## 4. 环境变量
+```text
+apps/
+  cms-api/        Django CMS
+  ai-service/     FastAPI AI/RAG
+  studio-web/     Next.js 编辑器
+  public-web/     Next.js 公开站
+deploy/
+  nginx/          生产 Nginx 配置
+scripts/
+  deploy_prod.sh  生产部署脚本
+.github/workflows/
+  deploy-main.yml main 自动部署工作流
+```
 
-复制 `.env.example` 到 `.env`，至少确认以下变量：
+## 2. 开发环境
 
-- `DJANGO_SETTINGS_MODULE`
-- `POSTGRES_*`
-- `REDIS_URL`
-- `INTERNAL_API_TOKEN`
-- `AI_PROVIDER`
+### 2.1 环境变量
 
-真实开发接入硅基流动前，必须配置：
+复制根目录 `.env.example`：
 
-- `SILICONFLOW_BASE_URL`
-- `SILICONFLOW_API_KEY`
-- `SILICONFLOW_CHAT_MODEL`
-- `SILICONFLOW_EMBEDDING_MODEL`
-- `SILICONFLOW_RERANK_MODEL`
+```bash
+cp .env.example .env
+```
 
-## 5. 快速启动
-
-1. 复制环境变量：
-   ```bash
-   cp .env.example .env
-   ```
-2. 构建并启动全部服务：
-   ```bash
-   COMPOSE_DOCKER_CLI_BUILD=0 DOCKER_BUILDKIT=0 docker compose up -d --build
-   ```
-3. 初始化数据库：
-   ```bash
-   docker compose exec web python manage.py migrate
-   ```
-4. 创建管理员：
-   ```bash
-   docker compose exec web python manage.py createsuperuser
-   ```
-
-## 6. 本地访问地址
-
-- Django 前台：`http://127.0.0.1:8001/`
-- Django health：`http://127.0.0.1:8001/api/health/`
-- Django 后台：`http://127.0.0.1:8001/django-admin/`
-- Studio 工作台：`http://127.0.0.1:8001/studio/`
-- Public Web 开发站：`http://127.0.0.1:3003/`
-- FastAPI health：`http://127.0.0.1:8002/health`
-
-## 7. A00 基础验证
+### 2.2 启动开发环境
 
 ```bash
 COMPOSE_DOCKER_CLI_BUILD=0 DOCKER_BUILDKIT=0 docker compose up -d --build
-docker compose exec -T ai-service pytest
+```
+
+开发环境默认暴露：
+
+- Django：`http://127.0.0.1:8001`
+- Django Health：`http://127.0.0.1:8001/api/health/`
+- Studio Web：`http://127.0.0.1:3000/django-admin/next-editor/login`
+- Public Web：`http://127.0.0.1:3003/solutions`
+- AI Service Health：`http://127.0.0.1:8002/health`
+
+### 2.3 开发环境最小验证
+
+```bash
+docker compose ps
 docker compose exec -T web python manage.py check
-docker compose exec -T web python manage.py test
-cd apps/studio-web && npm run lint
-cd apps/studio-web && npm run test
-cd apps/studio-web && npm run build
-curl -s http://127.0.0.1:8001/api/health/
-curl -s http://127.0.0.1:8002/health
+curl -I http://127.0.0.1:8001/api/health/
+curl -I http://127.0.0.1:3000/django-admin/next-editor/login
+curl -I http://127.0.0.1:3003/solutions
 ```
 
-## 8. 权限初始化（可选）
+## 3. 生产环境
+
+### 3.1 生产 Compose
+
+生产环境使用：
 
 ```bash
-docker compose exec web python manage.py setup_roles
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-## 9. A05 RAG 验证
+生产版包含：
+
+- `db`
+- `redis`
+- `web`
+- `ai-service`
+- `worker`
+- `editor-web`
+- `public-web`
+- `nginx`
+
+其中 `nginx` 统一暴露 `80` 端口：
+
+- `/` -> `public-web`
+- `/api/` -> Django
+- `/django-admin/` -> Django Admin
+- `/django/static/` -> Django 静态资源
+- `/django/media/` -> Django 媒体文件
+
+### 3.2 生产环境变量
+
+先复制模板：
 
 ```bash
-docker compose exec -T web python manage.py rebuild_knowledge_index --dry-run
-docker compose exec -T web python manage.py rebuild_knowledge_index --source article
-docker compose exec -T web python manage.py rag_query "SEO Schema" --limit 5
-docker compose exec -T web python manage.py test
+cp deploy/env.prod.example .env.prod
 ```
+
+至少补齐：
+
+- `SECRET_KEY`
+- `ALLOWED_HOSTS`
+- `CSRF_TRUSTED_ORIGINS`
+- `CMS_SITE_URL`
+- `POSTGRES_PASSWORD`
+- `INTERNAL_API_TOKEN`
+- 所有真实 AI / 阿里云凭证
+
+### 3.3 生产部署命令
+
+```bash
+chmod +x scripts/deploy_prod.sh
+./scripts/deploy_prod.sh
+```
+
+脚本会执行：
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml exec -T web python manage.py migrate --noinput
+docker compose -f docker-compose.prod.yml exec -T web python manage.py collectstatic --noinput
+docker compose -f docker-compose.prod.yml ps
+```
+
+## 4. GitHub Actions 自动部署
+
+已提供工作流：
+
+- `.github/workflows/deploy-main.yml`
+
+触发条件：
+
+- `main` 分支收到 `push`
+
+工作流行为：
+
+1. 在 GitHub Actions 中生成 `.env.prod`
+2. 通过 `rsync` 同步仓库到生产机 `/root/cms官网后台`
+3. 上传 `.env.prod`
+4. 在服务器执行 `./scripts/deploy_prod.sh`
+
+### 4.1 需要配置的 GitHub Secrets
+
+服务器：
+
+- `PROD_SERVER_HOST`
+- `PROD_SERVER_PASSWORD`
+
+Django / 站点：
+
+- `PROD_DJANGO_SETTINGS_MODULE`
+- `PROD_SECRET_KEY`
+- `PROD_ALLOWED_HOSTS`
+- `PROD_CSRF_TRUSTED_ORIGINS`
+- `PROD_CMS_SITE_URL`
+- `PROD_INTERNAL_API_TOKEN`
+
+数据库：
+
+- `PROD_POSTGRES_DB`
+- `PROD_POSTGRES_USER`
+- `PROD_POSTGRES_PASSWORD`
+
+前端：
+
+- `PROD_NEXT_PUBLIC_DJANGO_BASE_URL`
+- `PROD_NEXT_PUBLIC_EDITOR_BASE_URL`
+
+AI / RAG：
+
+- `PROD_AI_PROVIDER`
+- `PROD_AI_PROMPT_VERSION`
+- `PROD_SILICONFLOW_BASE_URL`
+- `PROD_SILICONFLOW_API_KEY`
+- `PROD_SILICONFLOW_CHAT_MODEL`
+- `PROD_SILICONFLOW_FAST_MODEL`
+- `PROD_SILICONFLOW_EMBEDDING_MODEL`
+- `PROD_SILICONFLOW_EMBEDDING_DIMENSIONS`
+- `PROD_SILICONFLOW_RERANK_MODEL`
+- `PROD_RAG_PROVIDER`
+- `PROD_RAG_DATABASE_URL`
+- `PROD_RAG_CHUNK_TABLE`
+- `PROD_RAG_SOURCE_TABLE`
+- `PROD_RAG_SOURCE_TYPE`
+- `PROD_RAG_ENABLE_RERANK`
+- `PROD_RAG_FORCE_MOCK`
+- `PROD_RAG_VECTOR_DIMENSIONS`
+- `PROD_RAG_CHUNK_SIZE`
+- `PROD_RAG_CHUNK_OVERLAP`
+
+阿里云：
+
+- `PROD_ALIYUN_ACCESS_KEY_ID`
+- `PROD_ALIYUN_ACCESS_KEY_SECRET`
+- `PROD_ALIYUN_REGION`
+- `PROD_ALIYUN_DNS_REGION`
+- `PROD_ALIYUN_DNS_DOMAINS`
+- `PROD_ALIYUN_CMS_NAMESPACE`
+- `PROD_ALIYUN_CMS_METRICS`
+
+## 5. 服务器部署目标
+
+当前生产目标服务器：
+
+- 主机：`139.224.245.94`
+- 部署目录：`/root/cms官网后台`
+
+## 6. 当前限制
+
+- GitHub Actions 自动部署依赖服务器 SSH 密码可正常登录；若服务器密码或 SSH 配置不正确，工作流会失败。
+- 当前生产 Nginx 配置默认走 `80` 端口，未包含 HTTPS 证书签发和自动续期。
+- 当前 `main` 自动部署工作流是“部署 main 到服务器”，不会自动合并任何其他分支。

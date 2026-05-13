@@ -1,0 +1,200 @@
+services:
+  db:
+    image: pgvector/pgvector:pg15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:15432:5432"
+    environment:
+      POSTGRES_DB: wagtailcms
+      POSTGRES_USER: wagtailcms
+      POSTGRES_PASSWORD: wagtailcms
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wagtailcms"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:16379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    working_dir: /app/apps/cms-api
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+    volumes:
+      - .:/app
+      - media_data:/app/media
+    ports:
+      - "127.0.0.1:8001:8000"
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      http_proxy: ""
+      https_proxy: ""
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      all_proxy: ""
+      ALL_PROXY: ""
+      NO_PROXY: localhost,127.0.0.1,web,db,redis,ai-service
+      no_proxy: localhost,127.0.0.1,web,db,redis,ai-service
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/').read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  ai-service:
+    build: .
+    entrypoint: []
+    working_dir: /app/apps/ai-service
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    volumes:
+      - .:/app
+    ports:
+      - "127.0.0.1:8002:8000"
+    env_file:
+      - .env
+    environment:
+      PYTHONPATH: /app/apps/ai-service:/app
+      http_proxy: ""
+      https_proxy: ""
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      all_proxy: ""
+      ALL_PROXY: ""
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  editor-web:
+    image: node:22-bookworm
+    working_dir: /app/apps/studio-web
+    command:
+      [
+        "sh",
+        "-c",
+        "if [ ! -x node_modules/.bin/next ]; then npm ci; fi && npm run dev -- --hostname 0.0.0.0 --port 3000",
+      ]
+    volumes:
+      - .:/app
+      - editor_web_node_modules:/app/apps/studio-web/node_modules
+      - editor_web_next_cache:/app/apps/studio-web/.next
+    ports:
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - .env
+    environment:
+      NEXT_EDITOR_DEV_ORIGIN: http://127.0.0.1:3000
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      NODE_ENV: development
+      http_proxy: ""
+      https_proxy: ""
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      all_proxy: ""
+      ALL_PROXY: ""
+      NO_PROXY: localhost,127.0.0.1,public-web,editor-web,web,db,redis,ai-service
+      no_proxy: localhost,127.0.0.1,public-web,editor-web,web,db,redis,ai-service
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/django-admin/next-editor/login').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+
+  public-web:
+    image: node:22-bookworm
+    working_dir: /app/apps/public-web
+    command:
+      [
+        "sh",
+        "-c",
+        "if [ ! -x node_modules/.bin/next ]; then npm ci; fi && npm run dev -- --hostname 0.0.0.0 --port 3003",
+      ]
+    volumes:
+      - .:/app
+      - public_web_node_modules:/app/apps/public-web/node_modules
+      - public_web_next_cache:/app/apps/public-web/.next
+    ports:
+      - "127.0.0.1:3003:3003"
+    env_file:
+      - .env
+    environment:
+      NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL: http://web:8000
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3003
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      NODE_ENV: development
+      http_proxy: ""
+      https_proxy: ""
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      all_proxy: ""
+      ALL_PROXY: ""
+      NO_PROXY: localhost,127.0.0.1,public-web,web,db,redis,ai-service
+      no_proxy: localhost,127.0.0.1,public-web,web,db,redis,ai-service
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3003/solutions').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+
+  worker:
+    build: .
+    entrypoint: []
+    working_dir: /app/apps/ai-service
+    command: ["python", "-m", "app.worker_stub"]
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      PYTHONPATH: /app/apps/ai-service:/app/apps/cms-api:/app
+      http_proxy: ""
+      https_proxy: ""
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      all_proxy: ""
+      ALL_PROXY: ""
+      NO_PROXY: localhost,127.0.0.1,ai-service,web,db,redis
+      no_proxy: localhost,127.0.0.1,ai-service,web,db,redis
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  media_data:
+  editor_web_node_modules:
+  editor_web_next_cache:
+  public_web_node_modules:
+  public_web_next_cache:

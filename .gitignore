@@ -48,6 +48,7 @@ db_dump.sql
 .env.*.local
 .env.development
 .env.production
+.env.prod
 
 # IDEs / Editors
 .idea/
