@@ -195,7 +195,7 @@ jobs:
           fi
           printf '%s\n' "$PROD_ENV_FILE" > .env.prod
           ssh -i ~/.ssh/id_ed25519 "${{ secrets.PROD_SERVER_USER }}@${{ secrets.PROD_SERVER_HOST }}" \
-            "mkdir -p '${{ secrets.PROD_DEPLOY_PATH }}'"
+            "if [ -e '${{ secrets.PROD_DEPLOY_PATH }}' ] && [ ! -d '${{ secrets.PROD_DEPLOY_PATH }}' ]; then rm -f '${{ secrets.PROD_DEPLOY_PATH }}'; fi && mkdir -p '${{ secrets.PROD_DEPLOY_PATH }}'"
           scp -i ~/.ssh/id_ed25519 .env.prod \
             "${{ secrets.PROD_SERVER_USER }}@${{ secrets.PROD_SERVER_HOST }}:${{ secrets.PROD_DEPLOY_PATH }}/.env.prod"
 

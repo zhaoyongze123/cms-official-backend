@@ -11,6 +11,11 @@ NGINX_RELOAD_CMD="${NGINX_RELOAD_CMD:-/etc/init.d/nginx reload}"
 echo "[deploy] 目标目录: ${DEPLOY_PATH}"
 echo "[deploy] 目标分支: ${APP_BRANCH}"
 
+if [[ -e "${DEPLOY_PATH}" && ! -d "${DEPLOY_PATH}" ]]; then
+  echo "[deploy] 目标路径 ${DEPLOY_PATH} 已存在但不是目录，先删除旧文件"
+  rm -f "${DEPLOY_PATH}"
+fi
+
 if [[ ! -d "${DEPLOY_PATH}" ]]; then
   echo "[deploy] 创建部署目录 ${DEPLOY_PATH}"
   mkdir -p "${DEPLOY_PATH}"
