@@ -1,10 +1,46 @@
-# CMS 官网后台
+# 🚀 CMS 官网后台
 
-面向企业官网内容生产、SEO 发布与运营监控的内容管理平台。仓库当前采用单仓多应用结构，包含 Django CMS 主站、FastAPI AI/RAG 服务、Next.js 编辑工作台，以及 Next.js 对外公开站。
+> 面向企业官网内容生产、SEO 发布、运营协作与监控分析的一体化内容平台。
 
-线上生产域名当前为 [https://yuncan.com](https://yuncan.com)。
+[![Main Deploy](https://img.shields.io/github/actions/workflow/status/zhaoyongze123/cms-official-backend/deploy-main.yml?branch=main&label=main%20deploy)](https://github.com/zhaoyongze123/cms-official-backend/actions/workflows/deploy-main.yml)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Django](https://img.shields.io/badge/Django-CMS-0C4B33?logo=django&logoColor=white)](https://www.djangoproject.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-AI%20Service-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Next.js](https://img.shields.io/badge/Next.js-Studio%20%26%20Public-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 
-## 项目概览
+线上生产站点： [yuncan.com](https://yuncan.com)
+
+## ✨ 项目简介
+
+这是一个围绕企业官网内容运营构建的 monorepo，当前包含四个核心应用：
+
+- `Django CMS`：内容、后台、发布、SEO 真相源
+- `FastAPI AI Service`：AI / RAG / 工作流能力
+- `Next.js Studio`：内部编辑与监控工作台
+- `Next.js Public Web`：对外官网展示站点
+
+适合以下场景：
+
+- 企业官网后台重构与统一部署
+- 内容编辑、SEO 配置、监控分析一体化
+- Django 后台与现代前端工作台并行协作
+- 基于 Docker Compose 的可复制生产部署
+
+## 🧭 快速导航
+
+- [项目概览](#项目概览)
+- [技术栈](#技术栈)
+- [仓库结构](#仓库结构)
+- [本地开发](#本地开发)
+- [测试与质量校验](#测试与质量校验)
+- [生产部署](#生产部署)
+- [GitHub Actions 自动部署](#github-actions-自动部署)
+- [API 与路由概览](#api-与路由概览)
+- [常见运维命令](#常见运维命令)
+- [安全说明](#安全说明)
+
+## 📦 项目概览
 
 - `apps/cms-api`：Django 主应用，负责内容、后台、发布、SEO 渲染、媒体与对内对外 API。
 - `apps/ai-service`：FastAPI AI/RAG 服务，负责 AI 调用、检索与工作流编排。
@@ -12,9 +48,9 @@
 - `apps/public-web`：Next.js 对外站点，承接官网公开展示页。
 - `packages/editor-protocol`：前后端共享的编辑协议包。
 
-当前仓库同时维护开发环境与生产环境两套 Docker Compose，并提供 GitHub Actions 自动部署到生产服务器的工作流。
+当前仓库同时维护开发环境与生产环境两套 Docker Compose，并提供 `main` 分支自动部署工作流。
 
-## 技术栈
+## 🛠️ 技术栈
 
 - 后端：Python 3.12、Django、Gunicorn
 - AI 服务：FastAPI、Pytest
@@ -24,7 +60,7 @@
 - 缓存：Redis 7
 - 生产部署：Docker Compose、Nginx、GitHub Actions
 
-## 仓库结构
+## 🗂️ 仓库结构
 
 ```text
 .
@@ -50,17 +86,40 @@
 └── Dockerfile               后端基础镜像
 ```
 
-## 核心能力
+## 🌟 核心能力
 
-- Django Admin 后台与内容管理
-- 文章创建、编辑、发布与 SEO 元数据维护
-- Next.js 编辑器嵌入 Django Admin
-- 对外公开站渲染与内容展示
-- AI 审核、生成与 RAG 检索服务骨架
-- SEO 监控面板与站点健康数据接口
-- Docker 化开发、生产部署与自动化发布
+- 📝 Django Admin 后台与内容管理
+- 🧩 文章创建、编辑、发布与 SEO 元数据维护
+- 🖥️ Next.js 编辑器嵌入 Django Admin
+- 🌐 对外公开站渲染与内容展示
+- 🤖 AI 审核、生成与 RAG 检索服务骨架
+- 📈 SEO 监控面板与站点健康数据接口
+- 🚢 Docker 化开发、生产部署与自动化发布
 
-## 本地开发
+## 🧱 系统架构
+
+```text
+Browser / Operator
+        │
+        ├── Public Web (Next.js)
+        │        │
+        │        └── Django API
+        │
+        ├── Studio Web (Next.js)
+        │        │
+        │        ├── Django API
+        │        └── Django Admin Embed Proxy
+        │
+        ├── Django CMS
+        │        │
+        │        ├── PostgreSQL + pgvector
+        │        ├── Redis
+        │        └── FastAPI AI Service
+        │
+        └── Nginx / GitHub Actions / Docker Compose
+```
+
+## 💻 本地开发
 
 ### 环境要求
 
@@ -113,7 +172,7 @@ curl -I http://127.0.0.1:3000/django-admin/next-editor/login
 curl -I http://127.0.0.1:3003/solutions
 ```
 
-## 测试与质量校验
+## ✅ 测试与质量校验
 
 ### Django
 
@@ -160,7 +219,7 @@ python3 -m json.tool contracts/seo-context.schema.json > /dev/null
 python3 -m json.tool contracts/tiptap-document.schema.json > /dev/null
 ```
 
-## 生产部署
+## 🚀 生产部署
 
 ### 生产 Compose
 
@@ -250,7 +309,7 @@ chmod +x scripts/deploy_prod.sh
 ./scripts/deploy_prod.sh
 ```
 
-## GitHub Actions 自动部署
+## 🔁 GitHub Actions 自动部署
 
 工作流文件：
 
@@ -302,7 +361,7 @@ chmod +x scripts/deploy_prod.sh
 - `PROD_NGINX_SITE_PATH`：宿主机 Nginx 站点配置路径
 - `PROD_ENV_FILE`：完整 `.env.prod` 内容
 
-## API 与路由概览
+## 🔌 API 与路由概览
 
 ### Django 关键入口
 
@@ -330,7 +389,7 @@ chmod +x scripts/deploy_prod.sh
 
 - `/solutions`
 
-## 运行机制说明
+## 🧠 运行机制说明
 
 ### Django 与 Studio Web 的关系
 
@@ -344,7 +403,7 @@ chmod +x scripts/deploy_prod.sh
 - Studio Web 在生产 SSR 场景优先通过 `NEXT_PUBLIC_DJANGO_BASE_URL` 访问公网 Django 基地址。
 - 这一组合用于避免容器内 SSR 取数与宿主机 Nginx 路径前缀不一致的问题。
 
-## 常见运维命令
+## 🧰 常见运维命令
 
 ### 查看生产容器状态
 
@@ -377,12 +436,12 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T web pytho
 docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T web python manage.py createsuperuser
 ```
 
-## 安全说明
+## 🔐 安全说明
 
 - 不要提交 `.env`、`.env.prod`、私钥、Token、真实密码。
 - GitHub Actions 不应打印 `PROD_ENV_FILE` 内容。
 - 所有生产敏感信息请只保存在 GitHub Secrets 或服务器环境文件中。
 
-## 许可证
+## 📄 许可证
 
 当前仓库未声明开源许可证。如需对外开源，请补充 `LICENSE` 文件并在 README 中明确授权方式。
