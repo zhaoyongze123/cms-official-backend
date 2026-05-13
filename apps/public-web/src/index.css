@@ -1,0 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-hermes: #ff7900;
+  --color-hermes-light: #ff9d47;
+  --color-hermes-dark: #cc6100;
+  --color-ink: #111827;
+  --color-charcoal: #202329;
+  --color-muted: #667085;
+  --color-line: #e4e7ec;
+  --color-paper: #ffffff;
+  --color-mist: #fafafa;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-paper text-ink font-sans selection:bg-hermes/30 selection:text-ink;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-white/80 backdrop-blur-xl border border-white/20 shadow-xl;
+  }
+  .section-label {
+    @apply text-hermes text-xs font-extrabold tracking-widest uppercase;
+  }
+
+  .article-content {
+    @apply max-w-none text-lg leading-8 text-muted;
+  }
+
+  .article-content h1,
+  .article-content h2,
+  .article-content h3,
+  .article-content h4,
+  .article-content h5,
+  .article-content h6 {
+    @apply text-charcoal font-black tracking-tight;
+  }
+
+  .article-content h1 {
+    @apply text-4xl mt-12 mb-6;
+  }
+
+  .article-content h2 {
+    @apply text-3xl mt-12 mb-5;
+  }
+
+  .article-content h3 {
+    @apply text-2xl mt-10 mb-4;
+  }
+
+  .article-content p {
+    @apply my-5;
+  }
+
+  .article-content ul,
+  .article-content ol {
+    @apply my-6 pl-6 space-y-2;
+  }
+
+  .article-content li {
+    @apply leading-8;
+  }
+
+  .article-content a {
+    @apply text-hermes font-bold underline underline-offset-4;
+  }
+
+  .article-content blockquote {
+    @apply my-8 border-l-4 border-hermes/30 pl-6 text-charcoal bg-mist/70 py-4 rounded-r-2xl;
+  }
+
+  .article-content pre {
+    @apply my-8 rounded-2xl bg-charcoal text-white p-6 overflow-x-auto text-sm leading-6;
+  }
+
+  .article-content code {
+    @apply rounded bg-mist px-1.5 py-0.5 text-sm text-charcoal;
+  }
+
+  .article-content pre code {
+    @apply bg-transparent p-0 text-white;
+  }
+}

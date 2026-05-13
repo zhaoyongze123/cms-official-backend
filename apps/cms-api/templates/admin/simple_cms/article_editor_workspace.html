@@ -1,0 +1,83 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}{{ workspace_title }} | {{ site_title|default:_("Django site admin") }}{% endblock %}
+
+{% block breadcrumbs %}
+<ol class="breadcrumb float-sm-right">
+  <li class="breadcrumb-item"><a href="{% url 'admin:index' %}">后台首页</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'admin:simple_cms_article_changelist' %}">文章管理</a></li>
+  <li class="breadcrumb-item active">{{ workspace_title }}</li>
+</ol>
+{% endblock %}
+
+{% block content %}
+<div class="next-editor-admin-shell">
+  <section class="next-editor-admin-frame card">
+    <div class="card-body p-0">
+      <iframe
+        id="next-editor-frame"
+        class="next-editor-frame"
+        src="{{ next_editor_url }}"
+        title="Next.js 文章编辑器"
+        loading="eager"
+      ></iframe>
+    </div>
+  </section>
+</div>
+
+<style>
+  .next-editor-admin-shell {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .next-editor-admin-frame {
+    border-radius: 18px;
+    border: 1px solid var(--admin-border);
+    box-shadow: var(--admin-shadow);
+    overflow: hidden;
+  }
+
+  .next-editor-frame {
+    width: 100%;
+    min-height: 1180px;
+    border: 0;
+    display: block;
+    background: transparent;
+  }
+</style>
+
+<script>
+  (function () {
+    const frame = document.getElementById("next-editor-frame");
+    if (!frame) {
+      return;
+    }
+
+    function syncFrameHeight() {
+      try {
+        const body = frame.contentWindow.document.body;
+        const documentElement = frame.contentWindow.document.documentElement;
+        const nextHeight = Math.max(
+          body ? body.scrollHeight : 0,
+          documentElement ? documentElement.scrollHeight : 0,
+          1180
+        );
+        frame.style.height = `${nextHeight}px`;
+      } catch (error) {
+        frame.style.height = "1180px";
+      }
+    }
+
+    frame.addEventListener("load", syncFrameHeight);
+    window.addEventListener("resize", syncFrameHeight);
+    window.addEventListener("message", function (event) {
+      if (!event.data || event.data.type !== "next-editor-resize") {
+        return;
+      }
+      frame.style.height = `${Math.max(event.data.height || 0, 1180)}px`;
+    });
+  })();
+</script>
+{% endblock %}

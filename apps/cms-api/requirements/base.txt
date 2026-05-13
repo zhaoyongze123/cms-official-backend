@@ -1,0 +1,12 @@
+django>=5.1,<5.2
+django-environ>=0.11,<0.12
+django-ckeditor>=6.7,<6.8
+django-jazzmin>=3.0,<3.1
+psycopg[binary]>=3.2,<3.3
+redis>=5.0,<6.0
+pgvector>=0.3,<0.4
+Pillow>=10.4,<11.0
+aliyun-python-sdk-core>=2.16,<3.0
+gunicorn>=21.2,<22.0
+google-auth>=2.35,<3.0
+requests>=2.32,<2.33
