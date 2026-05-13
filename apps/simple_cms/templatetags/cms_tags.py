@@ -1,5 +1,5 @@
 ﻿from django import template
-from apps.simple_cms.models import Article, Category
+from cms_apps.articles.models import Article, Category
 from apps.media_library.models import ImageItem, FileItem
 from apps.sys_settings.models import SiteSetting
 from apps.aliyun_monitor.models import DnsDomainStat, EcsInstanceSnapshot, EcsMetricPoint

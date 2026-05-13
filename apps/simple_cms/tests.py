@@ -1,15 +1,21 @@
 ﻿import json
+from email.message import Message
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.simple_cms.admin_views import next_editor_proxy
 from apps.media_library.models import ImageItem
 
-from .models import Article, Category, FaqItem, KnowledgeChunk, KnowledgeSource, SeoMetadata, Tag
+from cms_apps.articles.models import Article, Category, Tag
+from cms_apps.faq.models import FaqItem
+from cms_apps.knowledge.models import KnowledgeChunk, KnowledgeSource
+from cms_apps.seo.models import SeoMetadata
 from .rag import deterministic_embedding, search_knowledge
 
 
@@ -170,6 +176,22 @@ class ContentSeoModelTests(TestCase):
         self.assertEqual(refreshed.content_html, "<p>hello</p>")
         self.assertIn("content_json", refreshed.revisions.first().changed_fields)
 
+    def test_article_detail_prefers_content_html_over_legacy_body(self):
+        self.article.body = "<p>legacy body</p>"
+        self.article.content_html = (
+            '<figure><img src="/media/demo.png" alt="示例图片" '
+            'width="420" height="280" style="width:420px;height:280px;max-width:100%;" /></figure>'
+        )
+        self.article.status = "published"
+        self.article.save()
+
+        response = self.client.get(self.article.get_absolute_url())
+
+        self.assertContains(response, 'width="420"')
+        self.assertContains(response, 'height="280"')
+        self.assertContains(response, 'style="width:420px;height:280px;max-width:100%;"')
+        self.assertNotContains(response, "legacy body")
+
     def test_article_can_bind_tags(self):
         tag = Tag.objects.create(name="SEO 基础", slug="seo-basic")
 
@@ -280,3 +302,56 @@ class RagIndexTests(TestCase):
 
         return Writer()
 
+
+class _FakeUpstreamResponse:
+    def __init__(self, body: bytes):
+        self.status = 200
+        self._body = body
+        self.headers = Message()
+        self.headers["Content-Type"] = "application/json"
+
+    def read(self):
+        return self._body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+
+@override_settings(NEXT_EDITOR_INTERNAL_URL="http://editor-web:3000")
+class NextEditorProxyTests(SimpleTestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    @patch("apps.simple_cms.admin_views.DIRECT_PROXY_OPENER.open")
+    def test_patch_proxy_forwards_request_body(self, mocked_open):
+        mocked_open.return_value = _FakeUpstreamResponse(b'{"ok": true}')
+        payload = {
+            "title": "代理保存测试",
+            "content_json": {
+                "type": "doc",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "attrs": {"blockId": "blk_proxy_test_1"},
+                        "content": [{"type": "text", "text": "代理层必须转发 PATCH body"}],
+                    }
+                ],
+            },
+        }
+        request = self.factory.patch(
+            "/django-admin/next-editor/api/articles/3/",
+            data=json.dumps(payload),
+            content_type="application/json",
+            HTTP_ACCEPT="application/json",
+        )
+
+        response = next_editor_proxy(request, "api/articles/3/")
+
+        upstream_request = mocked_open.call_args.args[0]
+        self.assertEqual(upstream_request.get_method(), "PATCH")
+        self.assertEqual(upstream_request.data, request.body)
+        self.assertEqual(response.status_code, 200)
+        self.assertJSONEqual(response.content, {"ok": True})

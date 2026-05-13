@@ -20,16 +20,16 @@
 | --- | --- | --- | --- | --- | --- |
 | A00 | DONE | `feature/platform-foundation` | Docker Compose、Django health、FastAPI health、Next.js shell、Redis、Postgres、基础环境变量 | 无 | 2026-05-09 已验证 `docker compose ps` 三端健康、Django `check/test` 通过、`/api/health/`、`/health`、`/studio/articles` 返回成功 |
 | A01 | DONE | `feature/contracts-v1` | OpenAPI、JSON Schema、Mock 示例、错误结构 | A00 | 2026-05-09 已完成 `contracts/` JSON Schema 校验、OpenAPI YAML 解析、契约边界文档落库 |
-| A02 | REVIEW | `feature/django-content-seo-models` | Tag、SeoMetadata、FaqItem、Media Alt、Article content_json 字段 | A01 | 2026-05-09 已验证 `python manage.py check`、`migrate`、`test apps.simple_cms`；全量 `makemigrations --check --dry-run` 受 `aliyun_monitor` 既有迁移漂移影响 |
-| A03 | TODO | `feature/django-seo-renderer` | SEO Context、Schema、OG、Canonical、TOC、Sitemap | A02 | curl 可验证 SEO 输出 |
-| A04 | REVIEW | `feature/fastapi-langgraph-ai-service` | FastAPI 骨架、Mock Provider、SiliconFlow Provider、LangGraph Review Graph | A01 | 2026-05-09 已验证 `docker compose run --rm --no-deps ai-service python -m pytest ai_service/tests/test_ai_service_contract.py -q` 18 通过，`GET /health` 返回成功；`POST /internal/rag/search` 因 `.env` 中 `INTERNAL_API_TOKEN` 为空未完成 HTTP 验证 |
-| A05 | TODO | `feature/rag-pgvector` | pgvector、KnowledgeSource、KnowledgeChunk、Indexer、Retriever、Rerank | A02 | RAG 命令可检索 |
-| A06 | TODO | `feature/django-ai-review-models` | AiReviewRun、AiSuggestion、AiPatch、Suggestion API、Mock AI Client | A01、A02 | DRF API 测试通过 |
-| A07 | REVIEW | `feature/nextjs-studio-shell` | Next.js Studio、登录态、文章列表、文章编辑基础页、Mock API | A01 | 2026-05-09 已完成 Mock 登录页、Studio Shell、文章列表、编辑基础页、Mock API；已验证 `cd editor-web && npm run lint && npm run test && npm run build` 通过，`next start --port 3101` 下 `GET /login` 返回 200、`GET /api/articles` 返回 JSON、未登录访问 `GET /studio/articles` 返回 307 跳转 `/login`；分支已 push，PR 已创建，待 Review |
-| A08 | TODO | `feature/tiptap-editor-basic` | TipTap 文档结构、blockId、content_json 保存、content_html 渲染 | A01、A07 | 编辑保存刷新正常 |
-| A09 | TODO | `feature/tiptap-diff-editor` | AI Diff 渲染、Accept、Reject、编辑后接受、content_hash 冲突 | A06、A08 | Patch UI 验收通过 |
-| A10 | TODO | `feature/publish-flow` | 发布前检查、发布 API、Error 阻断、Warning 提示 | A03、A06、A09 | 发布流程可跑通 |
-| A11 | TODO | `feature/analytics-monitoring` | AnalyticsSnapshot、GSC/GA4 Stub、站内事件、监控面板 | A07 | 监控面板可显示 mock 数据 |
+| A02 | DONE | `feature/django-content-seo-models` | Tag、SeoMetadata、FaqItem、Media Alt、Article content_json 字段 | A01 | 已完成 |
+| A03 | DONE | `feature/django-seo-renderer` | SEO Context、Schema、OG、Canonical、TOC、Sitemap | A02 | 已完成 |
+| A04 | DONE | `feature/fastapi-langgraph-ai-service` | FastAPI 骨架、Mock Provider、SiliconFlow Provider、LangGraph Review Graph | A01 | 已完成 |
+| A05 | DONE | `feature/rag-pgvector` | pgvector、KnowledgeSource、KnowledgeChunk、Indexer、Retriever、Rerank | A02 | 已完成 |
+| A06 | DONE | `feature/django-ai-review-models` | AiReviewRun、AiSuggestion、AiPatch、Suggestion API、Mock AI Client | A01、A02 | 已完成 |
+| A07 | DONE | `feature/nextjs-studio-shell` | Next.js Studio、登录态、文章列表、文章编辑基础页、Mock API | A01 | 已完成 |
+| A08 | DONE | `feature/tiptap-editor-basic` | TipTap 文档结构、blockId、content_json 保存、content_html 渲染 | A01、A07 | 已完成 |
+| A09 | TODO | `feature/tiptap-diff-editor` | AI Diff 渲染、Accept、Reject、编辑后接受、content_hash 冲突 | A06、A08 | 尚未开始，是当前剩余主线任务之一 |
+| A10 | TODO | `feature/publish-flow` | 发布前检查、发布 API、Error 阻断、Warning 提示 | A03、A06、A09 | 尚未开始，依赖 A09 完成后推进 |
+| A11 | DONE | `feature/analytics-monitoring` | AnalyticsSnapshot、GSC/GA4 Stub、站内事件、监控面板 | A07 | 已完成 |
 | A12 | TODO | `feature/e2e-integration` | 三端联调、契约回归、真实流程冒烟 | A03-A11 | E2E 验收通过 |
 
 ## 3. 任务领取规则

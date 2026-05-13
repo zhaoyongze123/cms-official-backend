@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="500" viewBox="0 0 900 500">
+  <rect width="900" height="500" fill="#fbfbfb"/>
+  <text x="40" y="55" font-size="30" font-family="Arial" font-weight="700">回收积分规则海报</text>
+  <rect x="55" y="90" width="790" height="330" rx="24" fill="#fff0c7" stroke="#333" stroke-width="3"/>
+  <text x="95" y="150" font-size="28" font-family="Arial" font-weight="700">本周任务：连续投递 3 天</text>
+  <text x="95" y="205" font-size="24" font-family="Arial">厨余垃圾满 1kg：+8 积分</text>
+  <text x="95" y="250" font-size="24" font-family="Arial">纸箱压扁投递：+12 积分</text>
+  <text x="95" y="295" font-size="24" font-family="Arial">塑料瓶清空投递：+6 积分</text>
+  <text x="95" y="340" font-size="24" font-family="Arial">误投 2 次以上：暂停奖励 24 小时</text>
+  <rect x="640" y="135" width="120" height="120" fill="white" stroke="#222" stroke-width="4"/>
+  <rect x="660" y="155" width="25" height="25" fill="#222"/><rect x="715" y="155" width="25" height="25" fill="#222"/>
+  <rect x="660" y="210" width="25" height="25" fill="#222"/><rect x="700" y="195" width="15" height="15" fill="#222"/>
+  <text x="610" y="290" font-size="22" font-family="Arial">扫码查看积分</text>
+  <text x="70" y="460" font-size="18" font-family="Arial">图3：海报上含多个数字、规则和一个二维码式图案，适合测试 OCR 与规则抽取。</text>
+</svg>

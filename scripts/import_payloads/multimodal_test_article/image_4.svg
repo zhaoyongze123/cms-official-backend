@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="540" viewBox="0 0 900 540">
+  <rect width="900" height="540" fill="#eef3f6"/>
+  <text x="40" y="55" font-size="30" font-family="Arial" font-weight="700">运营人员巡检记录截图</text>
+  <rect x="60" y="85" width="780" height="390" rx="18" fill="white" stroke="#c9c9c9"/>
+  <text x="90" y="135" font-size="22" font-family="Arial" font-weight="700">巡检单 #20260428-A17</text>
+  <text x="90" y="175" font-size="20" font-family="Arial">站点：东门智能回收站</text>
+  <text x="90" y="215" font-size="20" font-family="Arial">异常：纸类箱满载率 92%，有害箱传感器离线 11 分钟</text>
+  <text x="90" y="255" font-size="20" font-family="Arial">处理：已安排 09:30 清运；10:00 前复核传感器</text>
+  <text x="90" y="295" font-size="20" font-family="Arial">备注：7:42 有居民误投玻璃瓶至纸类箱，系统已提示纠正</text>
+  <line x1="90" y1="325" x2="810" y2="325" stroke="#ddd"/>
+  <text x="90" y="365" font-size="20" font-family="Arial">负责人：陈楠</text>
+  <text x="320" y="365" font-size="20" font-family="Arial">复核人：罗青</text>
+  <text x="550" y="365" font-size="20" font-family="Arial">优先级：P2</text>
+  <rect x="90" y="395" width="160" height="44" rx="8" fill="#e7f5e7"/><text x="125" y="424" font-size="20" font-family="Arial">已派单</text>
+  <rect x="270" y="395" width="160" height="44" rx="8" fill="#fff3cd"/><text x="292" y="424" font-size="20" font-family="Arial">待复核</text>
+  <text x="60" y="510" font-size="18" font-family="Arial">图4：截图包含时间、异常、责任人和优先级，适合测试跨图上下文推理。</text>
+</svg>

@@ -24,9 +24,12 @@ RUN set -eux; \
         cron; \
     rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY apps/cms-api/requirements /app/apps/cms-api/requirements
+COPY apps/ai-service/requirements /app/apps/ai-service/requirements
 RUN unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY all_proxy ALL_PROXY; \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir \
+      -r /app/apps/cms-api/requirements/base.txt \
+      -r /app/apps/ai-service/requirements/base.txt
 
 COPY . .
 
@@ -36,6 +39,7 @@ RUN chmod 0644 /etc/cron.d/aliyun_sync && touch /var/log/cron.log
 
 RUN chmod +x /entrypoint.sh
 
+WORKDIR /app/apps/cms-api
 RUN python manage.py collectstatic --noinput --settings=config.settings.production 2>/dev/null || true
 
 EXPOSE 8000

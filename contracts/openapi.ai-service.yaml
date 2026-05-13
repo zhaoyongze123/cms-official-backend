@@ -52,6 +52,38 @@ paths:
       responses:
         "200":
           description: 图片 Alt 建议
+  /internal/ai/generate-title:
+    post:
+      summary: 生成爆款标题
+      security:
+        - internalToken: []
+      responses:
+        "200":
+          description: 标题列表
+  /internal/ai/generate-slug:
+    post:
+      summary: 生成 SEO Slug
+      security:
+        - internalToken: []
+      responses:
+        "200":
+          description: Slug 列表
+  /internal/ai/generate-tags:
+    post:
+      summary: 生成文章标签
+      security:
+        - internalToken: []
+      responses:
+        "200":
+          description: 标签列表
+  /internal/ai/generate-description:
+    post:
+      summary: 生成 SEO Description
+      security:
+        - internalToken: []
+      responses:
+        "200":
+          description: Description 列表
   /internal/rag/reindex-article:
     post:
       summary: 重建文章 RAG 索引

@@ -19,7 +19,7 @@ class EcsInstanceSnapshot(models.Model):
     class Meta:
         verbose_name = "ECS 实例"
         verbose_name_plural = "ECS 实例"
-        ordering = ["expired_time", "instance_name"]
+        ordering = ["-captured_at", "instance_name"]
 
     def __str__(self):
         return self.instance_name or self.instance_id
@@ -32,8 +32,8 @@ class DnsDomainStat(models.Model):
     captured_at = models.DateTimeField("采集时间", auto_now_add=True)
 
     class Meta:
-        verbose_name = "DNS 域名"
-        verbose_name_plural = "DNS 域名"
+        verbose_name = "DNS 统计"
+        verbose_name_plural = "DNS 统计"
         ordering = ["-timestamp"]
         unique_together = ("domain_name", "timestamp")
 

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block meta_description %}{% if article.meta_description %}{{ article.meta_description }}{% else %}{{ article.body|striptags|truncatewords:30 }}{% endif %}{% endblock %}
+{% block meta_description %}{% if article.meta_description %}{{ article.meta_description }}{% elif article.content_html %}{{ article.content_html|striptags|truncatewords:30 }}{% else %}{{ article.body|striptags|truncatewords:30 }}{% endif %}{% endblock %}
 
 {% block meta_keywords %}{{ article.category.name|default:article.title }}{% endblock %}
 
@@ -32,7 +32,11 @@
             <div class="row justify-content-center">
                 <div class="col-md-10 col-lg-9">
                     <div class="rich-content">
-                        {{ article.body|safe }}
+                        {% if article.content_html %}
+                          {{ article.content_html|safe }}
+                        {% else %}
+                          {{ article.body|safe }}
+                        {% endif %}
                     </div>
 
                     <div class="mt-5 pt-5 border-top d-flex justify-content-between align-items-center flex-wrap">
@@ -75,4 +79,3 @@
 }
 </style>
 {% endblock %}
-

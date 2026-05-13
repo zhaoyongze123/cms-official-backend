@@ -1,4 +1,4 @@
 SHELL=/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-*/15 * * * * root cd /app && python manage.py sync_aliyun >> /var/log/cron.log 2>&1
+*/15 * * * * root cd /app/apps/cms-api && python manage.py sync_aliyun >> /var/log/cron.log 2>&1

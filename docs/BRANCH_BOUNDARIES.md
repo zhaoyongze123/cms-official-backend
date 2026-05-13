@@ -38,10 +38,10 @@ contract-change/<topic>
 | `feature/contracts-v1` | `contracts/`、契约说明文档、Mock 示例 | Django/FastAPI/Next.js 实现 |
 | `feature/django-content-seo-models` | Django 模型、迁移、Admin、模型测试 | FastAPI、Next.js |
 | `feature/django-seo-renderer` | SEO service、模板、Sitemap、Schema、页面测试 | AI 生成逻辑、TipTap 编辑器 |
-| `feature/fastapi-langgraph-ai-service` | `ai_service/`、Provider、LangGraph、pytest | Django 模型、Next.js UI |
+| `feature/fastapi-langgraph-ai-service` | `apps/ai-service/`、兼容层 `ai_service/`、Provider、LangGraph、pytest | Django 模型、Next.js UI |
 | `feature/rag-pgvector` | RAG 模型、Indexer、Retriever、pgvector 配置、命令 | Next.js UI、TipTap Diff |
 | `feature/django-ai-review-models` | AiReviewRun、AiSuggestion、AiPatch、DRF API、Mock AI Client | FastAPI 内部实现、Next.js UI |
-| `feature/nextjs-studio-shell` | `editor-web/` shell、路由、API client、Mock 数据 | Django 模型、FastAPI |
+| `feature/nextjs-studio-shell` | `apps/studio-web/` shell、兼容层 `editor-web/`、路由、API client、Mock 数据 | Django 模型、FastAPI |
 | `feature/tiptap-editor-basic` | TipTap 文档结构、blockId、保存逻辑 | AI Provider、RAG |
 | `feature/tiptap-diff-editor` | Diff Decoration、Accept/Reject UI、Patch apply | Django 落库规则、FastAPI Patch 生成 |
 | `feature/publish-flow` | 发布检查、发布 API、发布按钮串联 | AI Review Graph、RAG 索引 |

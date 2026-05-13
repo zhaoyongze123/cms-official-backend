@@ -42,6 +42,10 @@ Next.js 只能调用 Django API。
 | `POST` | `/api/articles/` | 新建文章 |
 | `GET` | `/api/articles/{id}/` | 文章详情 |
 | `PATCH` | `/api/articles/{id}/` | 保存草稿或编辑 |
+| `GET` | `/api/ai/settings/generation/` | 获取四项生成模型、API Key 状态与 Prompt 配置 |
+| `PATCH` | `/api/ai/settings/generation/` | 更新四项生成模型、API Key 与 Prompt 配置 |
+| `GET` | `/api/public/articles/` | 公开已发布文章列表 |
+| `GET` | `/api/public/articles/{slug}/` | 公开已发布文章详情 |
 | `POST` | `/api/articles/{id}/ai-review/` | 触发 AI 审核 |
 | `GET` | `/api/articles/{id}/ai-review-runs/` | 审核运行历史 |
 | `GET` | `/api/ai-review-runs/{run_id}/suggestions/` | 获取建议 |
@@ -51,6 +55,76 @@ Next.js 只能调用 Django API。
 | `POST` | `/api/articles/{id}/seo-check/` | 发布前检查 |
 | `GET` | `/api/articles/{id}/analytics/` | 单篇监控 |
 | `GET` | `/api/dashboard/seo-summary/` | SEO 总览 |
+
+Analytics 当前已落定的返回结构：
+
+| 接口 | 关键字段 |
+| --- | --- |
+| `/api/articles/{id}/analytics/` | `article`、`latest_snapshot`、`snapshots[]` |
+| `/api/dashboard/seo-summary/` | `totals`、`performance`、`top_articles[]` |
+
+`GET/PATCH /api/articles/{id}/` 当前用于编辑态回显与保存的扩展字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `seo.meta_title` | 编辑态 Meta Title |
+| `seo.meta_description` | 编辑态 Meta Description |
+| `seo.meta_keywords` | 编辑态 Meta Keywords |
+| `seo.canonical_url` | 编辑态 Canonical |
+| `seo.robots` | 编辑态 Robots |
+| `seo.og_title` | 编辑态 OG 标题 |
+| `seo.og_description` | 编辑态 OG 描述 |
+| `seo.og_image` | 编辑态 OG 图片对象，包含 `image_id/title/alt_text/file_url` |
+| `faq_items[]` | FAQ 真相源列表，包含 `question/answer/sort_order` |
+
+`/api/articles/{id}/analytics/` 中 `latest_snapshot` 与 `snapshots[]` 当前包含：
+
+| 字段 | 说明 |
+| --- | --- |
+| `snapshot_id` | 快照主键 |
+| `snapshot_date` | 快照日期 |
+| `source` | 数据来源标识 |
+| `impressions` | 曝光量 |
+| `clicks` | 点击量 |
+| `average_position` | 平均排名 |
+| `ctr` | 点击率，0-1 浮点 |
+| `sessions` | 会话数 |
+| `users` | 用户数 |
+| `bounce_rate` | 跳出率，0-1 浮点 |
+| `avg_engagement_seconds` | 平均参与时长（秒） |
+| `conversions` | 转化数 |
+| `notes` | 备注 |
+| `updated_at` | 快照更新时间 |
+
+`/api/dashboard/seo-summary/` 当前聚合字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `totals.total_articles` | 文章总数 |
+| `totals.published_articles` | 已发布文章数 |
+| `totals.draft_articles` | 草稿文章数 |
+| `totals.archived_articles` | 已归档文章数 |
+| `totals.articles_with_seo_metadata` | 存在 `SeoMetadata` 的文章数 |
+| `totals.articles_with_faq` | 存在 FAQ 的文章数 |
+| `totals.articles_with_analytics` | 存在 `AnalyticsSnapshot` 的文章数 |
+| `performance.*` | 基于每篇文章最新快照的聚合性能指标 |
+| `top_articles[]` | 按最新快照曝光量倒序的文章列表 |
+
+公开文章接口当前已对 public-web 暴露以下 SEO 字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `seo.meta_title` | 公开 Meta Title |
+| `seo.meta_description` | 公开 Meta Description |
+| `seo.canonical_url` | Canonical URL |
+| `seo.robots` | Robots 指令 |
+| `seo.og_title` | OG 标题 |
+| `seo.og_description` | OG 描述 |
+| `seo.og_image_url` | OG 图片地址 |
+| `seo_payload.canonical_url_resolved` | Django 回退后的最终 Canonical |
+| `seo_payload.faq_items` | FAQ 真相源条目 |
+| `seo_payload.json_ld.breadcrumb` | BreadcrumbList 结构化数据 |
+| `seo_payload.json_ld.faq` | FAQPage 结构化数据 |
 
 ## 4. Django ↔ FastAPI API
 

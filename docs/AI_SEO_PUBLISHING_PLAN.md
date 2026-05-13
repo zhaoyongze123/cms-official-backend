@@ -75,7 +75,7 @@ curl -s http://127.0.0.1:8002/internal/rag/search -H "Content-Type: application/
 涉及 Next.js Studio 时追加：
 
 ```bash
-cd editor-web
+cd apps/studio-web
 npm run lint
 npm run test
 npm run build
@@ -252,8 +252,8 @@ PostgreSQL 是统一数据底座
 | 没有结构化 Tag | 新增 `Tag`，Article 使用 ManyToMany |
 | 没有 RAG | 新增 `KnowledgeSource`、`KnowledgeChunk`、pgvector |
 | 没有 AI 审核 | 新增 `AiReviewRun`、`AiSuggestion`、`AiPatch` |
-| 没有独立 AI 服务 | 新增 `ai_service/` FastAPI + LangGraph |
-| 没有前端 Studio | 新增 `editor-web/` Next.js + TipTap |
+| 没有独立 AI 服务 | 新增 `apps/ai-service/` FastAPI + LangGraph |
+| 没有前端 Studio | 新增 `apps/studio-web/` Next.js + TipTap |
 
 ## 5. 系统职责边界
 
@@ -1368,7 +1368,7 @@ docker compose exec -T ai-service pytest
 验收：
 
 ```bash
-cd editor-web
+cd apps/studio-web
 npm run lint
 npm run test
 npm run build
@@ -1411,7 +1411,7 @@ npm run build
 
 ```bash
 docker compose exec -T web python manage.py test
-cd editor-web && npm run build
+cd apps/studio-web && npm run build
 ```
 
 手工验收：

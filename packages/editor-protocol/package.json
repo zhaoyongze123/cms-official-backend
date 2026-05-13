@@ -1,0 +1,20 @@
+{
+  "name": "@cms/editor-protocol",
+  "version": "0.0.0",
+  "private": true,
+  "description": "编辑器协议与校验骨架包",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./constants": "./src/constants.ts",
+    "./validators": "./src/validators.ts",
+    "./schemas/*": "./src/schemas/*"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "sideEffects": false
+}

@@ -96,9 +96,9 @@
 | 模块 | 可以修改 | 禁止修改 |
 | --- | --- | --- |
 | Django CMS | `apps/`、`config/`、Django API、迁移、模板 | FastAPI 内部图逻辑、Next.js UI |
-| FastAPI AI Service | `ai_service/`、AI provider、LangGraph、RAG 节点 | Django 业务状态、Next.js UI |
-| Next.js Studio | `editor-web/`、运营工作台、API client、页面状态 | Django 模型、FastAPI 内部逻辑 |
-| TipTap Editor | `editor-web/components/editor`、patch 渲染和应用 | AI 输出生成、Django 落库 |
+| FastAPI AI Service | `apps/ai-service/`、兼容入口 `ai_service/`、AI provider、LangGraph、RAG 节点 | Django 业务状态、Next.js UI |
+| Next.js Studio | `apps/studio-web/`、兼容入口 `editor-web/`、运营工作台、API client、页面状态 | Django 模型、FastAPI 内部逻辑 |
+| TipTap Editor | `apps/studio-web/components/editor`、patch 渲染和应用 | AI 输出生成、Django 落库 |
 | Contracts | `contracts/`、契约文档 | 业务实现代码 |
 
 跨边界变更必须先修改契约，并走 `contract-change/*`。
@@ -130,7 +130,7 @@ docker compose exec -T ai-service pytest
 Next.js 验证：
 
 ```bash
-cd editor-web
+cd apps/studio-web
 npm run lint
 npm run test
 npm run build

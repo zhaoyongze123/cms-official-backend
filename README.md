@@ -1,12 +1,13 @@
 # 企业内容管理平台 (CMS)
 
-基于 Django 构建的企业内容管理系统，当前正在升级为 `Django CMS + FastAPI AI/RAG Service + Next.js Studio` 的三端架构。
+基于 Django 构建的企业内容管理系统，当前以前后台一体的 Django 站点为唯一对外入口，并保留 FastAPI AI/RAG Service 与仅用于文章编辑区的 Next.js Studio 作为内部服务。仓库默认运行方式已经收口为开发热更新模式，不再维护单独的 compose dev 覆盖文件。
 
 ## 1. 当前底座能力
 
-- `web`：Django CMS，负责内容、权限和公开页面。
+- `web`：Django CMS，运行入口收口到 `apps/cms-api/`，负责内容、权限和公开页面。
 - `ai-service`：FastAPI 骨架，负责 AI/RAG 服务健康检查和后续内部接口。
-- `editor-web`：Next.js Studio 壳应用，负责后续运营工作台。
+- `studio-web`：Next.js 内部编辑器服务，运行入口位于 `apps/studio-web/`，仅承接文章编辑区，由 Django Admin 同域嵌入。
+- `public-web`：Next.js 公开站点工程，运行入口位于 `apps/public-web/`，当前已纳入仓库与 compose，但是否完全接管公开站仍以 PR-21 cutover 验收结果为准。
 - `db`：PostgreSQL 15。
 - `redis`：Redis 7。
 - `worker`：异步任务占位 worker，后续承接 Celery 或队列消费。
@@ -21,8 +22,6 @@
 
 - Docker Engine 20.10+
 - Docker Compose v2
-- Node.js 22+（本地单独运行 `editor-web` 时需要）
-
 ## 4. 环境变量
 
 复制 `.env.example` 到 `.env`，至少确认以下变量：
@@ -32,9 +31,6 @@
 - `REDIS_URL`
 - `INTERNAL_API_TOKEN`
 - `AI_PROVIDER`
-- `NEXT_PUBLIC_DJANGO_BASE_URL`
-- `NEXT_PUBLIC_EDITOR_BASE_URL`
-- `NEXT_PUBLIC_AUTH_MODE`
 
 真实开发接入硅基流动前，必须配置：
 
@@ -52,7 +48,6 @@
    ```
 2. 构建并启动全部服务：
    ```bash
-   cd editor-web && npm install && cd ..
    COMPOSE_DOCKER_CLI_BUILD=0 DOCKER_BUILDKIT=0 docker compose up -d --build
    ```
 3. 初始化数据库：
@@ -69,20 +64,22 @@
 - Django 前台：`http://127.0.0.1:8001/`
 - Django health：`http://127.0.0.1:8001/api/health/`
 - Django 后台：`http://127.0.0.1:8001/django-admin/`
+- Studio 工作台：`http://127.0.0.1:8001/studio/`
+- Public Web 开发站：`http://127.0.0.1:3003/`
 - FastAPI health：`http://127.0.0.1:8002/health`
-- Next.js Studio：`http://127.0.0.1:3000/`
-- Next.js Studio 文章页：`http://127.0.0.1:3000/studio/articles`
 
 ## 7. A00 基础验证
 
 ```bash
-cd editor-web && npm install && cd ..
 COMPOSE_DOCKER_CLI_BUILD=0 DOCKER_BUILDKIT=0 docker compose up -d --build
+docker compose exec -T ai-service pytest
 docker compose exec -T web python manage.py check
 docker compose exec -T web python manage.py test
+cd apps/studio-web && npm run lint
+cd apps/studio-web && npm run test
+cd apps/studio-web && npm run build
 curl -s http://127.0.0.1:8001/api/health/
 curl -s http://127.0.0.1:8002/health
-curl -I http://127.0.0.1:3000/studio/articles
 ```
 
 ## 8. 权限初始化（可选）

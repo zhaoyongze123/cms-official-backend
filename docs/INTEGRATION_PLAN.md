@@ -55,7 +55,7 @@ docker compose exec -T ai-service pytest
 涉及 Next.js：
 
 ```bash
-cd editor-web
+cd apps/studio-web
 npm run lint
 npm run test
 npm run build
