@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { motion } from "motion/react";
-import { Activity, ArrowRight, Cloud, Code, Mail, MapPin, Phone, Server, Settings, Shield, Zap } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { Activity, ArrowRight, Cloud, Code, Mail, MapPin, Phone, Server, Settings, Shield, X, Zap } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -55,8 +55,106 @@ function SolutionItem({ title, tag, desc }: { title: string; tag: string; desc: 
   );
 }
 
+function ConsultationModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return (
+    <AnimatePresence>
+      {open ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[80] bg-charcoal/55 backdrop-blur-md px-4 py-8"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.98 }}
+            transition={{ duration: 0.25 }}
+            className="mx-auto flex min-h-full max-w-5xl items-center justify-center"
+          >
+            <div
+              className="relative w-full overflow-hidden rounded-[2rem] bg-white shadow-2xl shadow-ink/30"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                aria-label="关闭咨询弹层"
+                onClick={onClose}
+                className="absolute right-6 top-6 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-line bg-white/90 text-charcoal shadow-sm transition-colors hover:border-hermes hover:text-hermes"
+              >
+                <X size={18} />
+              </button>
+
+              <div className="grid gap-10 p-8 md:grid-cols-[1.4fr_0.9fr] md:p-12">
+                <div>
+                  <div className="mb-10">
+                    <span className="text-xs font-black uppercase tracking-[0.35em] text-hermes">Architecture Desk</span>
+                    <h3 className="mt-4 text-4xl font-black text-charcoal md:text-5xl">扫码咨询</h3>
+                  </div>
+
+                  <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
+                    <div className="flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-hermes/15 via-white to-ink/10 text-4xl font-black text-hermes shadow-inner">
+                      Y
+                    </div>
+                    <div className="space-y-3">
+                      <div className="text-4xl font-black text-charcoal">云璨</div>
+                      <div className="text-xl text-charcoal/75">专属顾问</div>
+                      <div className="flex flex-wrap items-center gap-3 text-xl text-muted">
+                        <Phone className="text-hermes" size={22} />
+                        <span>021-50583875</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3 text-base text-muted">
+                        <Mail className="text-hermes" size={18} />
+                        <span>service@yuncan.com</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center">
+                  <div className="rounded-[1.75rem] bg-white p-5 shadow-xl shadow-hermes/10 ring-1 ring-line">
+                    <div className="relative grid h-56 w-56 grid-cols-7 gap-1 rounded-2xl bg-white p-4">
+                      {Array.from({ length: 49 }).map((_, index) => {
+                        const active = [0, 1, 2, 4, 6, 7, 8, 10, 12, 14, 18, 19, 20, 21, 24, 26, 28, 30, 31, 33, 35, 36, 40, 42, 43, 44, 46, 48].includes(index);
+                        return <span key={index} className={`rounded-[2px] ${active ? "bg-charcoal" : "bg-charcoal/10"}`} />;
+                      })}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-4 border-white bg-hermes text-2xl font-black text-white shadow-lg">
+                          Y
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative bg-gradient-to-r from-[#2358d8] via-[#3165e6] to-[#2d6eff] px-8 py-10 text-white md:px-12">
+                <div className="absolute left-20 top-0 h-6 w-6 -translate-y-1/2 rotate-45 bg-[#3165e6]" />
+                <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                  <p className="max-w-2xl text-2xl font-medium leading-relaxed md:text-4xl">
+                    欢迎扫码，在线体验云璨企业级方案
+                  </p>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-bold tracking-[0.2em] text-white transition-colors hover:bg-white hover:text-[#2d6eff]"
+                  >
+                    我知道了
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
 export default function PublicLandingPage() {
   const titleContainerRef = useRef<HTMLDivElement>(null);
+  const [consultationOpen, setConsultationOpen] = useState(false);
 
   useEffect(() => {
     const lens = document.getElementById("hero-lens");
@@ -102,9 +200,9 @@ export default function PublicLandingPage() {
             </div>
             <div ref={titleContainerRef} className="relative group/hero overflow-visible mb-12">
               <h1 className="text-5xl lg:text-7xl font-black text-charcoal leading-tight pointer-events-none select-none">
-                让云架构更稳定
+                让云贴近业务，
                 <br />
-                更懂您的业务
+                让 AI 驱动增长
               </h1>
               <div
                 id="hero-lens"
@@ -115,27 +213,37 @@ export default function PublicLandingPage() {
                 }}
               >
                 <h1 className="text-5xl lg:text-7xl font-black text-hermes leading-tight">
-                  让云架构更稳定
+                  让云贴近业务，
                   <br />
-                  更懂您的业务
+                  让 AI 驱动增长
                 </h1>
               </div>
             </div>
             <p className="text-xl text-muted leading-relaxed mb-10 max-w-xl">
-              我们不是单纯的资源代理商，而是企业云化转型的架构合伙人。先梳理痛点，再设计架构，最后通过自动化运维交付业务价值。
+              整合公有云、私有云与 AI 能力，为企业提供全栈云解决方案与定制开发服务，助力数智化转型。
             </p>
             <div className="flex flex-wrap gap-4">
-              <button className="bg-hermes text-white px-8 py-4 rounded-full font-bold shadow-xl shadow-hermes/30">立即咨询架构专家</button>
-              <a href="/solutions" className="bg-white text-charcoal border border-line px-8 py-4 rounded-full font-bold hover:bg-mist transition-colors">
+              <button
+                type="button"
+                onClick={() => setConsultationOpen(true)}
+                className="bg-hermes text-white px-8 py-4 rounded-full font-bold shadow-xl shadow-hermes/30"
+              >
+                立即咨询架构专家
+              </button>
+              <button
+                type="button"
+                onClick={() => setConsultationOpen(true)}
+                className="bg-white text-charcoal border border-line px-8 py-4 rounded-full font-bold hover:bg-mist transition-colors"
+              >
                 探索服务矩阵
-              </a>
+              </button>
             </div>
 
             <div className="mt-16 grid grid-cols-3 gap-8">
               {[
-                { label: "行业方案", val: "10+" },
-                { label: "运维级别", val: "7×24" },
-                { label: "架构安全", val: "P0级" }
+                { label: "IT服务经验", val: "20年+" },
+                { label: "客户案例", val: "500+" },
+                { label: "解决方案", val: "100+" }
               ].map((stat, i) => (
                 <div key={i} className="border-l-2 border-hermes/20 pl-4">
                   <div className="text-2xl font-black text-charcoal">{stat.val}</div>
@@ -273,7 +381,7 @@ export default function PublicLandingPage() {
                 </div>
                 <div>
                   <h4 className="font-bold text-charcoal">专家热线</h4>
-                  <p className="text-muted text-sm font-medium">021-XXXX-XXXX (工作日 9:30 - 18:30)</p>
+                  <p className="text-muted text-sm font-medium">021-50583875</p>
                 </div>
               </div>
               <div className="flex items-start gap-6">
@@ -282,7 +390,7 @@ export default function PublicLandingPage() {
                 </div>
                 <div>
                   <h4 className="font-bold text-charcoal">总部中心</h4>
-                  <p className="text-muted text-sm font-medium">上海市闵行区联航路1588号 坤大科技楼601室</p>
+                  <p className="text-muted text-sm font-medium">上海市浦东新区世纪大道2002号</p>
                 </div>
               </div>
             </div>
@@ -314,6 +422,7 @@ export default function PublicLandingPage() {
           </motion.div>
         </div>
       </section>
+      <ConsultationModal open={consultationOpen} onClose={() => setConsultationOpen(false)} />
     </PublicLayout>
   );
 }

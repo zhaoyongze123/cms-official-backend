@@ -226,7 +226,7 @@ jobs:
           fi
           printf '%s\n' "$PROD_ENV_FILE" > .env.prod
           ssh -i ~/.ssh/id_ed25519 "${PROD_SERVER_USER_CLEAN}@${PROD_SERVER_HOST_CLEAN}" \
-            "mkdir -p '${PROD_DEPLOY_PATH_CLEAN}'"
+            "if [ -e '${PROD_DEPLOY_PATH_CLEAN}' ] && [ ! -d '${PROD_DEPLOY_PATH_CLEAN}' ]; then rm -f '${PROD_DEPLOY_PATH_CLEAN}'; fi && mkdir -p '${PROD_DEPLOY_PATH_CLEAN}'"
           scp -i ~/.ssh/id_ed25519 .env.prod \
             "${PROD_SERVER_USER_CLEAN}@${PROD_SERVER_HOST_CLEAN}:${PROD_DEPLOY_PATH_CLEAN}/.env.prod"
 

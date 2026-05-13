@@ -17,28 +17,28 @@ const CARD_DATA: CardInfo[] = [
   {
     id: 1,
     type: 'poster',
-    title: '让算力更具想象力',
-    subtitle: 'Brand Mission',
-    description: '云璨致力于通过全栈自动化运维，将复杂的底层基础设施转化为极简的业务推动力。我们不仅提供资源，更提供增长的可能。',
-    image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=800&auto=format&fit=crop',
+    title: '邮件数据归档，安全合规，尽在掌控',
+    subtitle: 'Mail Archive',
+    description: '邮件归档解决方案，帮助企业实现邮件数据本地化存储，支持压缩、审计、快速检索与统一管理。',
+    image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop',
     color: '#FF5F1F'
   },
   {
     id: 2,
     type: 'case',
-    title: '某跨国金融集团实践',
-    subtitle: 'Success Case',
-    description: '成功助力客户实现 3500+ 分布式节点跨云调度，核心业务可用性提升至 99.995%，年成本优化约 400 万。',
-    image: 'https://images.unsplash.com/photo-1551288049-bbdac8626ad1?q=80&w=800&auto=format&fit=crop',
+    title: 'AI 真实提效，填表不再耗时',
+    subtitle: 'AI Automation',
+    description: 'AI 驱动的表格自动化解决方案，实现表格读取、查询、分类与填充的智能化处理，大幅减少人工操作，显著提升填表效率。',
+    image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=800&auto=format&fit=crop',
     color: '#00D1FF'
   },
   {
     id: 3,
     type: 'feedback',
-    title: '“最信任的数字底座”',
-    subtitle: 'Customer Voice',
-    description: '“在数字化转型最艰难的时刻，是云璨的架构师团队带着我们梳理了所有业务线，帮我们躲过了数次宕机风险。”',
-    image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=800&auto=format&fit=crop',
+    title: 'AI + 网盘，落地效果出乎意料',
+    subtitle: 'AI Knowledge Base',
+    description: '以企业网盘作为 AI 数据底座，一举解决落地 AI 的三大痛点：数据孤岛、场景缺失与数据安全，让 AI 真正在企业内部跑起来。',
+    image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=800&auto=format&fit=crop',
     color: '#32CD32'
   }
 ];
