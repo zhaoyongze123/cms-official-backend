@@ -13,6 +13,7 @@ concurrency:
 env:
   PYTHON_VERSION: "3.12"
   NODE_VERSION: "22"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   verify:
@@ -199,6 +200,13 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
+      - name: 规范化部署 Secret
+        run: |
+          echo "PROD_SERVER_HOST_CLEAN=$(printf '%s' '${{ secrets.PROD_SERVER_HOST }}' | tr -d '\r\n\t ')" >> "$GITHUB_ENV"
+          echo "PROD_SERVER_USER_CLEAN=$(printf '%s' '${{ secrets.PROD_SERVER_USER }}' | tr -d '\r\n\t ')" >> "$GITHUB_ENV"
+          echo "PROD_DEPLOY_PATH_CLEAN=$(printf '%s' '${{ secrets.PROD_DEPLOY_PATH }}' | tr -d '\r' | sed 's/[[:space:]]*$//')" >> "$GITHUB_ENV"
+          echo "PROD_NGINX_SITE_PATH_CLEAN=$(printf '%s' '${{ secrets.PROD_NGINX_SITE_PATH }}' | tr -d '\r' | sed 's/[[:space:]]*$//')" >> "$GITHUB_ENV"
+
       - name: 安装 SSH 私钥
         env:
           PROD_SSH_PRIVATE_KEY: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
@@ -206,7 +214,7 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$PROD_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "${{ secrets.PROD_SERVER_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$PROD_SERVER_HOST_CLEAN" >> ~/.ssh/known_hosts
 
       - name: 上传生产环境变量
         env:
@@ -217,10 +225,10 @@ jobs:
             exit 1
           fi
           printf '%s\n' "$PROD_ENV_FILE" > .env.prod
-          ssh -i ~/.ssh/id_ed25519 "${{ secrets.PROD_SERVER_USER }}@${{ secrets.PROD_SERVER_HOST }}" \
-            "mkdir -p '${{ secrets.PROD_DEPLOY_PATH }}'"
+          ssh -i ~/.ssh/id_ed25519 "${PROD_SERVER_USER_CLEAN}@${PROD_SERVER_HOST_CLEAN}" \
+            "mkdir -p '${PROD_DEPLOY_PATH_CLEAN}'"
           scp -i ~/.ssh/id_ed25519 .env.prod \
-            "${{ secrets.PROD_SERVER_USER }}@${{ secrets.PROD_SERVER_HOST }}:${{ secrets.PROD_DEPLOY_PATH }}/.env.prod"
+            "${PROD_SERVER_USER_CLEAN}@${PROD_SERVER_HOST_CLEAN}:${PROD_DEPLOY_PATH_CLEAN}/.env.prod"
 
       - name: 打包部署代码
         run: |
@@ -237,16 +245,16 @@ jobs:
       - name: 上传部署代码
         run: |
           scp -i ~/.ssh/id_ed25519 deploy-release.tgz \
-            "${{ secrets.PROD_SERVER_USER }}@${{ secrets.PROD_SERVER_HOST }}:${{ secrets.PROD_DEPLOY_PATH }}/deploy-release.tgz"
+            "${PROD_SERVER_USER_CLEAN}@${PROD_SERVER_HOST_CLEAN}:${PROD_DEPLOY_PATH_CLEAN}/deploy-release.tgz"
 
       - name: 远程部署
         run: |
           ssh -i ~/.ssh/id_ed25519 \
-            "${{ secrets.PROD_SERVER_USER }}@${{ secrets.PROD_SERVER_HOST }}" \
-            "export DEPLOY_PATH='${{ secrets.PROD_DEPLOY_PATH }}' \
-             NGINX_SITE_PATH='${{ secrets.PROD_NGINX_SITE_PATH }}' \
+            "${PROD_SERVER_USER_CLEAN}@${PROD_SERVER_HOST_CLEAN}" \
+            "export DEPLOY_PATH='${PROD_DEPLOY_PATH_CLEAN}' \
+             NGINX_SITE_PATH='${PROD_NGINX_SITE_PATH_CLEAN}' \
              SKIP_GIT_SYNC='1' && \
-             cd '${{ secrets.PROD_DEPLOY_PATH }}' && \
+             cd '${PROD_DEPLOY_PATH_CLEAN}' && \
              tar -xzf deploy-release.tgz && \
              rm -f deploy-release.tgz && \
              bash -s" < scripts/deploy_prod.sh
