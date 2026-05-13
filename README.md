@@ -101,7 +101,8 @@ BT/nginx 反代规则：
 - `/` -> `public-web`
 - `/api/` -> Django
 - `/django-admin/` -> Django Admin
-- `/django/next-editor/` -> Studio
+- `/django-admin/next-editor/` -> Studio
+- 生产域名：`https://yuncan.com`
 
 ### 3.2 生产环境变量
 
@@ -131,10 +132,11 @@ chmod +x scripts/deploy_prod.sh
 脚本会执行：
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.prod.yml exec -T web python manage.py migrate --noinput
-docker compose -f docker-compose.prod.yml exec -T web python manage.py collectstatic --noinput
-docker compose -f docker-compose.prod.yml ps
+docker build -t cms-backend:prod .
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --no-build
+docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T web python manage.py migrate --noinput
+docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T web python manage.py collectstatic --noinput
+docker compose --env-file .env.prod -f docker-compose.prod.yml ps
 ```
 
 ## 4. GitHub Actions 自动部署
@@ -153,7 +155,7 @@ docker compose -f docker-compose.prod.yml ps
 2. 通过 `rsync` 同步仓库到生产机 `/root/cms官网后台`
 3. 上传 `.env.prod`
 4. 在服务器执行 `./scripts/deploy_prod.sh`，脚本会显式使用 `.env.prod`
-5. 将 `deploy/nginx/cms.conf` 安装为 BT/nginx 站点配置并重载 nginx
+5. 将 `deploy/nginx/cms.conf` 安装为 `yuncan.com` 的 BT/nginx 站点配置并重载 nginx
 
 ### 4.1 需要配置的 GitHub Secrets
 
@@ -180,7 +182,9 @@ Django / 站点：
 前端：
 
 - `PROD_NEXT_PUBLIC_DJANGO_BASE_URL`
+- `PROD_NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL`
 - `PROD_NEXT_PUBLIC_EDITOR_BASE_URL`
+- `PROD_NEXT_PUBLIC_SITE_URL`
 
 AI / RAG：
 
@@ -229,8 +233,9 @@ AI / RAG：
 
 因此生产部署必须走“高位本地端口 + BT/nginx 反代”，不能直接占用 `80/443/6379`
 
-## 6. 当前限制
+## 6. 当前状态
 
+- `https://yuncan.com/`、`https://yuncan.com/solutions`、`https://yuncan.com/django-admin/next-editor/login` 已切到当前新站。
+- `main` 自动部署工作流现在对齐 `yuncan.com` 的 BT/nginx 配置文件。
 - GitHub Actions 自动部署依赖服务器 SSH 密码可正常登录；若服务器密码或 SSH 配置不正确，工作流会失败。
-- 当前生产 Nginx 配置默认走 `80` 端口，未包含 HTTPS 证书签发和自动续期。
 - 当前 `main` 自动部署工作流是“部署 main 到服务器”，不会自动合并任何其他分支。
