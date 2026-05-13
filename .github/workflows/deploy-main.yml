@@ -78,10 +78,11 @@ jobs:
             --exclude 'apps/cms-api/media' \
             ./ root@${{ secrets.PROD_SERVER_HOST }}:/root/cms官网后台/
           sshpass -e scp -o StrictHostKeyChecking=no .env.prod root@${{ secrets.PROD_SERVER_HOST }}:/root/cms官网后台/.env.prod
+          sshpass -e scp -o StrictHostKeyChecking=no deploy/nginx/cms.conf root@${{ secrets.PROD_SERVER_HOST }}:/root/cms官网后台/deploy/nginx/cms.conf
 
       - name: Deploy on server
         env:
           SSHPASS: ${{ secrets.PROD_SERVER_PASSWORD }}
         run: |
           sshpass -e ssh -o StrictHostKeyChecking=no root@${{ secrets.PROD_SERVER_HOST }} \
-            "cd /root/cms官网后台 && chmod +x scripts/deploy_prod.sh && ./scripts/deploy_prod.sh"
+            "cd /root/cms官网后台 && chmod +x scripts/deploy_prod.sh && ./scripts/deploy_prod.sh && cp deploy/nginx/cms.conf /www/server/panel/vhost/nginx/cms官网后台.conf && nginx -t && bt reload"

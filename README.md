@@ -71,7 +71,7 @@ curl -I http://127.0.0.1:3003/solutions
 生产环境使用：
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 ```
 
 生产版包含：
@@ -83,15 +83,25 @@ docker compose -f docker-compose.prod.yml up -d --build
 - `worker`
 - `editor-web`
 - `public-web`
-- `nginx`
 
-其中 `nginx` 统一暴露 `80` 端口：
+- 生产环境不再使用容器内 Nginx 抢占宿主机 `80/443`
+- 统一改为 Docker 服务监听宿主机 `127.0.0.1` 高位端口，再由服务器现有 BT/nginx 反代
+
+生产内部端口：
+
+- Django：`127.0.0.1:18001`
+- FastAPI：`127.0.0.1:18002`
+- Studio：`127.0.0.1:13000`
+- Public Web：`127.0.0.1:13003`
+- Postgres：`127.0.0.1:15432`
+- Redis：`127.0.0.1:16379`
+
+BT/nginx 反代规则：
 
 - `/` -> `public-web`
 - `/api/` -> Django
 - `/django-admin/` -> Django Admin
-- `/django/static/` -> Django 静态资源
-- `/django/media/` -> Django 媒体文件
+- `/django/next-editor/` -> Studio
 
 ### 3.2 生产环境变量
 
@@ -142,7 +152,8 @@ docker compose -f docker-compose.prod.yml ps
 1. 在 GitHub Actions 中生成 `.env.prod`
 2. 通过 `rsync` 同步仓库到生产机 `/root/cms官网后台`
 3. 上传 `.env.prod`
-4. 在服务器执行 `./scripts/deploy_prod.sh`
+4. 在服务器执行 `./scripts/deploy_prod.sh`，脚本会显式使用 `.env.prod`
+5. 将 `deploy/nginx/cms.conf` 安装为 BT/nginx 站点配置并重载 nginx
 
 ### 4.1 需要配置的 GitHub Secrets
 
@@ -209,6 +220,14 @@ AI / RAG：
 
 - 主机：`139.224.245.94`
 - 部署目录：`/root/cms官网后台`
+
+服务器当前已确认：
+
+- Docker / Compose 可用
+- 宿主机 `80/443` 已被 BT/nginx 占用
+- 宿主机 `6379` 已被现有 redis 占用
+
+因此生产部署必须走“高位本地端口 + BT/nginx 反代”，不能直接占用 `80/443/6379`
 
 ## 6. 当前限制
 
