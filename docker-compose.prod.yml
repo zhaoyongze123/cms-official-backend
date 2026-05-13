@@ -43,6 +43,7 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
       PYTHONPATH: /app/apps/cms-api:/app
+      NEXT_EDITOR_INTERNAL_URL: http://editor-web:3000
       http_proxy: ""
       https_proxy: ""
       HTTP_PROXY: ""
@@ -131,6 +132,8 @@ services:
     environment:
       NODE_ENV: production
       NEXT_EDITOR_DEV_ORIGIN: ${CMS_SITE_URL}
+      DJANGO_INTERNAL_BASE_URL: ${CMS_SITE_URL}
+      NEXT_PUBLIC_DJANGO_BASE_URL: ${CMS_SITE_URL}
       http_proxy: ""
       https_proxy: ""
       HTTP_PROXY: ""
