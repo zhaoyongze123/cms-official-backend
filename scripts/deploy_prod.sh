@@ -48,21 +48,46 @@ fi
 
 export COMPOSE_DOCKER_CLI_BUILD=0
 export DOCKER_BUILDKIT=0
+COMPOSE_CMD=(docker compose --env-file .env.prod -f docker-compose.prod.yml)
+
+cleanup_reserved_port_containers() {
+  local port container_ids container_id container_name
+  local reserved_ports=(18001 18002 13000 13003)
+
+  for port in "${reserved_ports[@]}"; do
+    mapfile -t container_ids < <(docker ps --filter "publish=${port}" --format "{{.ID}}")
+    for container_id in "${container_ids[@]}"; do
+      container_name="$(docker inspect --format '{{.Name}}' "${container_id}" 2>/dev/null | sed 's#^/##')"
+      echo "[deploy] 端口 ${port} 被旧 Docker 容器 ${container_name:-${container_id}} 占用，先移除以释放端口"
+      docker rm -f "${container_id}"
+    done
+
+    if command -v ss >/dev/null 2>&1 && ss -ltn "sport = :${port}" | grep -q ":${port}"; then
+      echo "[deploy] 端口 ${port} 仍被非 Docker 进程占用，请先在服务器释放该端口" >&2
+      ss -ltnp "sport = :${port}" >&2 || true
+      exit 1
+    fi
+  done
+}
 
 echo "[deploy] 构建后端镜像"
 docker build -t cms-backend:prod .
 
+echo "[deploy] 清理当前 Compose 项目旧容器"
+"${COMPOSE_CMD[@]}" down --remove-orphans || true
+cleanup_reserved_port_containers
+
 echo "[deploy] 更新生产容器"
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build --remove-orphans
+"${COMPOSE_CMD[@]}" up -d --build --remove-orphans
 
 echo "[deploy] 执行数据库迁移"
-docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T web python manage.py migrate --noinput
+"${COMPOSE_CMD[@]}" exec -T web python manage.py migrate --noinput
 
 echo "[deploy] 收集静态文件"
-docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T web python manage.py collectstatic --noinput
+"${COMPOSE_CMD[@]}" exec -T web python manage.py collectstatic --noinput
 
 echo "[deploy] 输出容器状态"
-docker compose --env-file .env.prod -f docker-compose.prod.yml ps
+"${COMPOSE_CMD[@]}" ps
 
 if [[ -n "${NGINX_SITE_PATH}" ]]; then
   echo "[deploy] 更新 nginx 配置 ${NGINX_SITE_PATH}"
