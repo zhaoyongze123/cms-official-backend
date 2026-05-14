@@ -7,6 +7,8 @@ APP_REPO="${APP_REPO:-}"
 NGINX_SITE_PATH="${NGINX_SITE_PATH:-}"
 SKIP_GIT_SYNC="${SKIP_GIT_SYNC:-0}"
 NGINX_RELOAD_CMD="${NGINX_RELOAD_CMD:-/etc/init.d/nginx reload}"
+PUBLIC_WEB_SMOKE_URL="${PUBLIC_WEB_SMOKE_URL:-http://127.0.0.1:13003}"
+PUBLIC_WEB_EXPECTED_TEXT="${PUBLIC_WEB_EXPECTED_TEXT:-让云贴近业务}"
 
 echo "[deploy] 目标目录: ${DEPLOY_PATH}"
 echo "[deploy] 目标分支: ${APP_BRANCH}"
@@ -50,6 +52,11 @@ export COMPOSE_DOCKER_CLI_BUILD=0
 export DOCKER_BUILDKIT=0
 COMPOSE_CMD=(docker compose --env-file .env.prod -f docker-compose.prod.yml)
 
+if [[ -n "${NGINX_SITE_PATH}" && "${DEPLOY_PATH}" == "${NGINX_SITE_PATH}" ]]; then
+  echo "[deploy] DEPLOY_PATH 不能等于 NGINX_SITE_PATH，否则会把 nginx 配置文件路径当成代码目录" >&2
+  exit 1
+fi
+
 cleanup_reserved_port_containers() {
   local port container_ids container_id container_name
   local reserved_ports=(18001 18002 13000 13003)
@@ -68,6 +75,36 @@ cleanup_reserved_port_containers() {
       exit 1
     fi
   done
+}
+
+update_nginx_config() {
+  if [[ -z "${NGINX_SITE_PATH}" ]]; then
+    return 0
+  fi
+
+  if [[ -d "${NGINX_SITE_PATH}" ]]; then
+    echo "[deploy] nginx 配置路径 ${NGINX_SITE_PATH} 当前是目录，备份后改回文件"
+    mv "${NGINX_SITE_PATH}" "${NGINX_SITE_PATH}.dir.bak.$(date +%Y%m%d%H%M%S)"
+  fi
+
+  echo "[deploy] 更新 nginx 配置 ${NGINX_SITE_PATH}"
+  mkdir -p "$(dirname "${NGINX_SITE_PATH}")"
+  cp deploy/nginx/cms.conf "${NGINX_SITE_PATH}"
+  nginx -t
+  bash -lc "${NGINX_RELOAD_CMD}"
+}
+
+smoke_public_web() {
+  echo "[deploy] 验证 public-web 首页"
+  local home_html
+  home_html="$(curl -fsS "${PUBLIC_WEB_SMOKE_URL}/")"
+  if ! grep -q "${PUBLIC_WEB_EXPECTED_TEXT}" <<<"${home_html}"; then
+    echo "[deploy] public-web 首页未包含预期文案：${PUBLIC_WEB_EXPECTED_TEXT}" >&2
+    exit 1
+  fi
+
+  echo "[deploy] 验证 public-web 解决方案页"
+  curl -fsSI "${PUBLIC_WEB_SMOKE_URL}/solutions" >/dev/null
 }
 
 echo "[deploy] 构建后端镜像"
@@ -89,12 +126,7 @@ echo "[deploy] 收集静态文件"
 echo "[deploy] 输出容器状态"
 "${COMPOSE_CMD[@]}" ps
 
-if [[ -n "${NGINX_SITE_PATH}" ]]; then
-  echo "[deploy] 更新 nginx 配置 ${NGINX_SITE_PATH}"
-  mkdir -p "$(dirname "${NGINX_SITE_PATH}")"
-  cp deploy/nginx/cms.conf "${NGINX_SITE_PATH}"
-  nginx -t
-  bash -lc "${NGINX_RELOAD_CMD}"
-fi
+update_nginx_config
+smoke_public_web
 
 echo "[deploy] 完成"

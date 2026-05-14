@@ -198,6 +198,11 @@ async function requestJson<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+function logPublicApiError(scope: string, error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`[public-web] ${scope} 公开接口请求失败：${message}`);
+}
+
 export function getSiteSeoContext(): SiteSeoContext {
   return {
     siteName: "云璨科技",
@@ -296,7 +301,13 @@ export function buildFaqJsonLd(article: PublicArticle) {
 }
 
 export async function fetchPublishedArticles(): Promise<PublicArticle[]> {
-  const payload = await requestJson<ArticleApiItem[]>('/api/public/articles/');
+  let payload: ArticleApiItem[];
+  try {
+    payload = await requestJson<ArticleApiItem[]>('/api/public/articles/');
+  } catch (error) {
+    logPublicApiError("文章列表", error);
+    return [];
+  }
   return payload
     .sort((left, right) => {
       const leftTime = left.published_at ? new Date(left.published_at).getTime() : 0;
