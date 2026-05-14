@@ -8,8 +8,19 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-AI%20Service-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-Studio%20%26%20Public-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 线上生产站点： [yuncan.com](https://yuncan.com)
+
+<p align="center">
+  <img src="docs/assets/feature-preview.gif" alt="CMS 官网后台功能预览" width="920">
+</p>
+
+## 🖼️ Preview
+
+<p align="center">
+  <img src="docs/assets/homepage-screenshot.png" alt="公开站首页预览" width="920">
+</p>
 
 ## ✨ 项目简介
 
@@ -37,8 +48,13 @@
 - [生产部署](#生产部署)
 - [GitHub Actions 自动部署](#github-actions-自动部署)
 - [API 与路由概览](#api-与路由概览)
+- [Roadmap](ROADMAP.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security](SECURITY.md)
+- [License](LICENSE)
 - [常见运维命令](#常见运维命令)
 - [安全说明](#安全说明)
+- [English Summary](#english-summary)
 
 ## 📦 项目概览
 
@@ -97,6 +113,10 @@
 - 🚢 Docker 化开发、生产部署与自动化发布
 
 ## 🧱 系统架构
+
+<p align="center">
+  <img src="docs/assets/architecture.svg" alt="CMS 官网后台系统架构图" width="920">
+</p>
 
 ```text
 Browser / Operator
@@ -403,6 +423,26 @@ chmod +x scripts/deploy_prod.sh
 - Studio Web 在生产 SSR 场景优先通过 `NEXT_PUBLIC_DJANGO_BASE_URL` 访问公网 Django 基地址。
 - 这一组合用于避免容器内 SSR 取数与宿主机 Nginx 路径前缀不一致的问题。
 
+## 🗺️ Roadmap
+
+项目后续计划维护在 [`ROADMAP.md`](ROADMAP.md)，当前重点方向包括：
+
+- 完善公开站页面截图与功能演示
+- 补充 Django API 文档与示例请求
+- 扩展 SEO 监控数据源接入说明
+- 强化 AI 审核与 RAG 检索链路
+- 增加端到端验收测试
+
+## 🤝 Contributing
+
+贡献流程、模块边界和推荐验证命令见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
+
+提交前请特别注意：
+
+- 不要提交真实 `.env`、`.env.prod`、Token、私钥或密码。
+- 跨模块 API 变更需要同步更新 `contracts/`。
+- PR 描述应包含变更内容、验证命令和影响范围。
+
 ## 🧰 常见运维命令
 
 ### 查看生产容器状态
@@ -441,7 +481,14 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T web pytho
 - 不要提交 `.env`、`.env.prod`、私钥、Token、真实密码。
 - GitHub Actions 不应打印 `PROD_ENV_FILE` 内容。
 - 所有生产敏感信息请只保存在 GitHub Secrets 或服务器环境文件中。
+- 安全报告与凭证处理建议见 [`SECURITY.md`](SECURITY.md)。
+
+## English Summary
+
+CMS Official Backend is a production-oriented content management platform for corporate websites. It combines Django CMS, FastAPI AI/RAG services, Next.js Studio, Next.js Public Web, PostgreSQL with pgvector, Redis, Docker Compose, Nginx, and GitHub Actions deployment.
+
+The repository is designed for teams that need a maintainable CMS backend, an embedded editorial studio, SEO monitoring, AI-assisted content workflows, and a reproducible production deployment path.
 
 ## 📄 许可证
 
-当前仓库未声明开源许可证。如需对外开源，请补充 `LICENSE` 文件并在 README 中明确授权方式。
+本项目使用 [MIT License](LICENSE)。

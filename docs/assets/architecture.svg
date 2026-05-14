@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680" role="img" aria-labelledby="title desc">
+  <title id="title">CMS 官网后台系统架构图</title>
+  <desc id="desc">展示 Public Web、Studio Web、Django CMS、FastAPI AI Service、PostgreSQL、Redis、Nginx 与 GitHub Actions 的关系。</desc>
+  <defs>
+    <style>
+      .bg { fill: #f6f8fa; }
+      .card { fill: #ffffff; stroke: #d0d7de; stroke-width: 2; }
+      .title { fill: #24292f; font: 700 24px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .body { fill: #57606a; font: 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .label { fill: #ffffff; font: 700 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .line { stroke: #57606a; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .dash { stroke: #8c959f; stroke-width: 2; stroke-dasharray: 8 8; fill: none; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1200" height="680" rx="18"/>
+  <text x="60" y="68" class="title" style="font-size:34px">CMS Official Backend Architecture</text>
+  <text x="60" y="104" class="body">Django CMS + FastAPI AI Service + Next.js Studio + Next.js Public Web</text>
+
+  <rect x="70" y="160" width="250" height="130" rx="14" class="card"/>
+  <rect x="70" y="160" width="250" height="10" rx="5" fill="#1f883d"/>
+  <text x="96" y="206" class="title">Django CMS</text>
+  <text x="96" y="238" class="body">内容、权限、发布、SEO</text>
+  <text x="96" y="266" class="body">业务真相源</text>
+
+  <rect x="475" y="160" width="250" height="130" rx="14" class="card"/>
+  <rect x="475" y="160" width="250" height="10" rx="5" fill="#8250df"/>
+  <text x="501" y="206" class="title">FastAPI AI</text>
+  <text x="501" y="238" class="body">AI 审核、RAG 检索</text>
+  <text x="501" y="266" class="body">内部工作流服务</text>
+
+  <rect x="880" y="160" width="250" height="130" rx="14" class="card"/>
+  <rect x="880" y="160" width="250" height="10" rx="5" fill="#0969da"/>
+  <text x="906" y="206" class="title">Studio Web</text>
+  <text x="906" y="238" class="body">文章编辑、SEO 监控</text>
+  <text x="906" y="266" class="body">Django Admin 嵌入</text>
+
+  <rect x="475" y="420" width="250" height="130" rx="14" class="card"/>
+  <rect x="475" y="420" width="250" height="10" rx="5" fill="#bc4c00"/>
+  <text x="501" y="466" class="title">Public Web</text>
+  <text x="501" y="498" class="body">对外官网展示</text>
+  <text x="501" y="526" class="body">公开内容渲染</text>
+
+  <rect x="70" y="420" width="250" height="130" rx="14" class="card"/>
+  <rect x="70" y="420" width="250" height="10" rx="5" fill="#57606a"/>
+  <text x="96" y="466" class="title">PostgreSQL</text>
+  <text x="96" y="498" class="body">业务数据</text>
+  <text x="96" y="526" class="body">pgvector 向量检索</text>
+
+  <rect x="880" y="420" width="250" height="130" rx="14" class="card"/>
+  <rect x="880" y="420" width="250" height="10" rx="5" fill="#cf222e"/>
+  <text x="906" y="466" class="title">Redis / Worker</text>
+  <text x="906" y="498" class="body">缓存、队列</text>
+  <text x="906" y="526" class="body">异步任务</text>
+
+  <path class="line" d="M320 225 H475"/>
+  <path class="line" d="M725 225 H880"/>
+  <path class="line" d="M195 290 V420"/>
+  <path class="line" d="M600 290 V420"/>
+  <path class="line" d="M1005 290 V420"/>
+  <path class="dash" d="M880 485 H725"/>
+  <path class="dash" d="M475 485 H320"/>
+
+  <rect x="70" y="595" width="1060" height="46" rx="14" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+  <text x="96" y="625" class="body">Nginx routes public traffic, GitHub Actions ships main branch, Docker Compose runs the production stack.</text>
+</svg>
