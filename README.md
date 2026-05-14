@@ -265,8 +265,8 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 - FastAPI：`127.0.0.1:18002`
 - Studio Web：`127.0.0.1:13000`
 - Public Web：`127.0.0.1:13003`
-- PostgreSQL：`127.0.0.1:15432`
-- Redis：`127.0.0.1:16379`
+- PostgreSQL：仅 Compose 内部网络开放，服务名 `db:5432`
+- Redis：仅 Compose 内部网络开放，服务名 `redis:6379`
 
 ### Nginx 反向代理
 
