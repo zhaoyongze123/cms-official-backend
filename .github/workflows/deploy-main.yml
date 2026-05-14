@@ -232,6 +232,8 @@ jobs:
 
       - name: 打包部署代码
         run: |
+          release_archive="$RUNNER_TEMP/deploy-release.tgz"
+          rm -f "$release_archive"
           tar \
             --exclude=.git \
             --exclude=.github \
@@ -240,11 +242,12 @@ jobs:
             --exclude=.venv \
             --exclude=.pytest_cache \
             --exclude=apps/cms-api/media \
-            -czf deploy-release.tgz .
+            -czf "$release_archive" .
+          echo "RELEASE_ARCHIVE=$release_archive" >> "$GITHUB_ENV"
 
       - name: 上传部署代码
         run: |
-          scp -i ~/.ssh/id_ed25519 deploy-release.tgz \
+          scp -i ~/.ssh/id_ed25519 "$RELEASE_ARCHIVE" \
             "${PROD_SERVER_USER_CLEAN}@${PROD_SERVER_HOST_CLEAN}:${PROD_DEPLOY_PATH_CLEAN}/deploy-release.tgz"
 
       - name: 远程部署
