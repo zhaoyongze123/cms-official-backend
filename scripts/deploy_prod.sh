@@ -94,17 +94,69 @@ update_nginx_config() {
   bash -lc "${NGINX_RELOAD_CMD}"
 }
 
+wait_for_service_health() {
+  local service_name="$1"
+  local max_attempts="${2:-40}"
+  local attempt=1
+  local container_id health_status
+
+  container_id="$("${COMPOSE_CMD[@]}" ps -q "${service_name}")"
+  if [[ -z "${container_id}" ]]; then
+    echo "[deploy] 未找到服务 ${service_name} 对应容器，无法等待健康状态" >&2
+    exit 1
+  fi
+
+  while (( attempt <= max_attempts )); do
+    health_status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "${container_id}" 2>/dev/null || true)"
+    case "${health_status}" in
+      healthy|running)
+        echo "[deploy] 服务 ${service_name} 已就绪，状态=${health_status}"
+        return 0
+        ;;
+      unhealthy|exited|dead)
+        echo "[deploy] 服务 ${service_name} 状态异常：${health_status}" >&2
+        docker logs "${container_id}" --tail 200 >&2 || true
+        exit 1
+        ;;
+    esac
+    sleep 3
+    attempt=$((attempt + 1))
+  done
+
+  echo "[deploy] 等待服务 ${service_name} 就绪超时，最后状态=${health_status:-unknown}" >&2
+  docker logs "${container_id}" --tail 200 >&2 || true
+  exit 1
+}
+
 smoke_public_web() {
   echo "[deploy] 验证 public-web 首页"
-  local home_html
-  home_html="$(curl -fsS "${PUBLIC_WEB_SMOKE_URL}/")"
+  local home_html attempt
+  for attempt in 1 2 3 4 5; do
+    if home_html="$(curl -fsS --max-time 10 "${PUBLIC_WEB_SMOKE_URL}/")"; then
+      break
+    fi
+    if (( attempt == 5 )); then
+      echo "[deploy] public-web 首页在 ${attempt} 次尝试后仍不可用" >&2
+      exit 1
+    fi
+    sleep 3
+  done
   if ! grep -q "${PUBLIC_WEB_EXPECTED_TEXT}" <<<"${home_html}"; then
     echo "[deploy] public-web 首页未包含预期文案：${PUBLIC_WEB_EXPECTED_TEXT}" >&2
     exit 1
   fi
 
   echo "[deploy] 验证 public-web 解决方案页"
-  curl -fsSI "${PUBLIC_WEB_SMOKE_URL}/solutions" >/dev/null
+  for attempt in 1 2 3 4 5; do
+    if curl -fsSI --max-time 10 "${PUBLIC_WEB_SMOKE_URL}/solutions" >/dev/null; then
+      return 0
+    fi
+    if (( attempt == 5 )); then
+      echo "[deploy] public-web 解决方案页在 ${attempt} 次尝试后仍不可用" >&2
+      exit 1
+    fi
+    sleep 3
+  done
 }
 
 echo "[deploy] 构建后端镜像"
@@ -126,6 +178,7 @@ echo "[deploy] 收集静态文件"
 echo "[deploy] 输出容器状态"
 "${COMPOSE_CMD[@]}" ps
 
+wait_for_service_health public-web
 update_nginx_config
 smoke_public_web
 
