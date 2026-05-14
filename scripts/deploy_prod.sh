@@ -58,16 +58,16 @@ if [[ -n "${NGINX_SITE_PATH}" && "${DEPLOY_PATH}" == "${NGINX_SITE_PATH}" ]]; th
 fi
 
 cleanup_reserved_port_containers() {
-  local port container_ids container_id container_name
+  local port container_id container_name
   local reserved_ports=(18001 18002 13000 13003)
 
   for port in "${reserved_ports[@]}"; do
-    mapfile -t container_ids < <(docker ps --filter "publish=${port}" --format "{{.ID}}")
-    for container_id in "${container_ids[@]}"; do
+    while IFS= read -r container_id; do
+      [[ -z "${container_id}" ]] && continue
       container_name="$(docker inspect --format '{{.Name}}' "${container_id}" 2>/dev/null | sed 's#^/##')"
       echo "[deploy] 端口 ${port} 被旧 Docker 容器 ${container_name:-${container_id}} 占用，先移除以释放端口"
       docker rm -f "${container_id}"
-    done
+    done < <(docker ps --filter "publish=${port}" --format "{{.ID}}")
 
     if command -v ss >/dev/null 2>&1 && ss -ltn "sport = :${port}" | grep -q ":${port}"; then
       echo "[deploy] 端口 ${port} 仍被非 Docker 进程占用，请先在服务器释放该端口" >&2
