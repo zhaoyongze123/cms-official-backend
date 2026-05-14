@@ -36,7 +36,7 @@
 - 企业官网后台重构与统一部署
 - 内容编辑、SEO 配置、监控分析一体化
 - Django 后台与现代前端工作台并行协作
-- 基于 Docker Compose 的可复制生产部署
+- 面向团队协作的内容平台演进
 
 ## 🧭 快速导航
 
@@ -45,14 +45,12 @@
 - [仓库结构](#仓库结构)
 - [本地开发](#本地开发)
 - [测试与质量校验](#测试与质量校验)
-- [生产部署](#生产部署)
 - [GitHub Actions 自动部署](#github-actions-自动部署)
 - [API 与路由概览](#api-与路由概览)
 - [Roadmap](ROADMAP.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security](SECURITY.md)
 - [License](LICENSE)
-- [常见运维命令](#常见运维命令)
 - [安全说明](#安全说明)
 - [English Summary](#english-summary)
 
@@ -64,7 +62,7 @@
 - `apps/public-web`：Next.js 对外站点，承接官网公开展示页。
 - `packages/editor-protocol`：前后端共享的编辑协议包。
 
-当前仓库同时维护开发环境与生产环境两套 Docker Compose，并提供 `main` 分支自动部署工作流。
+当前仓库同时维护开发环境与生产环境两套 Compose 配置，并提供 `main` 分支自动部署工作流。
 
 ## 🛠️ 技术栈
 
@@ -74,7 +72,7 @@
 - 编辑器：TipTap
 - 数据库：PostgreSQL 15 + pgvector
 - 缓存：Redis 7
-- 生产部署：Docker Compose、Nginx、GitHub Actions
+- 工程化：Docker Compose、GitHub Actions
 
 ## 🗂️ 仓库结构
 
@@ -239,103 +237,11 @@ python3 -m json.tool contracts/seo-context.schema.json > /dev/null
 python3 -m json.tool contracts/tiptap-document.schema.json > /dev/null
 ```
 
-## 🚀 生产部署
-
-### 生产 Compose
-
-生产环境使用独立 Compose 文件：
-
-```bash
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
-```
-
-生产服务包括：
-
-- `db`
-- `redis`
-- `web`
-- `ai-service`
-- `worker`
-- `editor-web`
-- `public-web`
-
-### 生产内部端口
-
-- Django：`127.0.0.1:18001`
-- FastAPI：`127.0.0.1:18002`
-- Studio Web：`127.0.0.1:13000`
-- Public Web：`127.0.0.1:13003`
-- PostgreSQL：仅 Compose 内部网络开放，服务名 `db:5432`
-- Redis：仅 Compose 内部网络开放，服务名 `redis:6379`
-
-### Nginx 反向代理
-
-生产环境默认由宿主机 Nginx 转发到 Compose 内服务，当前站点规则对应：
-
-- `/` -> `public-web`
-- `/api/` -> Django
-- `/django-admin/` -> Django Admin
-- `/django-admin/next-editor/` -> Studio Web
-- `/django/static/` -> Django 静态文件
-- `/django/media/` -> Django 媒体文件
-
-生产 Nginx 模板位于：
-
-- [`deploy/nginx/cms.conf`](deploy/nginx/cms.conf)
-
-### 生产环境变量
-
-生产环境需要根目录 `.env.prod`。至少应包含：
-
-- `SECRET_KEY`
-- `ALLOWED_HOSTS`
-- `CSRF_TRUSTED_ORIGINS`
-- `CMS_SITE_URL`
-- `POSTGRES_DB`
-- `POSTGRES_USER`
-- `POSTGRES_PASSWORD`
-- `REDIS_URL`
-- `INTERNAL_API_TOKEN`
-- `AI_PROVIDER`
-- `AI_SERVICE_URL`
-- `DJANGO_INTERNAL_BASE_URL`
-- `NEXT_PUBLIC_DJANGO_BASE_URL`
-- 所有真实 AI、RAG、阿里云相关凭证
-
-注意：
-
-- 不要把 `.env.prod` 提交到 Git。
-- GitHub Actions 使用 `PROD_ENV_FILE` Secret 下发完整 `.env.prod`。
-
-### 部署脚本
-
-生产部署脚本位于：
-
-- [`scripts/deploy_prod.sh`](scripts/deploy_prod.sh)
-
-脚本核心行为：
-
-1. 构建后端镜像 `cms-backend:prod`
-2. 执行 `docker compose ... up -d --build --remove-orphans`
-3. 执行 Django 数据库迁移
-4. 执行 `collectstatic`
-5. 输出容器状态
-6. 可选更新服务器 Nginx 配置并重载
-
-本地在生产服务器执行：
-
-```bash
-chmod +x scripts/deploy_prod.sh
-./scripts/deploy_prod.sh
-```
-
 ## 🔁 GitHub Actions 自动部署
 
-工作流文件：
+工作流文件位于 [`.github/workflows/deploy-main.yml`](.github/workflows/deploy-main.yml)。
 
-- [`.github/workflows/deploy-main.yml`](.github/workflows/deploy-main.yml)
-
-触发条件：
+触发方式：
 
 - `push` 到 `main`
 - 手动 `workflow_dispatch`
@@ -356,13 +262,12 @@ chmod +x scripts/deploy_prod.sh
 
 ### 部署阶段行为
 
-`deploy` 阶段会：
+`deploy` 阶段会在通过验证后执行远程发布流程，包括：
 
-1. 安装 SSH 私钥
-2. 通过 `PROD_ENV_FILE` Secret 写入 `.env.prod`
-3. 打包当前仓库代码
-4. 上传部署包到服务器目录
-5. 远程执行 `scripts/deploy_prod.sh`
+1. 安装部署用 SSH 凭据
+2. 下发生产环境变量
+3. 上传发布包
+4. 触发远端部署脚本
 
 ### 需要配置的 GitHub Secrets
 
@@ -373,13 +278,7 @@ chmod +x scripts/deploy_prod.sh
 - `PROD_NGINX_SITE_PATH`
 - `PROD_ENV_FILE`
 
-推荐说明：
-
-- `PROD_SERVER_HOST`：生产服务器 IP 或域名
-- `PROD_SERVER_USER`：部署 SSH 用户
-- `PROD_DEPLOY_PATH`：服务器上的部署目录
-- `PROD_NGINX_SITE_PATH`：宿主机 Nginx 站点配置路径
-- `PROD_ENV_FILE`：完整 `.env.prod` 内容
+这些 Secret 应只在 GitHub 仓库设置页维护，不应出现在仓库文档、Issue、日志或代码示例中。
 
 ## 🔌 API 与路由概览
 
@@ -391,23 +290,11 @@ chmod +x scripts/deploy_prod.sh
 - `/api/articles/{id}/analytics/`
 - `/api/dashboard/seo-summary/`
 - `/django-admin/`
-- `/django-admin/analytics`
-- `/django-admin/next-editor/*`
 - `/sitemap.xml`
 
 ### FastAPI 关键入口
 
 - `/health`
-
-### Studio Web 关键入口
-
-- `/django-admin/next-editor/login`
-- `/django-admin/next-editor/django-admin/analytics`
-- `/django-admin/next-editor/studio/articles`
-
-### Public Web 关键入口
-
-- `/solutions`
 
 ## 🧠 运行机制说明
 
@@ -416,12 +303,6 @@ chmod +x scripts/deploy_prod.sh
 - Django Admin 提供后台与业务真相。
 - Studio Web 通过 Django 暴露的 API 获取内容与监控数据。
 - `/django-admin/next-editor/*` 通过 Django 代理到 Next.js。
-
-### 生产环境代理策略
-
-- Django 容器通过 `NEXT_EDITOR_INTERNAL_URL=http://editor-web:3000` 访问编辑器服务。
-- Studio Web 在生产 SSR 场景优先通过 `NEXT_PUBLIC_DJANGO_BASE_URL` 访问公网 Django 基地址。
-- 这一组合用于避免容器内 SSR 取数与宿主机 Nginx 路径前缀不一致的问题。
 
 ## 🗺️ Roadmap
 
@@ -443,42 +324,10 @@ chmod +x scripts/deploy_prod.sh
 - 跨模块 API 变更需要同步更新 `contracts/`。
 - PR 描述应包含变更内容、验证命令和影响范围。
 
-## 🧰 常见运维命令
-
-### 查看生产容器状态
-
-```bash
-docker compose --env-file .env.prod -f docker-compose.prod.yml ps
-```
-
-### 查看生产日志
-
-```bash
-docker logs -f cms-web-1
-docker logs -f cms-editor-web-1
-docker logs -f cms-public-web-1
-docker logs -f cms-ai-service-1
-```
-
-### 重建单个生产服务
-
-```bash
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --force-recreate web
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --force-recreate editor-web
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --force-recreate public-web
-```
-
-### 执行 Django 管理命令
-
-```bash
-docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T web python manage.py migrate --noinput
-docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T web python manage.py collectstatic --noinput
-docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T web python manage.py createsuperuser
-```
-
 ## 🔐 安全说明
 
 - 不要提交 `.env`、`.env.prod`、私钥、Token、真实密码。
+- 不要在公开文档中写入生产网络拓扑、宿主机路径、容器内部地址、精确端口映射。
 - GitHub Actions 不应打印 `PROD_ENV_FILE` 内容。
 - 所有生产敏感信息请只保存在 GitHub Secrets 或服务器环境文件中。
 - 安全报告与凭证处理建议见 [`SECURITY.md`](SECURITY.md)。
