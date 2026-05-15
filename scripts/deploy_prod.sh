@@ -58,16 +58,16 @@ if [[ -n "${NGINX_SITE_PATH}" && "${DEPLOY_PATH}" == "${NGINX_SITE_PATH}" ]]; th
 fi
 
 cleanup_reserved_port_containers() {
-  local port container_ids container_id container_name
+  local port container_id container_name
   local reserved_ports=(18001 18002 13000 13003)
 
   for port in "${reserved_ports[@]}"; do
-    mapfile -t container_ids < <(docker ps --filter "publish=${port}" --format "{{.ID}}")
-    for container_id in "${container_ids[@]}"; do
+    while IFS= read -r container_id; do
+      [[ -z "${container_id}" ]] && continue
       container_name="$(docker inspect --format '{{.Name}}' "${container_id}" 2>/dev/null | sed 's#^/##')"
       echo "[deploy] 端口 ${port} 被旧 Docker 容器 ${container_name:-${container_id}} 占用，先移除以释放端口"
       docker rm -f "${container_id}"
-    done
+    done < <(docker ps --filter "publish=${port}" --format "{{.ID}}")
 
     if command -v ss >/dev/null 2>&1 && ss -ltn "sport = :${port}" | grep -q ":${port}"; then
       echo "[deploy] 端口 ${port} 仍被非 Docker 进程占用，请先在服务器释放该端口" >&2
@@ -96,15 +96,38 @@ update_nginx_config() {
 
 smoke_public_web() {
   echo "[deploy] 验证 public-web 首页"
-  local home_html
-  home_html="$(curl -fsS "${PUBLIC_WEB_SMOKE_URL}/")"
+  local home_html attempt
+  for attempt in $(seq 1 40); do
+    if home_html="$(curl -fsS --max-time 10 "${PUBLIC_WEB_SMOKE_URL}/")"; then
+      break
+    fi
+    if (( attempt == 40 )); then
+      echo "[deploy] public-web 首页在 ${attempt} 次尝试后仍不可用" >&2
+      "${COMPOSE_CMD[@]}" ps >&2 || true
+      "${COMPOSE_CMD[@]}" logs --tail 200 public-web >&2 || true
+      exit 1
+    fi
+    sleep 5
+  done
   if ! grep -q "${PUBLIC_WEB_EXPECTED_TEXT}" <<<"${home_html}"; then
     echo "[deploy] public-web 首页未包含预期文案：${PUBLIC_WEB_EXPECTED_TEXT}" >&2
+    "${COMPOSE_CMD[@]}" logs --tail 200 public-web >&2 || true
     exit 1
   fi
 
   echo "[deploy] 验证 public-web 解决方案页"
-  curl -fsSI "${PUBLIC_WEB_SMOKE_URL}/solutions" >/dev/null
+  for attempt in $(seq 1 20); do
+    if curl -fsSI --max-time 10 "${PUBLIC_WEB_SMOKE_URL}/solutions" >/dev/null; then
+      return 0
+    fi
+    if (( attempt == 20 )); then
+      echo "[deploy] public-web 解决方案页在 ${attempt} 次尝试后仍不可用" >&2
+      "${COMPOSE_CMD[@]}" ps >&2 || true
+      "${COMPOSE_CMD[@]}" logs --tail 200 public-web >&2 || true
+      exit 1
+    fi
+    sleep 5
+  done
 }
 
 echo "[deploy] 构建后端镜像"
