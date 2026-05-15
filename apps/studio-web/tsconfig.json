@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": false,
     "skipLibCheck": true,
     "strict": true,
@@ -11,12 +15,16 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
-      "@cms/editor-protocol": ["../../packages/editor-protocol/src/index.ts"],
-      "@cms/editor-protocol/*": ["../../packages/editor-protocol/src/*"]
+      "@cms/editor-protocol": [
+        "../../packages/editor-protocol/src/index.ts"
+      ],
+      "@cms/editor-protocol/*": [
+        "../../packages/editor-protocol/src/*"
+      ]
     },
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "incremental": true,
     "plugins": [
       {
@@ -24,6 +32,14 @@
       }
     ]
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }
