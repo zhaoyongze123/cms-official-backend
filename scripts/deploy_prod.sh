@@ -9,6 +9,16 @@ SKIP_GIT_SYNC="${SKIP_GIT_SYNC:-0}"
 NGINX_RELOAD_CMD="${NGINX_RELOAD_CMD:-/etc/init.d/nginx reload}"
 PUBLIC_WEB_SMOKE_URL="${PUBLIC_WEB_SMOKE_URL:-http://127.0.0.1:13003}"
 PUBLIC_WEB_EXPECTED_TEXT="${PUBLIC_WEB_EXPECTED_TEXT:-让云贴近业务}"
+REQUIRED_ENV_VARS=(
+  SECRET_KEY
+  ALLOWED_HOSTS
+  CSRF_TRUSTED_ORIGINS
+  CMS_SITE_URL
+  POSTGRES_DB
+  POSTGRES_USER
+  POSTGRES_PASSWORD
+  INTERNAL_API_TOKEN
+)
 
 echo "[deploy] 目标目录: ${DEPLOY_PATH}"
 echo "[deploy] 目标分支: ${APP_BRANCH}"
@@ -51,6 +61,37 @@ fi
 export COMPOSE_DOCKER_CLI_BUILD=0
 export DOCKER_BUILDKIT=0
 COMPOSE_CMD=(docker compose --env-file .env.prod -f docker-compose.prod.yml)
+
+print_compose_diagnostics() {
+  echo "[deploy] 输出 Compose 状态"
+  "${COMPOSE_CMD[@]}" ps || true
+
+  echo "[deploy] 输出 web health 状态"
+  docker inspect yuncan-cms-official-web-1 \
+    --format '{{json .State.Health}}' 2>/dev/null || true
+
+  echo "[deploy] 输出关键容器最近日志"
+  "${COMPOSE_CMD[@]}" logs --tail 200 web ai-service worker db redis || true
+}
+
+validate_required_env() {
+  local missing=0 key value
+
+  for key in "${REQUIRED_ENV_VARS[@]}"; do
+    value="$(grep -E "^${key}=" .env.prod | tail -n 1 | cut -d '=' -f2- || true)"
+    if [[ -z "${value}" ]]; then
+      echo "[deploy] .env.prod 缺少必填项: ${key}" >&2
+      missing=1
+    fi
+  done
+
+  if (( missing == 1 )); then
+    echo "[deploy] 生产环境变量不完整，终止部署" >&2
+    exit 1
+  fi
+}
+
+validate_required_env
 
 if [[ -n "${NGINX_SITE_PATH}" && "${DEPLOY_PATH}" == "${NGINX_SITE_PATH}" ]]; then
   echo "[deploy] DEPLOY_PATH 不能等于 NGINX_SITE_PATH，否则会把 nginx 配置文件路径当成代码目录" >&2
@@ -138,13 +179,25 @@ echo "[deploy] 清理当前 Compose 项目旧容器"
 cleanup_reserved_port_containers
 
 echo "[deploy] 更新生产容器"
-"${COMPOSE_CMD[@]}" up -d --build --remove-orphans
+if ! "${COMPOSE_CMD[@]}" up -d --build --remove-orphans; then
+  echo "[deploy] docker compose up 失败" >&2
+  print_compose_diagnostics >&2
+  exit 1
+fi
 
 echo "[deploy] 执行数据库迁移"
-"${COMPOSE_CMD[@]}" exec -T web python manage.py migrate --noinput
+if ! "${COMPOSE_CMD[@]}" exec -T web python manage.py migrate --noinput; then
+  echo "[deploy] 数据库迁移失败" >&2
+  print_compose_diagnostics >&2
+  exit 1
+fi
 
 echo "[deploy] 收集静态文件"
-"${COMPOSE_CMD[@]}" exec -T web python manage.py collectstatic --noinput
+if ! "${COMPOSE_CMD[@]}" exec -T web python manage.py collectstatic --noinput; then
+  echo "[deploy] collectstatic 失败" >&2
+  print_compose_diagnostics >&2
+  exit 1
+fi
 
 echo "[deploy] 输出容器状态"
 "${COMPOSE_CMD[@]}" ps
