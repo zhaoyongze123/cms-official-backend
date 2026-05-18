@@ -364,10 +364,10 @@ jobs:
           GHCR_USERNAME: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          CLEAN_HOST=\"\$(printf '%s' \"$PROD_SERVER_HOST\" | tr -d '\r\n' | xargs)\"
-          CLEAN_USER=\"\$(printf '%s' \"$PROD_SERVER_USER\" | tr -d '\r\n' | xargs)\"
-          CLEAN_DEPLOY_PATH=\"\$(printf '%s' \"$PROD_DEPLOY_PATH\" | tr -d '\r\n' | xargs)\"
-          ssh -i ~/.ssh/id_ed25519 \"${CLEAN_USER}@${CLEAN_HOST}\" "
+          CLEAN_HOST="$(printf '%s' "$PROD_SERVER_HOST" | tr -d '\r\n' | xargs)"
+          CLEAN_USER="$(printf '%s' "$PROD_SERVER_USER" | tr -d '\r\n' | xargs)"
+          CLEAN_DEPLOY_PATH="$(printf '%s' "$PROD_DEPLOY_PATH" | tr -d '\r\n' | xargs)"
+          ssh -i ~/.ssh/id_ed25519 "${CLEAN_USER}@${CLEAN_HOST}" "
             set -eu
             echo '${GHCR_TOKEN}' | docker login ${{ env.REGISTRY }} -u '${GHCR_USERNAME}' --password-stdin
             cd '${CLEAN_DEPLOY_PATH}'
