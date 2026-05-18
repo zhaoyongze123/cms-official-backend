@@ -290,7 +290,8 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$PROD_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$PROD_SERVER_HOST" >> ~/.ssh/known_hosts
+          CLEAN_HOST="$(printf '%s' "$PROD_SERVER_HOST" | tr -d '\r\n' | xargs)"
+          ssh-keyscan -H "$CLEAN_HOST" >> ~/.ssh/known_hosts
 
       - name: 上传生产环境变量
         env:
@@ -299,10 +300,13 @@ jobs:
           PROD_DEPLOY_PATH: ${{ secrets.PROD_DEPLOY_PATH }}
           PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
         run: |
+          CLEAN_HOST="$(printf '%s' "$PROD_SERVER_HOST" | tr -d '\r\n' | xargs)"
+          CLEAN_USER="$(printf '%s' "$PROD_SERVER_USER" | tr -d '\r\n' | xargs)"
+          CLEAN_DEPLOY_PATH="$(printf '%s' "$PROD_DEPLOY_PATH" | tr -d '\r\n' | xargs)"
           printf '%s\n' "$PROD_ENV_FILE" > .env.prod
-          ssh -i ~/.ssh/id_ed25519 "${PROD_SERVER_USER}@${PROD_SERVER_HOST}" "mkdir -p '${PROD_DEPLOY_PATH}'"
+          ssh -i ~/.ssh/id_ed25519 "${CLEAN_USER}@${CLEAN_HOST}" "mkdir -p '${CLEAN_DEPLOY_PATH}'"
           scp -i ~/.ssh/id_ed25519 .env.prod \
-            "${PROD_SERVER_USER}@${PROD_SERVER_HOST}:${PROD_DEPLOY_PATH}/.env.prod"
+            "${CLEAN_USER}@${CLEAN_HOST}:${CLEAN_DEPLOY_PATH}/.env.prod"
 
       - name: 上传部署编排文件
         env:
@@ -310,8 +314,11 @@ jobs:
           PROD_SERVER_USER: ${{ secrets.PROD_SERVER_USER }}
           PROD_DEPLOY_PATH: ${{ secrets.PROD_DEPLOY_PATH }}
         run: |
+          CLEAN_HOST="$(printf '%s' "$PROD_SERVER_HOST" | tr -d '\r\n' | xargs)"
+          CLEAN_USER="$(printf '%s' "$PROD_SERVER_USER" | tr -d '\r\n' | xargs)"
+          CLEAN_DEPLOY_PATH="$(printf '%s' "$PROD_DEPLOY_PATH" | tr -d '\r\n' | xargs)"
           scp -i ~/.ssh/id_ed25519 docker-compose.prod.yml \
-            "${PROD_SERVER_USER}@${PROD_SERVER_HOST}:${PROD_DEPLOY_PATH}/docker-compose.prod.yml"
+            "${CLEAN_USER}@${CLEAN_HOST}:${CLEAN_DEPLOY_PATH}/docker-compose.prod.yml"
 
       - name: 远程拉取并部署
         env:
@@ -321,10 +328,13 @@ jobs:
           GHCR_USERNAME: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ssh -i ~/.ssh/id_ed25519 "${PROD_SERVER_USER}@${PROD_SERVER_HOST}" "
+          CLEAN_HOST=\"\$(printf '%s' \"$PROD_SERVER_HOST\" | tr -d '\r\n' | xargs)\"
+          CLEAN_USER=\"\$(printf '%s' \"$PROD_SERVER_USER\" | tr -d '\r\n' | xargs)\"
+          CLEAN_DEPLOY_PATH=\"\$(printf '%s' \"$PROD_DEPLOY_PATH\" | tr -d '\r\n' | xargs)\"
+          ssh -i ~/.ssh/id_ed25519 \"${CLEAN_USER}@${CLEAN_HOST}\" "
             set -eu
             echo '${GHCR_TOKEN}' | docker login ${{ env.REGISTRY }} -u '${GHCR_USERNAME}' --password-stdin
-            cd '${PROD_DEPLOY_PATH}'
+            cd '${CLEAN_DEPLOY_PATH}'
             docker compose --env-file .env.prod -f docker-compose.prod.yml pull
             docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --remove-orphans
             docker image prune -f
