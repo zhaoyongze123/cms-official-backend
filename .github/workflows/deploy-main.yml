@@ -271,11 +271,14 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: 登录阿里云 ACR
-        if: ${{ vars.ACR_REGISTRY != '' && vars.ACR_NAMESPACE != '' && secrets.ACR_USERNAME != '' && secrets.ACR_PASSWORD != '' }}
         env:
           ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
           ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
         run: |
+          if [ -z "${ACR_REGISTRY}" ] || [ -z "${ACR_NAMESPACE}" ] || [ -z "${ACR_USERNAME}" ] || [ -z "${ACR_PASSWORD}" ]; then
+            echo "未配置 ACR 凭据，跳过阿里云 ACR 登录。"
+            exit 0
+          fi
           printf '%s' "$ACR_PASSWORD" | docker login "${ACR_REGISTRY}" -u "$ACR_USERNAME" --password-stdin
 
       - name: 同步 Postgres 基础镜像到 GHCR
@@ -321,8 +324,14 @@ jobs:
             ${{ env.PUBLIC_IMAGE }}:sha-${{ github.sha }}
 
       - name: 同步 GHCR 镜像到阿里云 ACR
-        if: ${{ vars.ACR_REGISTRY != '' && vars.ACR_NAMESPACE != '' && secrets.ACR_USERNAME != '' && secrets.ACR_PASSWORD != '' }}
+        env:
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
         run: |
+          if [ -z "${ACR_REGISTRY}" ] || [ -z "${ACR_NAMESPACE}" ] || [ -z "${ACR_USERNAME}" ] || [ -z "${ACR_PASSWORD}" ]; then
+            echo "未配置 ACR 凭据，跳过阿里云 ACR 同步。"
+            exit 0
+          fi
           ACR_BASE="${ACR_REGISTRY}/${ACR_NAMESPACE}"
           docker buildx imagetools create \
             --tag "${ACR_BASE}/cms-backend:latest" \
