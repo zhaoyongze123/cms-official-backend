@@ -23,9 +23,42 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
+  deploy-preflight:
+    name: 生产 SSH 预检
+    runs-on: ubuntu-latest
+    steps:
+      - name: 安装 SSH 私钥
+        env:
+          PROD_SSH_PRIVATE_KEY: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          PROD_SERVER_HOST: ${{ secrets.PROD_SERVER_HOST }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$PROD_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          CLEAN_HOST="$(printf '%s' "$PROD_SERVER_HOST" | tr -d '\r\n' | xargs)"
+          test -n "$CLEAN_HOST"
+          ssh-keyscan -H "$CLEAN_HOST" >> ~/.ssh/known_hosts
+
+      - name: 校验 SSH 与部署目录
+        env:
+          PROD_SERVER_HOST: ${{ secrets.PROD_SERVER_HOST }}
+          PROD_SERVER_USER: ${{ secrets.PROD_SERVER_USER }}
+          PROD_DEPLOY_PATH: ${{ secrets.PROD_DEPLOY_PATH }}
+        run: |
+          CLEAN_HOST="$(printf '%s' "$PROD_SERVER_HOST" | tr -d '\r\n' | xargs)"
+          CLEAN_USER="$(printf '%s' "$PROD_SERVER_USER" | tr -d '\r\n' | xargs)"
+          CLEAN_DEPLOY_PATH="$(printf '%s' "$PROD_DEPLOY_PATH" | tr -d '\r\n' | xargs)"
+          test -n "$CLEAN_HOST"
+          test -n "$CLEAN_USER"
+          test -n "$CLEAN_DEPLOY_PATH"
+          ssh -o BatchMode=yes -o ConnectTimeout=10 -i ~/.ssh/id_ed25519 \
+            "${CLEAN_USER}@${CLEAN_HOST}" \
+            "mkdir -p '${CLEAN_DEPLOY_PATH}' && echo 'ssh-preflight-ok'"
+
   verify:
     name: 测试与构建
     runs-on: ubuntu-latest
+    needs: deploy-preflight
     services:
       postgres:
         image: pgvector/pgvector:pg15
