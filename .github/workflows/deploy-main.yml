@@ -333,24 +333,31 @@ jobs:
             exit 0
           fi
           ACR_BASE="${ACR_REGISTRY}/${ACR_NAMESPACE}"
-          docker buildx imagetools create \
-            --tag "${ACR_BASE}/cms-backend:latest" \
-            --tag "${ACR_BASE}/cms-backend:${IMAGE_TAG}" \
-            "${BACKEND_IMAGE}:${IMAGE_TAG}"
-          docker buildx imagetools create \
-            --tag "${ACR_BASE}/cms-studio-web:latest" \
-            --tag "${ACR_BASE}/cms-studio-web:${IMAGE_TAG}" \
-            "${STUDIO_IMAGE}:${IMAGE_TAG}"
-          docker buildx imagetools create \
-            --tag "${ACR_BASE}/cms-public-web:latest" \
-            --tag "${ACR_BASE}/cms-public-web:${IMAGE_TAG}" \
-            "${PUBLIC_IMAGE}:${IMAGE_TAG}"
-          docker buildx imagetools create \
-            --tag "${ACR_BASE}/cms-pgvector:pg15" \
-            "${DB_IMAGE}:pg15"
-          docker buildx imagetools create \
-            --tag "${ACR_BASE}/cms-redis:7-alpine" \
-            "${REDIS_IMAGE}:7-alpine"
+          docker pull "${BACKEND_IMAGE}:${IMAGE_TAG}"
+          docker tag "${BACKEND_IMAGE}:${IMAGE_TAG}" "${ACR_BASE}/cms-backend:${IMAGE_TAG}"
+          docker tag "${BACKEND_IMAGE}:${IMAGE_TAG}" "${ACR_BASE}/cms-backend:latest"
+          docker push "${ACR_BASE}/cms-backend:${IMAGE_TAG}"
+          docker push "${ACR_BASE}/cms-backend:latest"
+
+          docker pull "${STUDIO_IMAGE}:${IMAGE_TAG}"
+          docker tag "${STUDIO_IMAGE}:${IMAGE_TAG}" "${ACR_BASE}/cms-studio-web:${IMAGE_TAG}"
+          docker tag "${STUDIO_IMAGE}:${IMAGE_TAG}" "${ACR_BASE}/cms-studio-web:latest"
+          docker push "${ACR_BASE}/cms-studio-web:${IMAGE_TAG}"
+          docker push "${ACR_BASE}/cms-studio-web:latest"
+
+          docker pull "${PUBLIC_IMAGE}:${IMAGE_TAG}"
+          docker tag "${PUBLIC_IMAGE}:${IMAGE_TAG}" "${ACR_BASE}/cms-public-web:${IMAGE_TAG}"
+          docker tag "${PUBLIC_IMAGE}:${IMAGE_TAG}" "${ACR_BASE}/cms-public-web:latest"
+          docker push "${ACR_BASE}/cms-public-web:${IMAGE_TAG}"
+          docker push "${ACR_BASE}/cms-public-web:latest"
+
+          docker pull "${DB_IMAGE}:pg15"
+          docker tag "${DB_IMAGE}:pg15" "${ACR_BASE}/cms-pgvector:pg15"
+          docker push "${ACR_BASE}/cms-pgvector:pg15"
+
+          docker pull "${REDIS_IMAGE}:7-alpine"
+          docker tag "${REDIS_IMAGE}:7-alpine" "${ACR_BASE}/cms-redis:7-alpine"
+          docker push "${ACR_BASE}/cms-redis:7-alpine"
 
   deploy:
     name: SSH 部署生产环境
