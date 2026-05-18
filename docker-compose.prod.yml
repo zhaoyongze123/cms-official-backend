@@ -13,7 +13,7 @@ x-frontend-env: &frontend-env
 
 services:
   db:
-    image: pgvector/pgvector:pg15
+    image: ${DB_IMAGE:-ghcr.io/zhaoyongze123/cms-pgvector:pg15}
     restart: unless-stopped
     volumes:
       - /data/yuncan-cms/postgres:/var/lib/postgresql/data
@@ -30,7 +30,7 @@ services:
       retries: 10
 
   redis:
-    image: redis:7-alpine
+    image: ${REDIS_IMAGE:-ghcr.io/zhaoyongze123/cms-redis:7-alpine}
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
