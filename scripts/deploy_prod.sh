@@ -9,6 +9,7 @@ SKIP_GIT_SYNC="${SKIP_GIT_SYNC:-0}"
 NGINX_RELOAD_CMD="${NGINX_RELOAD_CMD:-/etc/init.d/nginx reload}"
 PUBLIC_WEB_SMOKE_URL="${PUBLIC_WEB_SMOKE_URL:-http://127.0.0.1:13003}"
 PUBLIC_WEB_EXPECTED_TEXT="${PUBLIC_WEB_EXPECTED_TEXT:-让云贴近业务}"
+EDITOR_WEB_SMOKE_URL="${EDITOR_WEB_SMOKE_URL:-http://127.0.0.1:13000/django-admin/next-editor/login}"
 REQUIRED_ENV_VARS=(
   SECRET_KEY
   ALLOWED_HOSTS
@@ -171,6 +172,23 @@ smoke_public_web() {
   done
 }
 
+smoke_editor_web() {
+  echo "[deploy] 验证 editor-web 登录页"
+  local attempt
+  for attempt in $(seq 1 30); do
+    if curl -fsSI --max-time 10 "${EDITOR_WEB_SMOKE_URL}" >/dev/null; then
+      return 0
+    fi
+    if (( attempt == 30 )); then
+      echo "[deploy] editor-web 登录页在 ${attempt} 次尝试后仍不可用" >&2
+      "${COMPOSE_CMD[@]}" ps >&2 || true
+      "${COMPOSE_CMD[@]}" logs --tail 200 editor-web >&2 || true
+      exit 1
+    fi
+    sleep 5
+  done
+}
+
 echo "[deploy] 构建后端镜像"
 docker build -t cms-backend:prod .
 
@@ -178,8 +196,8 @@ echo "[deploy] 清理当前 Compose 项目旧容器"
 "${COMPOSE_CMD[@]}" down --remove-orphans || true
 cleanup_reserved_port_containers
 
-echo "[deploy] 更新生产容器"
-if ! "${COMPOSE_CMD[@]}" up -d --build --remove-orphans; then
+echo "[deploy] 更新后端容器"
+if ! "${COMPOSE_CMD[@]}" up -d --build --remove-orphans db redis web ai-service worker; then
   echo "[deploy] docker compose up 失败" >&2
   print_compose_diagnostics >&2
   exit 1
@@ -203,6 +221,13 @@ echo "[deploy] 输出容器状态"
 "${COMPOSE_CMD[@]}" ps
 
 update_nginx_config
+
+echo "[deploy] 启动 public-web"
+"${COMPOSE_CMD[@]}" up -d public-web
 smoke_public_web
+
+echo "[deploy] 启动 editor-web"
+"${COMPOSE_CMD[@]}" up -d editor-web
+smoke_editor_web
 
 echo "[deploy] 完成"

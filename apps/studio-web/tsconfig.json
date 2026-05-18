@@ -13,15 +13,6 @@
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
-    "baseUrl": ".",
-    "paths": {
-      "@cms/editor-protocol": [
-        "../../packages/editor-protocol/src/index.ts"
-      ],
-      "@cms/editor-protocol/*": [
-        "../../packages/editor-protocol/src/*"
-      ]
-    },
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",

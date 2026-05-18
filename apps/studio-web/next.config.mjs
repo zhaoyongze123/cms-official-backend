@@ -13,8 +13,8 @@ const nextConfig = (phase) => {
     basePath,
     assetPrefix: isDevelopmentServer ? `${normalizedDevOrigin}${basePath}` : undefined,
     allowedDevOrigins: ["127.0.0.1", "localhost"],
+    typedRoutes: true,
     experimental: {
-      typedRoutes: true,
       externalDir: true
     }
   };

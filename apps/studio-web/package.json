@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@cms/editor-protocol": "file:../../packages/editor-protocol",
     "@tiptap/extension-bubble-menu": "^3.23.1",
     "@tiptap/extension-character-count": "^3.23.1",
     "@tiptap/extension-floating-menu": "^3.23.1",

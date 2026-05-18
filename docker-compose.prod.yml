@@ -117,16 +117,12 @@ services:
     image: node:22-bookworm
     restart: unless-stopped
     working_dir: /app/apps/studio-web
-    command:
-      [
-        "sh",
-        "-c",
-        "npm ci --include=dev && npm install --include=dev /app/packages/editor-protocol && npm run build && npm run start -- --hostname 0.0.0.0 --port 3000",
-      ]
+    command: ["sh", "/app/apps/studio-web/scripts/start-prod.sh"]
     env_file:
       - .env.prod
     environment:
       NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=1024
       NEXT_EDITOR_DEV_ORIGIN: ${CMS_SITE_URL}
       DJANGO_INTERNAL_BASE_URL: ${CMS_SITE_URL}
       NEXT_PUBLIC_DJANGO_BASE_URL: ${CMS_SITE_URL}
@@ -156,16 +152,12 @@ services:
     image: node:22-bookworm
     restart: unless-stopped
     working_dir: /app/apps/public-web
-    command:
-      [
-        "sh",
-        "-c",
-        "npm ci --include=dev && npm run build && npm run start -- --hostname 0.0.0.0 --port 3003",
-      ]
+    command: ["sh", "/app/apps/public-web/scripts/start-prod.sh"]
     env_file:
       - .env.prod
     environment:
       NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=1024
       NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL: ${CMS_SITE_URL}
       NEXT_PUBLIC_SITE_URL: ${CMS_SITE_URL}
       http_proxy: ""
