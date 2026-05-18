@@ -13,6 +13,11 @@ concurrency:
 env:
   PYTHON_VERSION: "3.12"
   NODE_VERSION: "22"
+  REGISTRY: ghcr.io
+  IMAGE_NAMESPACE: ghcr.io/zhaoyongze123
+  BACKEND_IMAGE: ghcr.io/zhaoyongze123/cms-backend
+  STUDIO_IMAGE: ghcr.io/zhaoyongze123/cms-studio-web
+  PUBLIC_IMAGE: ghcr.io/zhaoyongze123/cms-public-web
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
@@ -74,15 +79,11 @@ jobs:
 
       - name: 安装 Studio 依赖
         working-directory: apps/studio-web
-        run: npm ci
+        run: npm install --include=dev --no-audit --no-fund
 
       - name: 安装 Public Web 依赖
         working-directory: apps/public-web
-        run: npm ci
-
-      - name: 安装本地包依赖
-        run: |
-          npm install --prefix apps/studio-web ./packages/editor-protocol
+        run: npm install --include=dev --no-audit --no-fund
 
       - name: Django 检查
         env:
@@ -188,93 +189,130 @@ jobs:
           python3 -m json.tool contracts/seo-context.schema.json > /dev/null
           python3 -m json.tool contracts/tiptap-document.schema.json > /dev/null
 
-      - name: 后端镜像构建
-        run: docker build -t cms-backend:ci .
-
-  deploy:
-    name: SSH 部署生产环境
+  build-and-push:
+    name: 构建并推送生产镜像
     runs-on: ubuntu-latest
     needs: verify
-    environment: production
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
 
-      - name: 规范化部署 Secret
-        run: |
-          echo "PROD_SERVER_HOST_CLEAN=$(printf '%s' '${{ secrets.PROD_SERVER_HOST }}' | tr -d '\r\n\t ')" >> "$GITHUB_ENV"
-          echo "PROD_SERVER_USER_CLEAN=$(printf '%s' '${{ secrets.PROD_SERVER_USER }}' | tr -d '\r\n\t ')" >> "$GITHUB_ENV"
-          echo "PROD_DEPLOY_PATH_CLEAN=$(printf '%s' '${{ secrets.PROD_DEPLOY_PATH }}' | tr -d '\r' | sed 's/[[:space:]]*$//')" >> "$GITHUB_ENV"
-          echo "PROD_NGINX_SITE_PATH_CLEAN=$(printf '%s' '${{ secrets.PROD_NGINX_SITE_PATH }}' | tr -d '\r' | sed 's/[[:space:]]*$//')" >> "$GITHUB_ENV"
+      - name: 登录 GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 校验生产路径
-        run: |
-          if [ -z "$PROD_DEPLOY_PATH_CLEAN" ] || [ -z "$PROD_NGINX_SITE_PATH_CLEAN" ]; then
-            echo "PROD_DEPLOY_PATH 或 PROD_NGINX_SITE_PATH 为空" >&2
-            exit 1
-          fi
-          if [ "$PROD_DEPLOY_PATH_CLEAN" = "$PROD_NGINX_SITE_PATH_CLEAN" ]; then
-            echo "PROD_DEPLOY_PATH 不能等于 PROD_NGINX_SITE_PATH" >&2
-            exit 1
-          fi
-          case "$PROD_DEPLOY_PATH_CLEAN" in
-            *.conf)
-              echo "PROD_DEPLOY_PATH 不能指向 nginx .conf 文件路径" >&2
-              exit 1
-              ;;
-          esac
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            apps/studio-web/package-lock.json
+            apps/public-web/package-lock.json
 
+      - name: 生成前端生产产物
+        env:
+          NEXT_PUBLIC_DJANGO_BASE_URL: ${{ vars.CMS_ADMIN_SITE_URL || 'https://admin.example.com' }}
+          NEXT_PUBLIC_EDITOR_BASE_URL: ${{ vars.CMS_ADMIN_SITE_URL || 'https://admin.example.com' }}
+          NEXT_PUBLIC_AUTH_MODE: django-session
+          NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL: ${{ vars.CMS_SITE_URL || 'https://www.example.com' }}
+          NEXT_PUBLIC_SITE_URL: ${{ vars.CMS_SITE_URL || 'https://www.example.com' }}
+        run: |
+          npm install --prefix apps/studio-web --include=dev --no-audit --no-fund
+          npm install --prefix apps/public-web --include=dev --no-audit --no-fund
+          npm run build --prefix apps/studio-web
+          npm run build --prefix apps/public-web
+
+      - name: 配置 Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 构建并推送后端镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:latest
+            ${{ env.BACKEND_IMAGE }}:sha-${{ github.sha }}
+
+      - name: 构建并推送 Studio 镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/studio-web/Dockerfile.prod
+          push: true
+          tags: |
+            ${{ env.STUDIO_IMAGE }}:latest
+            ${{ env.STUDIO_IMAGE }}:sha-${{ github.sha }}
+
+      - name: 构建并推送 Public 镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/public-web/Dockerfile.prod
+          push: true
+          tags: |
+            ${{ env.PUBLIC_IMAGE }}:latest
+            ${{ env.PUBLIC_IMAGE }}:sha-${{ github.sha }}
+
+  deploy:
+    name: SSH 部署生产环境
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: production
+    steps:
       - name: 安装 SSH 私钥
         env:
           PROD_SSH_PRIVATE_KEY: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          PROD_SERVER_HOST: ${{ secrets.PROD_SERVER_HOST }}
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "$PROD_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$PROD_SERVER_HOST_CLEAN" >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$PROD_SERVER_HOST" >> ~/.ssh/known_hosts
 
       - name: 上传生产环境变量
         env:
+          PROD_SERVER_HOST: ${{ secrets.PROD_SERVER_HOST }}
+          PROD_SERVER_USER: ${{ secrets.PROD_SERVER_USER }}
+          PROD_DEPLOY_PATH: ${{ secrets.PROD_DEPLOY_PATH }}
           PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
         run: |
-          if [ -z "$PROD_ENV_FILE" ]; then
-            echo "缺少 PROD_ENV_FILE Secret" >&2
-            exit 1
-          fi
           printf '%s\n' "$PROD_ENV_FILE" > .env.prod
-          ssh -i ~/.ssh/id_ed25519 "${PROD_SERVER_USER_CLEAN}@${PROD_SERVER_HOST_CLEAN}" \
-            "if [ -e '${PROD_DEPLOY_PATH_CLEAN}' ] && [ ! -d '${PROD_DEPLOY_PATH_CLEAN}' ]; then rm -f '${PROD_DEPLOY_PATH_CLEAN}'; fi && mkdir -p '${PROD_DEPLOY_PATH_CLEAN}'"
+          ssh -i ~/.ssh/id_ed25519 "${PROD_SERVER_USER}@${PROD_SERVER_HOST}" "mkdir -p '${PROD_DEPLOY_PATH}'"
           scp -i ~/.ssh/id_ed25519 .env.prod \
-            "${PROD_SERVER_USER_CLEAN}@${PROD_SERVER_HOST_CLEAN}:${PROD_DEPLOY_PATH_CLEAN}/.env.prod"
+            "${PROD_SERVER_USER}@${PROD_SERVER_HOST}:${PROD_DEPLOY_PATH}/.env.prod"
 
-      - name: 打包部署代码
+      - name: 上传部署编排文件
+        env:
+          PROD_SERVER_HOST: ${{ secrets.PROD_SERVER_HOST }}
+          PROD_SERVER_USER: ${{ secrets.PROD_SERVER_USER }}
+          PROD_DEPLOY_PATH: ${{ secrets.PROD_DEPLOY_PATH }}
         run: |
-          release_archive="$RUNNER_TEMP/deploy-release.tgz"
-          rm -f "$release_archive"
-          tar \
-            --exclude=.git \
-            --exclude=.github \
-            --exclude=node_modules \
-            --exclude=.next \
-            --exclude=.venv \
-            --exclude=.pytest_cache \
-            --exclude=apps/cms-api/media \
-            -czf "$release_archive" .
-          echo "RELEASE_ARCHIVE=$release_archive" >> "$GITHUB_ENV"
+          scp -i ~/.ssh/id_ed25519 docker-compose.prod.yml \
+            "${PROD_SERVER_USER}@${PROD_SERVER_HOST}:${PROD_DEPLOY_PATH}/docker-compose.prod.yml"
 
-      - name: 上传部署代码
+      - name: 远程拉取并部署
+        env:
+          PROD_SERVER_HOST: ${{ secrets.PROD_SERVER_HOST }}
+          PROD_SERVER_USER: ${{ secrets.PROD_SERVER_USER }}
+          PROD_DEPLOY_PATH: ${{ secrets.PROD_DEPLOY_PATH }}
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          scp -i ~/.ssh/id_ed25519 "$RELEASE_ARCHIVE" \
-            "${PROD_SERVER_USER_CLEAN}@${PROD_SERVER_HOST_CLEAN}:${PROD_DEPLOY_PATH_CLEAN}/deploy-release.tgz"
-
-      - name: 远程部署
-        run: |
-          ssh -i ~/.ssh/id_ed25519 \
-            "${PROD_SERVER_USER_CLEAN}@${PROD_SERVER_HOST_CLEAN}" \
-            "export DEPLOY_PATH='${PROD_DEPLOY_PATH_CLEAN}' \
-             NGINX_SITE_PATH='${PROD_NGINX_SITE_PATH_CLEAN}' \
-             SKIP_GIT_SYNC='1' && \
-             cd '${PROD_DEPLOY_PATH_CLEAN}' && \
-             tar -xzf deploy-release.tgz && \
-             rm -f deploy-release.tgz && \
-             bash scripts/deploy_prod.sh"
+          ssh -i ~/.ssh/id_ed25519 "${PROD_SERVER_USER}@${PROD_SERVER_HOST}" "
+            set -eu
+            echo '${GHCR_TOKEN}' | docker login ${{ env.REGISTRY }} -u '${GHCR_USERNAME}' --password-stdin
+            cd '${PROD_DEPLOY_PATH}'
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker image prune -f
+            docker system df
+          "

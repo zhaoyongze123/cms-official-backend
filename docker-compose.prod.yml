@@ -1,12 +1,24 @@
 x-backend-image: &backend-image
-  image: cms-backend:prod
+  image: ${BACKEND_IMAGE:-ghcr.io/zhaoyongze123/cms-backend:latest}
+
+x-frontend-common: &frontend-common
+  restart: unless-stopped
+  env_file:
+    - .env.prod
+
+x-frontend-env: &frontend-env
+  NODE_ENV: production
+  NEXT_TELEMETRY_DISABLED: "1"
+  NODE_OPTIONS: --max-old-space-size=1024
 
 services:
   db:
     image: pgvector/pgvector:pg15
     restart: unless-stopped
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - /data/yuncan-cms/postgres:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:15432:5432"
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -22,7 +34,9 @@ services:
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
-      - redis_data:/data
+      - /data/yuncan-cms/redis:/data
+    ports:
+      - "127.0.0.1:16379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -40,12 +54,6 @@ services:
       DJANGO_SETTINGS_MODULE: config.settings.production
       PYTHONPATH: /app/apps/cms-api:/app
       NEXT_EDITOR_INTERNAL_URL: http://editor-web:3000
-      http_proxy: ""
-      https_proxy: ""
-      HTTP_PROXY: ""
-      HTTPS_PROXY: ""
-      all_proxy: ""
-      ALL_PROXY: ""
     depends_on:
       db:
         condition: service_healthy
@@ -57,8 +65,8 @@ services:
       timeout: 5s
       retries: 10
     volumes:
-      - media_data:/app/apps/cms-api/media
-      - static_data:/app/apps/cms-api/staticfiles
+      - /data/yuncan-cms/media:/app/apps/cms-api/media
+      - /data/yuncan-cms/static:/app/apps/cms-api/staticfiles
     ports:
       - "127.0.0.1:18001:8000"
 
@@ -72,12 +80,6 @@ services:
       - .env.prod
     environment:
       PYTHONPATH: /app/apps/ai-service:/app
-      http_proxy: ""
-      https_proxy: ""
-      HTTP_PROXY: ""
-      HTTPS_PROXY: ""
-      all_proxy: ""
-      ALL_PROXY: ""
     depends_on:
       db:
         condition: service_healthy
@@ -101,12 +103,6 @@ services:
       - .env.prod
     environment:
       PYTHONPATH: /app/apps/ai-service:/app/apps/cms-api:/app
-      http_proxy: ""
-      https_proxy: ""
-      HTTP_PROXY: ""
-      HTTPS_PROXY: ""
-      all_proxy: ""
-      ALL_PROXY: ""
     depends_on:
       db:
         condition: service_healthy
@@ -114,24 +110,13 @@ services:
         condition: service_healthy
 
   editor-web:
-    image: node:22-bookworm
-    restart: unless-stopped
-    working_dir: /app/apps/studio-web
-    command: ["sh", "/app/apps/studio-web/scripts/start-prod.sh"]
-    env_file:
-      - .env.prod
+    <<: *frontend-common
+    image: ${STUDIO_IMAGE:-ghcr.io/zhaoyongze123/cms-studio-web:latest}
     environment:
-      NODE_ENV: production
-      NODE_OPTIONS: --max-old-space-size=1024
+      <<: *frontend-env
       NEXT_EDITOR_DEV_ORIGIN: ${CMS_SITE_URL}
       DJANGO_INTERNAL_BASE_URL: ${CMS_SITE_URL}
       NEXT_PUBLIC_DJANGO_BASE_URL: ${CMS_SITE_URL}
-      http_proxy: ""
-      https_proxy: ""
-      HTTP_PROXY: ""
-      HTTPS_PROXY: ""
-      all_proxy: ""
-      ALL_PROXY: ""
     depends_on:
       web:
         condition: service_healthy
@@ -140,53 +125,23 @@ services:
       interval: 20s
       timeout: 10s
       retries: 20
-    volumes:
-      - ./apps/studio-web:/app/apps/studio-web
-      - ./packages:/app/packages:ro
-      - editor_web_node_modules:/app/apps/studio-web/node_modules
-      - editor_web_next_cache:/app/apps/studio-web/.next
     ports:
       - "127.0.0.1:13000:3000"
 
   public-web:
-    image: node:22-bookworm
-    restart: unless-stopped
-    working_dir: /app/apps/public-web
-    command: ["sh", "/app/apps/public-web/scripts/start-prod.sh"]
-    env_file:
-      - .env.prod
+    <<: *frontend-common
+    image: ${PUBLIC_IMAGE:-ghcr.io/zhaoyongze123/cms-public-web:latest}
     environment:
-      NODE_ENV: production
-      NODE_OPTIONS: --max-old-space-size=1024
+      <<: *frontend-env
       NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL: ${CMS_SITE_URL}
       NEXT_PUBLIC_SITE_URL: ${CMS_SITE_URL}
-      http_proxy: ""
-      https_proxy: ""
-      HTTP_PROXY: ""
-      HTTPS_PROXY: ""
-      all_proxy: ""
-      ALL_PROXY: ""
     depends_on:
       web:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3003/solutions').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/solutions').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))"]
       interval: 20s
       timeout: 10s
       retries: 20
-    volumes:
-      - ./apps/public-web:/app/apps/public-web
-      - public_web_node_modules:/app/apps/public-web/node_modules
-      - public_web_next_cache:/app/apps/public-web/.next
     ports:
-      - "127.0.0.1:13003:3003"
-
-volumes:
-  postgres_data:
-  redis_data:
-  media_data:
-  static_data:
-  editor_web_node_modules:
-  editor_web_next_cache:
-  public_web_node_modules:
-  public_web_next_cache:
+      - "127.0.0.1:13003:3000"

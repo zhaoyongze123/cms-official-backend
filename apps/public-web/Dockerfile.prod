@@ -1,0 +1,21 @@
+FROM node:22-bookworm-slim AS runner
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV http_proxy=
+ENV https_proxy=
+ENV HTTP_PROXY=
+ENV HTTPS_PROXY=
+ENV all_proxy=
+ENV ALL_PROXY=
+
+WORKDIR /app
+
+COPY apps/public-web/.next/standalone /app
+COPY apps/public-web/.next/static /app/apps/public-web/.next/static
+
+WORKDIR /app/apps/public-web
+
+EXPOSE 3003
+
+CMD ["node", "server.js"]
