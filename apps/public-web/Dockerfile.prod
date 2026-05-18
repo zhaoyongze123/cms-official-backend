@@ -16,6 +16,6 @@ COPY apps/public-web/.next/static /app/apps/public-web/.next/static
 
 WORKDIR /app/apps/public-web
 
-EXPOSE 3003
+EXPOSE 3000
 
 CMD ["node", "server.js"]
