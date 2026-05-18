@@ -315,6 +315,9 @@ jobs:
     needs: build-and-push
     environment: production
     steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
       - name: 安装 SSH 私钥
         env:
           PROD_SSH_PRIVATE_KEY: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
