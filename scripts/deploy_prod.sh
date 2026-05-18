@@ -101,7 +101,7 @@ fi
 
 cleanup_reserved_port_containers() {
   local port container_id container_name
-  local reserved_ports=(18001 18002 13000 13003)
+  local reserved_ports=(15432 16379 18001 18002 13000 13003)
 
   for port in "${reserved_ports[@]}"; do
     while IFS= read -r container_id; do
