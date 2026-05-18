@@ -15,6 +15,7 @@ env:
   NODE_VERSION: "22"
   REGISTRY: ghcr.io
   IMAGE_NAMESPACE: ghcr.io/zhaoyongze123
+  IMAGE_TAG: sha-${{ github.sha }}
   BACKEND_IMAGE: ghcr.io/zhaoyongze123/cms-backend
   STUDIO_IMAGE: ghcr.io/zhaoyongze123/cms-studio-web
   PUBLIC_IMAGE: ghcr.io/zhaoyongze123/cms-public-web
@@ -340,6 +341,13 @@ jobs:
           CLEAN_USER="$(printf '%s' "$PROD_SERVER_USER" | tr -d '\r\n' | xargs)"
           CLEAN_DEPLOY_PATH="$(printf '%s' "$PROD_DEPLOY_PATH" | tr -d '\r\n' | xargs)"
           printf '%s\n' "$PROD_ENV_FILE" > .env.prod
+          {
+            echo "BACKEND_IMAGE=${BACKEND_IMAGE}:${IMAGE_TAG}"
+            echo "STUDIO_IMAGE=${STUDIO_IMAGE}:${IMAGE_TAG}"
+            echo "PUBLIC_IMAGE=${PUBLIC_IMAGE}:${IMAGE_TAG}"
+            echo "DB_IMAGE=${DB_IMAGE}:pg15"
+            echo "REDIS_IMAGE=${REDIS_IMAGE}:7-alpine"
+          } >> .env.prod
           ssh -i ~/.ssh/id_ed25519 "${CLEAN_USER}@${CLEAN_HOST}" "mkdir -p '${CLEAN_DEPLOY_PATH}'"
           scp -i ~/.ssh/id_ed25519 .env.prod \
             "${CLEAN_USER}@${CLEAN_HOST}:${CLEAN_DEPLOY_PATH}/.env.prod"
