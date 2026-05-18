@@ -15,6 +15,8 @@ env:
   NODE_VERSION: "22"
   REGISTRY: ghcr.io
   IMAGE_NAMESPACE: ghcr.io/zhaoyongze123
+  ACR_REGISTRY: ${{ vars.ACR_REGISTRY || '' }}
+  ACR_NAMESPACE: ${{ vars.ACR_NAMESPACE || '' }}
   IMAGE_TAG: sha-${{ github.sha }}
   BACKEND_IMAGE: ghcr.io/zhaoyongze123/cms-backend
   STUDIO_IMAGE: ghcr.io/zhaoyongze123/cms-studio-web
@@ -268,6 +270,14 @@ jobs:
       - name: 配置 Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: 登录阿里云 ACR
+        if: ${{ vars.ACR_REGISTRY != '' && vars.ACR_NAMESPACE != '' && secrets.ACR_USERNAME != '' && secrets.ACR_PASSWORD != '' }}
+        env:
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+        run: |
+          printf '%s' "$ACR_PASSWORD" | docker login "${ACR_REGISTRY}" -u "$ACR_USERNAME" --password-stdin
+
       - name: 同步 Postgres 基础镜像到 GHCR
         run: |
           docker pull --platform linux/amd64 pgvector/pgvector:pg15
@@ -310,6 +320,29 @@ jobs:
             ${{ env.PUBLIC_IMAGE }}:latest
             ${{ env.PUBLIC_IMAGE }}:sha-${{ github.sha }}
 
+      - name: 同步 GHCR 镜像到阿里云 ACR
+        if: ${{ vars.ACR_REGISTRY != '' && vars.ACR_NAMESPACE != '' && secrets.ACR_USERNAME != '' && secrets.ACR_PASSWORD != '' }}
+        run: |
+          ACR_BASE="${ACR_REGISTRY}/${ACR_NAMESPACE}"
+          docker buildx imagetools create \
+            --tag "${ACR_BASE}/cms-backend:latest" \
+            --tag "${ACR_BASE}/cms-backend:${IMAGE_TAG}" \
+            "${BACKEND_IMAGE}:${IMAGE_TAG}"
+          docker buildx imagetools create \
+            --tag "${ACR_BASE}/cms-studio-web:latest" \
+            --tag "${ACR_BASE}/cms-studio-web:${IMAGE_TAG}" \
+            "${STUDIO_IMAGE}:${IMAGE_TAG}"
+          docker buildx imagetools create \
+            --tag "${ACR_BASE}/cms-public-web:latest" \
+            --tag "${ACR_BASE}/cms-public-web:${IMAGE_TAG}" \
+            "${PUBLIC_IMAGE}:${IMAGE_TAG}"
+          docker buildx imagetools create \
+            --tag "${ACR_BASE}/cms-pgvector:pg15" \
+            "${DB_IMAGE}:pg15"
+          docker buildx imagetools create \
+            --tag "${ACR_BASE}/cms-redis:7-alpine" \
+            "${REDIS_IMAGE}:7-alpine"
+
   deploy:
     name: SSH 部署生产环境
     runs-on: ubuntu-latest
@@ -340,13 +373,18 @@ jobs:
           CLEAN_HOST="$(printf '%s' "$PROD_SERVER_HOST" | tr -d '\r\n' | xargs)"
           CLEAN_USER="$(printf '%s' "$PROD_SERVER_USER" | tr -d '\r\n' | xargs)"
           CLEAN_DEPLOY_PATH="$(printf '%s' "$PROD_DEPLOY_PATH" | tr -d '\r\n' | xargs)"
+          if [ -n "${ACR_REGISTRY}" ] && [ -n "${ACR_NAMESPACE}" ]; then
+            DEPLOY_IMAGE_BASE="${ACR_REGISTRY}/${ACR_NAMESPACE}"
+          else
+            DEPLOY_IMAGE_BASE="${IMAGE_NAMESPACE}"
+          fi
           printf '%s\n' "$PROD_ENV_FILE" > .env.prod
           {
-            echo "BACKEND_IMAGE=${BACKEND_IMAGE}:${IMAGE_TAG}"
-            echo "STUDIO_IMAGE=${STUDIO_IMAGE}:${IMAGE_TAG}"
-            echo "PUBLIC_IMAGE=${PUBLIC_IMAGE}:${IMAGE_TAG}"
-            echo "DB_IMAGE=${DB_IMAGE}:pg15"
-            echo "REDIS_IMAGE=${REDIS_IMAGE}:7-alpine"
+            echo "BACKEND_IMAGE=${DEPLOY_IMAGE_BASE}/cms-backend:${IMAGE_TAG}"
+            echo "STUDIO_IMAGE=${DEPLOY_IMAGE_BASE}/cms-studio-web:${IMAGE_TAG}"
+            echo "PUBLIC_IMAGE=${DEPLOY_IMAGE_BASE}/cms-public-web:${IMAGE_TAG}"
+            echo "DB_IMAGE=${DEPLOY_IMAGE_BASE}/cms-pgvector:pg15"
+            echo "REDIS_IMAGE=${DEPLOY_IMAGE_BASE}/cms-redis:7-alpine"
           } >> .env.prod
           ssh -i ~/.ssh/id_ed25519 "${CLEAN_USER}@${CLEAN_HOST}" "mkdir -p '${CLEAN_DEPLOY_PATH}'"
           scp -i ~/.ssh/id_ed25519 .env.prod \
@@ -371,13 +409,19 @@ jobs:
           PROD_DEPLOY_PATH: ${{ secrets.PROD_DEPLOY_PATH }}
           GHCR_USERNAME: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
         run: |
           CLEAN_HOST="$(printf '%s' "$PROD_SERVER_HOST" | tr -d '\r\n' | xargs)"
           CLEAN_USER="$(printf '%s' "$PROD_SERVER_USER" | tr -d '\r\n' | xargs)"
           CLEAN_DEPLOY_PATH="$(printf '%s' "$PROD_DEPLOY_PATH" | tr -d '\r\n' | xargs)"
           ssh -i ~/.ssh/id_ed25519 "${CLEAN_USER}@${CLEAN_HOST}" "
             set -eu
-            echo '${GHCR_TOKEN}' | docker login ${{ env.REGISTRY }} -u '${GHCR_USERNAME}' --password-stdin
+            if [ -n '${ACR_REGISTRY}' ] && [ -n '${ACR_NAMESPACE}' ] && [ -n '${ACR_USERNAME}' ] && [ -n '${ACR_PASSWORD}' ]; then
+              echo '${ACR_PASSWORD}' | docker login '${ACR_REGISTRY}' -u '${ACR_USERNAME}' --password-stdin
+            else
+              echo '${GHCR_TOKEN}' | docker login ${{ env.REGISTRY }} -u '${GHCR_USERNAME}' --password-stdin
+            fi
             cd '${CLEAN_DEPLOY_PATH}'
             docker compose --env-file .env.prod -f docker-compose.prod.yml pull
             docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --remove-orphans
