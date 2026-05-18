@@ -1,3 +1,5 @@
+import { headers } from "next/headers";
+
 const DEFAULT_DJANGO_PUBLIC_BASE_URL = "http://127.0.0.1:8001";
 const DEFAULT_DJANGO_INTERNAL_BASE_URL = "http://web:8000";
 
@@ -31,9 +33,28 @@ export async function proxyDjangoRequest(
   path: string,
   init: RequestInit = {}
 ) {
+  const requestHeaders = await headers();
   const url = `${getDjangoBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
+  const cookieHeader = requestHeaders.get("cookie");
+  const forwardedHost = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+  const forwardedProto = requestHeaders.get("x-forwarded-proto") ?? "https";
+  const mergedHeaders = new Headers(init.headers ?? {});
+
+  if (cookieHeader && !mergedHeaders.has("Cookie")) {
+    mergedHeaders.set("Cookie", cookieHeader);
+  }
+
+  if (forwardedHost && !mergedHeaders.has("X-Forwarded-Host")) {
+    mergedHeaders.set("X-Forwarded-Host", forwardedHost);
+  }
+
+  if (!mergedHeaders.has("X-Forwarded-Proto")) {
+    mergedHeaders.set("X-Forwarded-Proto", forwardedProto);
+  }
+
   const response = await fetch(url, {
     ...init,
+    headers: mergedHeaders,
     cache: "no-store",
   });
   const body = await response.text();
