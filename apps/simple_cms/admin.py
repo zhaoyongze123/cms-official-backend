@@ -124,14 +124,14 @@ class ArticleAdmin(admin.ModelAdmin):
 
     def change_view(self, request, object_id, form_url="", extra_context=None):
         extra_context = extra_context or {}
-        extra_context["next_editor_url"] = reverse("next_editor_proxy_root") + f"studio/articles/{object_id}/"
+        extra_context["next_editor_url"] = reverse("next_editor_proxy_root") + f"django-admin/articles/{object_id}/"
         extra_context["workspace_mode"] = "change"
         extra_context["workspace_title"] = "编辑文章"
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
 
     def add_view(self, request, form_url="", extra_context=None):
         extra_context = extra_context or {}
-        extra_context["next_editor_url"] = reverse("next_editor_proxy_root") + "studio/articles/new/"
+        extra_context["next_editor_url"] = reverse("next_editor_proxy_root") + "django-admin/articles/new/"
         extra_context["workspace_mode"] = "add"
         extra_context["workspace_title"] = "新建文章"
         return super().add_view(request, form_url, extra_context=extra_context)
