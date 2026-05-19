@@ -120,7 +120,7 @@ services:
       HOSTNAME: 0.0.0.0
       PORT: "3000"
       NEXT_EDITOR_DEV_ORIGIN: ${CMS_SITE_URL}
-      DJANGO_INTERNAL_BASE_URL: ${CMS_SITE_URL}
+      DJANGO_INTERNAL_BASE_URL: http://web:8000
       NEXT_PUBLIC_DJANGO_BASE_URL: ${CMS_SITE_URL}
     depends_on:
       web:
