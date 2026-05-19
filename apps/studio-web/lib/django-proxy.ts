@@ -6,10 +6,7 @@ const DEFAULT_DJANGO_INTERNAL_BASE_URL = "http://web:8000";
 export function getDjangoBaseUrl() {
   const internalBaseUrl = process.env.DJANGO_INTERNAL_BASE_URL?.trim();
   const publicBaseUrl = process.env.NEXT_PUBLIC_DJANGO_BASE_URL?.trim();
-  const isProduction = process.env.NODE_ENV === "production";
-  const baseUrl = isProduction
-    ? publicBaseUrl ?? internalBaseUrl ?? DEFAULT_DJANGO_INTERNAL_BASE_URL
-    : internalBaseUrl ?? publicBaseUrl ?? DEFAULT_DJANGO_INTERNAL_BASE_URL;
+  const baseUrl = internalBaseUrl ?? publicBaseUrl ?? DEFAULT_DJANGO_INTERNAL_BASE_URL;
 
   return baseUrl.replace(/\/+$/, "");
 }
