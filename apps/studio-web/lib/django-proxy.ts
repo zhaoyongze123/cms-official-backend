@@ -3,12 +3,16 @@ import { headers } from "next/headers";
 const DEFAULT_DJANGO_PUBLIC_BASE_URL = "http://127.0.0.1:8001";
 const DEFAULT_DJANGO_INTERNAL_BASE_URL = "http://web:8000";
 
+function normalizeDjangoBaseUrl(baseUrl: string) {
+  return baseUrl.replace(/\/django\/?$/, "").replace(/\/+$/, "");
+}
+
 export function getDjangoBaseUrl() {
   const internalBaseUrl = process.env.DJANGO_INTERNAL_BASE_URL?.trim();
   const publicBaseUrl = process.env.NEXT_PUBLIC_DJANGO_BASE_URL?.trim();
   const baseUrl = internalBaseUrl ?? publicBaseUrl ?? DEFAULT_DJANGO_INTERNAL_BASE_URL;
 
-  return baseUrl.replace(/\/+$/, "");
+  return normalizeDjangoBaseUrl(baseUrl);
 }
 
 export function getDjangoPublicBaseUrl() {
