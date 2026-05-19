@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { ArticleEditorWorkspace } from "../../../../components/articles/article-editor-workspace";
-import { fetchServerArticle } from "../../../../lib/server-articles";
+import { DjangoApiError, fetchServerArticle } from "../../../../lib/server-articles";
 
 type Params = Promise<{
   id: string;
@@ -22,8 +22,11 @@ export default async function DjangoAdminArticlePage({
   let article;
   try {
     article = await fetchServerArticle(articleId);
-  } catch {
-    notFound();
+  } catch (error) {
+    if (error instanceof DjangoApiError && error.status === 404) {
+      notFound();
+    }
+    throw error;
   }
 
   return <ArticleEditorWorkspace article={article} embedded />;

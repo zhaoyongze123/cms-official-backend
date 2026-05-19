@@ -13,23 +13,36 @@ type DjangoErrorResponse = {
   };
 };
 
+export class DjangoApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "DjangoApiError";
+    this.status = status;
+  }
+}
+
 async function readJson<T>(response: Response) {
   if (!response.ok) {
+    const responseText = await response.text();
     let errorMessage = `请求失败: ${response.status}`;
     try {
-      const payload = (await response.json()) as DjangoErrorResponse;
+      const payload = JSON.parse(responseText) as DjangoErrorResponse;
       const message = payload.error?.message;
       const code = payload.error?.code;
       if (message) {
         errorMessage = code ? `${code}: ${message}` : message;
       }
     } catch {
-      // 保留默认错误文案
+      if (responseText.trim()) {
+        errorMessage = `${errorMessage} ${responseText.slice(0, 200)}`;
+      }
     }
-    throw new Error(errorMessage);
+    throw new DjangoApiError(errorMessage, response.status);
   }
 
-  return (await response.json()) as T;
+  return JSON.parse(await response.text()) as T;
 }
 
 export async function fetchServerArticles(query?: string, status?: string) {
