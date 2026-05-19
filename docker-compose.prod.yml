@@ -63,6 +63,7 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import socket; s = socket.create_connection(('127.0.0.1', 8000), 5); s.close()"]
+      start_period: 45s
       interval: 15s
       timeout: 5s
       retries: 10
@@ -126,6 +127,7 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/django-admin/next-editor/login').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))"]
+      start_period: 40s
       interval: 20s
       timeout: 10s
       retries: 20
@@ -146,6 +148,7 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/solutions').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))"]
+      start_period: 40s
       interval: 20s
       timeout: 10s
       retries: 20

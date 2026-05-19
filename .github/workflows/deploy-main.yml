@@ -473,10 +473,33 @@ jobs:
               done
             }
 
+            wait_http() {
+              url=\"\$1\"
+              attempts=\"\$2\"
+              sleep_seconds=\"\$3\"
+              attempt=1
+              while [ \"\$attempt\" -le \"\$attempts\" ]; do
+                if curl -fsS --max-time 10 \"\$url\" >/dev/null; then
+                  return 0
+                fi
+                if [ \"\$attempt\" -eq \"\$attempts\" ]; then
+                  echo \"等待地址可用失败: \$url\" >&2
+                  return 1
+                fi
+                attempt=\$((attempt + 1))
+                sleep \"\$sleep_seconds\"
+              done
+            }
+
             docker compose --env-file .env.prod -f docker-compose.prod.yml down --remove-orphans || true
             cleanup_ports
             docker compose --env-file .env.prod -f docker-compose.prod.yml pull db redis web ai-service worker public-web editor-web
-            docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --remove-orphans db redis web ai-service worker public-web editor-web
+            docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --remove-orphans db redis web ai-service worker
+            wait_http 'http://127.0.0.1:18001/' 24 5
+            docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --remove-orphans public-web
+            wait_http 'http://127.0.0.1:13003/solutions' 24 5
+            docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --remove-orphans editor-web
+            wait_http 'http://127.0.0.1:13000/django-admin/next-editor/login' 24 5
             docker image prune -f
             docker system df
           "
