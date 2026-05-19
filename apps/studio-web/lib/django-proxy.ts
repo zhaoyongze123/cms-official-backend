@@ -33,8 +33,10 @@ export async function proxyDjangoRequest(
   const requestHeaders = await headers();
   const url = `${getDjangoBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
   const cookieHeader = requestHeaders.get("cookie");
-  const forwardedHost = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
-  const forwardedProto = requestHeaders.get("x-forwarded-proto") ?? "https";
+  const forwardedHost = process.env.DJANGO_INTERNAL_BASE_URL?.includes("web:8000")
+    ? "web:8000"
+    : requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+  const forwardedProto = "https";
   const mergedHeaders = new Headers(init.headers ?? {});
 
   if (cookieHeader && !mergedHeaders.has("Cookie")) {
