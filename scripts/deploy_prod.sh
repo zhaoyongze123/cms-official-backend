@@ -62,13 +62,14 @@ fi
 export COMPOSE_DOCKER_CLI_BUILD=0
 export DOCKER_BUILDKIT=0
 COMPOSE_CMD=(docker compose --env-file .env.prod -f docker-compose.prod.yml)
+COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-yuncan-cms}"
 
 print_compose_diagnostics() {
   echo "[deploy] 输出 Compose 状态"
   "${COMPOSE_CMD[@]}" ps || true
 
   echo "[deploy] 输出 web health 状态"
-  docker inspect yuncan-cms-official-web-1 \
+  docker inspect "${COMPOSE_PROJECT_NAME}-web-1" \
     --format '{{json .State.Health}}' 2>/dev/null || true
 
   echo "[deploy] 输出关键容器最近日志"
@@ -100,7 +101,7 @@ if [[ -n "${NGINX_SITE_PATH}" && "${DEPLOY_PATH}" == "${NGINX_SITE_PATH}" ]]; th
 fi
 
 cleanup_reserved_port_containers() {
-  local port container_id container_name
+  local port container_id container_name pid_list
   local reserved_ports=(15432 16379 18001 18002 13000 13003)
 
   for port in "${reserved_ports[@]}"; do
@@ -112,9 +113,32 @@ cleanup_reserved_port_containers() {
     done < <(docker ps --filter "publish=${port}" --format "{{.ID}}")
 
     if command -v ss >/dev/null 2>&1 && ss -ltn "sport = :${port}" | grep -q ":${port}"; then
-      echo "[deploy] 端口 ${port} 仍被非 Docker 进程占用，请先在服务器释放该端口" >&2
-      ss -ltnp "sport = :${port}" >&2 || true
-      exit 1
+      echo "[deploy] 端口 ${port} 仍被宿主机进程占用，尝试终止后重试"
+      ss -ltnp "sport = :${port}" || true
+      pid_list="$(ss -ltnp "sport = :${port}" 2>/dev/null | sed -n 's/.*pid=\([0-9]\+\).*/\1/p' | sort -u)"
+      if [[ -n "${pid_list}" ]]; then
+        while IFS= read -r pid; do
+          [[ -z "${pid}" ]] && continue
+          echo "[deploy] 终止占用端口 ${port} 的进程 PID=${pid}"
+          kill -TERM "${pid}" 2>/dev/null || true
+        done <<< "${pid_list}"
+        sleep 2
+
+        if ss -ltn "sport = :${port}" | grep -q ":${port}"; then
+          while IFS= read -r pid; do
+            [[ -z "${pid}" ]] && continue
+            echo "[deploy] 端口 ${port} 仍未释放，强制终止 PID=${pid}"
+            kill -KILL "${pid}" 2>/dev/null || true
+          done <<< "${pid_list}"
+          sleep 1
+        fi
+      fi
+
+      if ss -ltn "sport = :${port}" | grep -q ":${port}"; then
+        echo "[deploy] 端口 ${port} 在自动终止后仍被占用，终止部署" >&2
+        ss -ltnp "sport = :${port}" >&2 || true
+        exit 1
+      fi
     fi
   done
 }

@@ -439,8 +439,44 @@ jobs:
               echo '${GHCR_TOKEN}' | docker login ${{ env.REGISTRY }} -u '${GHCR_USERNAME}' --password-stdin
             fi
             cd '${CLEAN_DEPLOY_PATH}'
-            docker compose --env-file .env.prod -f docker-compose.prod.yml pull
-            docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --remove-orphans
+            export COMPOSE_PROJECT_NAME=yuncan-cms
+            reserved_ports='15432 16379 18001 18002 13000 13003'
+            cleanup_ports() {
+              for port in \$reserved_ports; do
+                docker ps -a --filter publish=\${port} --format '{{.ID}}' | while read -r cid; do
+                  [ -z \"\$cid\" ] && continue
+                  docker rm -f \"\$cid\"
+                done
+
+                if command -v ss >/dev/null 2>&1 && ss -lnt \"sport = :\${port}\" | grep -q \":\${port}\"; then
+                  ss -ltnp \"sport = :\${port}\" || true
+                  ss -ltnp \"sport = :\${port}\" 2>/dev/null | sed -n 's/.*pid=\\([0-9]\\+\\).*/\\1/p' | sort -u | while read -r pid; do
+                    [ -z \"\$pid\" ] && continue
+                    kill -TERM \"\$pid\" 2>/dev/null || true
+                  done
+                  sleep 2
+                fi
+
+                if command -v ss >/dev/null 2>&1 && ss -lnt \"sport = :\${port}\" | grep -q \":\${port}\"; then
+                  ss -ltnp \"sport = :\${port}\" 2>/dev/null | sed -n 's/.*pid=\\([0-9]\\+\\).*/\\1/p' | sort -u | while read -r pid; do
+                    [ -z \"\$pid\" ] && continue
+                    kill -KILL \"\$pid\" 2>/dev/null || true
+                  done
+                  sleep 1
+                fi
+
+                if command -v ss >/dev/null 2>&1 && ss -lnt \"sport = :\${port}\" | grep -q \":\${port}\"; then
+                  echo \"端口 \${port} 仍被占用，终止部署\" >&2
+                  ss -ltnp \"sport = :\${port}\" >&2 || true
+                  exit 1
+                fi
+              done
+            }
+
+            docker compose --env-file .env.prod -f docker-compose.prod.yml down --remove-orphans || true
+            cleanup_ports
+            docker compose --env-file .env.prod -f docker-compose.prod.yml pull db redis web ai-service worker public-web editor-web
+            docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --remove-orphans db redis web ai-service worker public-web editor-web
             docker image prune -f
             docker system df
           "

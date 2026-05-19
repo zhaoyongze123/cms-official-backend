@@ -1,3 +1,5 @@
+name: yuncan-cms
+
 x-backend-image: &backend-image
   image: ${BACKEND_IMAGE:-ghcr.io/zhaoyongze123/cms-backend:latest}
 
@@ -114,6 +116,8 @@ services:
     image: ${STUDIO_IMAGE:-ghcr.io/zhaoyongze123/cms-studio-web:latest}
     environment:
       <<: *frontend-env
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
       NEXT_EDITOR_DEV_ORIGIN: ${CMS_SITE_URL}
       DJANGO_INTERNAL_BASE_URL: ${CMS_SITE_URL}
       NEXT_PUBLIC_DJANGO_BASE_URL: ${CMS_SITE_URL}
@@ -133,6 +137,8 @@ services:
     image: ${PUBLIC_IMAGE:-ghcr.io/zhaoyongze123/cms-public-web:latest}
     environment:
       <<: *frontend-env
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
       NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL: ${CMS_SITE_URL}
       NEXT_PUBLIC_SITE_URL: ${CMS_SITE_URL}
     depends_on:
