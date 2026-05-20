@@ -13,6 +13,7 @@ WORKDIR /app
 
 COPY apps/public-web/.next/standalone /app
 COPY apps/public-web/.next/static /app/apps/public-web/.next/static
+COPY apps/public-web/public /app/apps/public-web/public
 
 WORKDIR /app/apps/public-web
 
