@@ -1,29 +1,22 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "motion/react";
 import { Activity, ArrowRight, Cloud, Code, Mail, MapPin, Phone, Server, Settings, Shield, X, Zap } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import PublicLayout from "./public-layout";
-
-const HeroScene = dynamic(() => import("../../components/HeroScene"), { ssr: false });
-const InteractiveCard = dynamic(
-  () => import("../../components/InteractiveCard").then((module) => module.InteractiveCard),
-  { ssr: false }
-);
+import HeroScene from "../../components/HeroScene";
+import { InteractiveCard } from "../../components/InteractiveCard";
 
 gsap.registerPlugin(ScrollTrigger);
 
 function FeatureCard({ icon: Icon, title, desc, index }: { icon: React.ComponentType<{ size?: number }>; title: string; desc: string; index: number }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay: index * 0.1 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.08, duration: 0.35, ease: "easeOut" }}
       whileHover={{ y: -10 }}
       className="p-8 bg-white border border-line rounded-2xl hover:border-hermes hover:shadow-2xl hover:shadow-hermes/5 transition-all group"
     >
@@ -38,7 +31,11 @@ function FeatureCard({ icon: Icon, title, desc, index }: { icon: React.Component
 
 function SolutionItem({ title, tag, desc }: { title: string; tag: string; desc: string }) {
   return (
-    <motion.div whileHover={{ x: 10 }} className="group flex flex-col md:flex-row md:items-center justify-between py-8 border-b border-line cursor-pointer">
+    <motion.a
+      href="/solutions"
+      whileHover={{ x: 10 }}
+      className="group flex flex-col md:flex-row md:items-center justify-between py-8 border-b border-line cursor-pointer"
+    >
       <div className="flex-1">
         <div className="flex items-center gap-3 mb-2">
           <span className="px-2 py-0.5 bg-hermes/10 text-hermes text-[10px] font-bold rounded uppercase tracking-wider">{tag}</span>
@@ -51,7 +48,7 @@ function SolutionItem({ title, tag, desc }: { title: string; tag: string; desc: 
           <ArrowRight size={20} />
         </div>
       </div>
-    </motion.div>
+    </motion.a>
   );
 }
 
@@ -187,12 +184,73 @@ export default function PublicLandingPage() {
     return () => window.removeEventListener("mousemove", moveCursor);
   }, []);
 
+  useEffect(() => {
+    const scheduledTimers: number[] = [];
+    let resetInterval: number | null = null;
+
+    const resetLandingViewport = () => {
+      if (window.location.pathname !== "/" || window.location.hash) {
+        return;
+      }
+      const applyScrollReset = () => {
+        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        const scrollingElement = document.scrollingElement;
+        if (scrollingElement) {
+          scrollingElement.scrollTop = 0;
+          scrollingElement.scrollLeft = 0;
+        }
+        ScrollTrigger.refresh();
+      };
+
+      applyScrollReset();
+      requestAnimationFrame(() => {
+        applyScrollReset();
+        requestAnimationFrame(applyScrollReset);
+      });
+
+      [0, 80, 220].forEach((delay) => {
+        const timer = window.setTimeout(applyScrollReset, delay);
+        scheduledTimers.push(timer);
+      });
+
+      if (resetInterval !== null) {
+        window.clearInterval(resetInterval);
+      }
+      resetInterval = window.setInterval(applyScrollReset, 16);
+      const stopTimer = window.setTimeout(() => {
+        if (resetInterval !== null) {
+          window.clearInterval(resetInterval);
+          resetInterval = null;
+        }
+      }, 700);
+      scheduledTimers.push(stopTimer);
+    };
+
+    const previousScrollRestoration = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+    resetLandingViewport();
+    window.addEventListener("popstate", resetLandingViewport);
+    window.addEventListener("pageshow", resetLandingViewport);
+
+    return () => {
+      window.history.scrollRestoration = previousScrollRestoration;
+      if (resetInterval !== null) {
+        window.clearInterval(resetInterval);
+      }
+      scheduledTimers.forEach((timer) => window.clearTimeout(timer));
+      window.removeEventListener("popstate", resetLandingViewport);
+      window.removeEventListener("pageshow", resetLandingViewport);
+    };
+  }, []);
+
   return (
     <PublicLayout active="landing">
       <section className="relative pt-40 pb-20 px-6 overflow-hidden min-h-[90vh] flex items-center">
         <HeroScene />
         <div className="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-20 items-center">
-          <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
+          <div>
             <div className="inline-block px-4 py-1.5 bg-hermes/10 rounded-full mb-6">
               <span className="text-hermes text-xs font-bold tracking-widest uppercase flex items-center gap-2">
                 <Activity size={12} className="animate-pulse" /> Global Enterprise Cloud Solution
@@ -251,11 +309,11 @@ export default function PublicLandingPage() {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </div>
 
-          <motion.div initial={{ opacity: 0, scale: 0.9, x: 50 }} animate={{ opacity: 1, scale: 1, x: 0 }} transition={{ duration: 1, delay: 0.2 }} className="relative">
+          <div className="relative">
             <InteractiveCard />
-          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -267,7 +325,7 @@ export default function PublicLandingPage() {
               <h2 className="text-4xl md:text-5xl font-black text-charcoal mt-4 mb-6">全生命周期的云技术力量</h2>
               <p className="text-muted text-lg">从初创上云到大规模集团化跨云治理，我们提供涵盖各阶段的专业解决方案。</p>
             </div>
-            <a href="/solutions" className="group flex items-center gap-3 text-hermes font-bold">
+            <a href="/services" className="group flex items-center gap-3 text-hermes font-bold">
               了解详细服务标准 <ArrowRight className="group-hover:translate-x-2 transition-transform" />
             </a>
           </div>
@@ -278,7 +336,11 @@ export default function PublicLandingPage() {
             <FeatureCard icon={Code} title="云原生应用开发" desc="基于容器、FaaS等现代云技术重构企业业务链路，提升开发效率，释放云端弹性算力。" index={2} />
             <FeatureCard icon={Shield} title="7*24 智能运维" desc="自研智能监控平台配合资深专家团队，实现秒级告警响应与自动化故障自愈（Auto-healing）。" index={3} />
             <FeatureCard icon={Settings} title="云资源优化治理" desc="深挖资源空闲点，平衡性能与其对应支出，帮助企业平均每年节约30%-50%的云计算费用。" index={4} />
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.5 }} className="p-8 bg-hermes rounded-2xl shadow-xl shadow-hermes/20 flex flex-col justify-between">
+            <motion.div
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.35, ease: "easeOut" }}
+              className="p-8 bg-hermes rounded-2xl shadow-xl shadow-hermes/20 flex flex-col justify-between"
+            >
               <div>
                 <Zap className="text-white mb-8" size={32} />
                 <h3 className="text-xl font-bold text-white mb-4">定制化服务</h3>
@@ -313,115 +375,6 @@ export default function PublicLandingPage() {
         </div>
       </section>
 
-      <section id="合作伙伴" className="py-20 border-t border-line bg-mist shadow-inner relative overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none">
-          <div className="h-full w-full bg-[radial-gradient(#ff7900_1px,transparent_1px)] [background-size:20px_20px]" />
-        </div>
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
-            <div className="shrink-0 text-center lg:text-left">
-              <span className="section-label">Our Partners</span>
-              <h3 className="text-2xl font-bold text-charcoal mt-2">与全球顶尖厂商共筑生态</h3>
-            </div>
-            <div className="flex flex-wrap justify-center items-center gap-10 md:gap-16 grayscale opacity-40 hover:opacity-100 transition-all duration-700">
-              {["阿里云", "腾讯云", "华为云", "AWS", "Azure"].map((p) => (
-                <div key={p} className="flex flex-col items-center group cursor-pointer">
-                  <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-3 group-hover:bg-hermes/5 group-hover:shadow-hermes/20 transition-all">
-                    <Cloud className="text-charcoal group-hover:text-hermes transition-colors" size={32} />
-                  </div>
-                  <span className="text-sm font-bold tracking-tighter text-charcoal/60 group-hover:text-hermes transition-colors uppercase">{p}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="产品中心" className="py-32 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col items-center text-center mb-20">
-            <span className="section-label">Product Showcase</span>
-            <h2 className="text-4xl font-black text-charcoal mt-4 mb-6">核心产品及云管工具</h2>
-            <p className="text-muted max-w-2xl">结合十余年云运维经验，我们沉淀了一系列自动化、智能化的管理工具，助力企业实现精准控本与极致稳健。</p>
-          </div>
-        </div>
-      </section>
-
-      <section id="交付中心" className="py-32 px-6 bg-charcoal text-white overflow-hidden">
-        <div className="max-w-7xl mx-auto text-center mb-24">
-          <span className="text-hermes text-xs font-black tracking-widest uppercase mb-4 block">Delivery Excellence</span>
-          <h2 className="text-4xl md:text-6xl font-black mb-8">标准、透明、可控的交付链路</h2>
-        </div>
-      </section>
-
-      <section id="关于我们" className="py-32 px-6 bg-mist relative overflow-hidden">
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-20 items-center">
-          <div>
-            <span className="section-label">Connect with Us</span>
-            <h2 className="text-5xl font-black text-charcoal mt-4 mb-8">
-              准备好让云技术
-              <br />
-              驱动您的业务了吗？
-            </h2>
-            <p className="text-muted text-lg mb-12">不论您的企业目前处于何种发展阶段，云璨的技术专家都能为您提供度身定制的咨询建议。</p>
-
-            <div className="space-y-8">
-              <div className="flex items-start gap-6">
-                <div className="w-12 h-12 bg-white rounded-xl shadow-md flex items-center justify-center text-hermes shrink-0">
-                  <Mail />
-                </div>
-                <div>
-                  <h4 className="font-bold text-charcoal">邮件咨询</h4>
-                  <p className="text-muted text-sm font-medium">service@yuncan.com</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-6">
-                <div className="w-12 h-12 bg-white rounded-xl shadow-md flex items-center justify-center text-hermes shrink-0">
-                  <Phone />
-                </div>
-                <div>
-                  <h4 className="font-bold text-charcoal">专家热线</h4>
-                  <p className="text-muted text-sm font-medium">021-50583875</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-6">
-                <div className="w-12 h-12 bg-white rounded-xl shadow-md flex items-center justify-center text-hermes shrink-0">
-                  <MapPin />
-                </div>
-                <div>
-                  <h4 className="font-bold text-charcoal">总部中心</h4>
-                  <p className="text-muted text-sm font-medium">上海市浦东新区世纪大道2002号</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="p-10 bg-white rounded-3xl shadow-2xl border border-line">
-            <h3 className="text-2xl font-bold text-charcoal mb-8">申请架构审计</h3>
-            <form className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-muted uppercase tracking-wider">您的姓名</label>
-                  <input type="text" className="w-full bg-mist border border-line rounded-xl px-4 py-3 outline-none focus:border-hermes transition-colors" placeholder="张先生/女士" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-muted uppercase tracking-wider">联系电话</label>
-                  <input type="tel" className="w-full bg-mist border border-line rounded-xl px-4 py-3 outline-none focus:border-hermes transition-colors" placeholder="138 **** ****" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-muted uppercase tracking-wider">企业名称</label>
-                <input type="text" className="w-full bg-mist border border-line rounded-xl px-4 py-3 outline-none focus:border-hermes transition-colors" placeholder="上海某某科技有限公司" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-muted uppercase tracking-wider">需求描述</label>
-                <textarea rows={4} className="w-full bg-mist border border-line rounded-xl px-4 py-3 outline-none focus:border-hermes transition-colors resize-none" placeholder="请简述您目前面临的技术痛点或上云规划..." />
-              </div>
-              <button className="w-full bg-hermes text-white font-black py-4 rounded-xl shadow-xl shadow-hermes/20">立即获取专业方案</button>
-            </form>
-          </motion.div>
-        </div>
-      </section>
       <ConsultationModal open={consultationOpen} onClose={() => setConsultationOpen(false)} />
     </PublicLayout>
   );

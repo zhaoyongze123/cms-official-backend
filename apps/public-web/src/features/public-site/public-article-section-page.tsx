@@ -1,8 +1,10 @@
+"use client";
+
+import type { PublicArticle, PublicArticleSectionConfig } from "../../lib/articles-api";
 import PublicLayout from "./public-layout";
 import SolutionsCMS from "../../components/SolutionsCMS";
-import type { PublicArticle, PublicArticleSectionConfig } from "../../lib/articles-api";
 
-export default function PublicSolutionsPage({
+export default function PublicArticleSectionPage({
   articles,
   categories,
   selectedCategory,
@@ -16,7 +18,7 @@ export default function PublicSolutionsPage({
   section: PublicArticleSectionConfig;
 }) {
   return (
-    <PublicLayout active="solutions">
+    <PublicLayout active={section.key}>
       <SolutionsCMS
         mode="list"
         articles={articles}

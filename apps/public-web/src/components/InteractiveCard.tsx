@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence, type Variants } from 'motion/react';
 import { Layers, Users, Zap, RotateCw } from 'lucide-react';
@@ -82,6 +82,15 @@ export const InteractiveCard = () => {
     setDirection(1);
     setIndex((prev) => prev + 1);
   };
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setDirection(1);
+      setIndex((prev) => prev + 1);
+    }, 7000);
+
+    return () => window.clearInterval(timer);
+  }, []);
 
   return (
     <div className="relative w-full h-[550px] flex items-center justify-center perspective-2000">

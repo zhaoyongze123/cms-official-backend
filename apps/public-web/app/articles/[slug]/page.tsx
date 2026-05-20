@@ -7,14 +7,17 @@ import {
   buildBreadcrumbJsonLd,
   buildFaqJsonLd,
   fetchArticleDetailBySlug,
+  getPublicArticleSectionConfig,
+  type PublicArticleSectionKey,
 } from "../../../src/lib/articles-api";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
-  params
+  params,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ from?: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
   const article = await fetchArticleDetailBySlug(slug);
@@ -49,25 +52,31 @@ export async function generateMetadata({
 }
 
 export default async function ArticlePage({
-  params
+  params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ from?: string }>;
 }) {
   const { slug } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : {};
   const article = await fetchArticleDetailBySlug(slug);
 
   if (!article) {
     notFound();
   }
 
-  const jsonLd = [buildArticleJsonLd(article), buildBreadcrumbJsonLd(article), buildFaqJsonLd(article)].filter(Boolean);
+  const fromSection = ((resolvedSearchParams.from || "solutions").trim() || "solutions") as PublicArticleSectionKey;
+  const validSectionKeys: PublicArticleSectionKey[] = ["services", "solutions", "products", "cases"];
+  const section = getPublicArticleSectionConfig(validSectionKeys.includes(fromSection) ? fromSection : "solutions");
+  const jsonLd = [buildArticleJsonLd(article), buildBreadcrumbJsonLd(article, section), buildFaqJsonLd(article)].filter(Boolean);
 
   return (
     <>
       {jsonLd.map((item, index) => (
         <script key={index} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(item) }} />
       ))}
-      <PublicArticlePage article={article} />
+      <PublicArticlePage article={article} section={section} />
     </>
   );
 }

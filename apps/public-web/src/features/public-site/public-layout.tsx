@@ -1,12 +1,13 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { motion, useScroll, useSpring } from "motion/react";
 import { ArrowRight, Cloud, ExternalLink, Headset, Mail, Phone, Shield } from "lucide-react";
 
 interface PublicLayoutProps {
-  active: "landing" | "solutions" | "article";
+  active: "landing" | "services" | "solutions" | "products" | "cases" | "about" | "article";
   children: React.ReactNode;
 }
 
@@ -17,32 +18,38 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
     damping: 30,
     restDelta: 0.001
   });
+  const contactQrPath = "/contact-qr.png";
+  const logoPath = "/yuncan-logo.png";
 
   return (
     <div className="relative min-h-screen selection:bg-hermes/30 bg-paper overflow-x-hidden">
-      <nav className="fixed top-0 left-0 right-0 z-50 glass-panel border-b border-line px-6 py-4">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-line px-6 py-4 shadow-sm">
         <motion.div className="absolute bottom-0 left-0 right-0 h-[2px] bg-hermes origin-left" style={{ scaleX }} />
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link className="flex items-center gap-3 cursor-pointer" href="/">
-            <div className="w-10 h-10 bg-hermes rounded-lg shadow-lg shadow-hermes/30 flex items-center justify-center text-white font-black text-xl">
-              Y
-            </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-lg tracking-tight leading-none uppercase">Yuncan</span>
-              <span className="text-[10px] text-muted font-medium tracking-widest mt-1 text-nowrap">云璨科技</span>
-            </div>
+            <Image
+              alt="YUNCAN professional service"
+              className="h-auto w-[15.2rem] max-w-none"
+              height={727}
+              priority
+              src={logoPath}
+              width={2164}
+            />
           </Link>
           <div className="hidden md:flex items-center gap-8 lg:gap-10">
-            <Link className={`text-sm font-semibold transition-colors relative group ${active === "landing" ? "text-hermes" : "text-charcoal hover:text-hermes"}`} href="/#服务体系">
+            <Link className={`text-sm font-semibold transition-colors relative group ${active === "services" ? "text-hermes" : "text-charcoal hover:text-hermes"}`} href="/services">
               上云服务
             </Link>
             <Link className={`text-sm font-semibold transition-colors relative group ${active === "solutions" || active === "article" ? "text-hermes" : "text-charcoal hover:text-hermes"}`} href="/solutions">
               解决方案
             </Link>
-            <Link className="text-sm font-semibold transition-colors relative group text-charcoal hover:text-hermes" href="/#产品中心">
+            <Link className={`text-sm font-semibold transition-colors relative group ${active === "cases" ? "text-hermes" : "text-charcoal hover:text-hermes"}`} href="/cases">
+              客户案例
+            </Link>
+            <Link className={`text-sm font-semibold transition-colors relative group ${active === "products" ? "text-hermes" : "text-charcoal hover:text-hermes"}`} href="/products">
               产品中心
             </Link>
-            <Link className="text-sm font-semibold transition-colors relative group text-charcoal hover:text-hermes" href="/#关于我们">
+            <Link className={`text-sm font-semibold transition-colors relative group ${active === "about" ? "text-hermes" : "text-charcoal hover:text-hermes"}`} href="/about">
               关于我们
             </Link>
           </div>
@@ -61,56 +68,45 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
         <div className="relative flex items-center">
           <div className="group/contact pointer-events-auto relative flex h-36 w-20 flex-col items-center justify-center gap-3 overflow-visible rounded-l-[1.5rem]">
             <div className="pointer-events-none absolute right-full top-1/2 mr-4 w-[21rem] -translate-y-1/2 translate-x-6 opacity-0 transition-all duration-300 group-hover/contact:translate-x-0 group-hover/contact:opacity-100">
-              <div className="relative overflow-hidden rounded-[2.25rem] border border-white/45 bg-white/18 shadow-[0_24px_80px_rgba(15,23,42,0.18)] backdrop-blur-[28px]">
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.66),rgba(255,255,255,0.22))]" />
-                <div className="absolute inset-x-6 top-4 h-10 rounded-full bg-white/40 blur-2xl" />
-                <div className="relative space-y-5 p-5">
-                  <div className="flex items-start gap-4 rounded-[1.6rem] border border-white/40 bg-white/55 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_10px_30px_rgba(148,163,184,0.14)] backdrop-blur-xl">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-[1.35rem] bg-[#3b6af0] text-white shadow-[0_12px_28px_rgba(59,106,240,0.32)]">
-                      <Phone size={20} />
+              <div className="relative overflow-hidden rounded-[2.25rem] border border-[#e7ecf4] bg-[#f3f6fb] shadow-[0_24px_80px_rgba(15,23,42,0.14)]">
+                <div className="relative space-y-5 bg-[#eef2f8] p-5">
+                  <div className="flex items-start gap-3 rounded-[1.6rem] border border-[#eef1f6] bg-white px-4 py-3 shadow-[0_12px_28px_rgba(148,163,184,0.12)]">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-[1.2rem] bg-[#edf0f5] text-charcoal shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
+                      <Phone size={18} />
                     </div>
                     <div>
-                      <div className="text-sm font-bold tracking-[0.08em] text-charcoal">售前咨询</div>
-                      <div className="mt-1 text-[2rem] font-black tracking-tight text-[#3b6af0]">021-50583875</div>
+                      <div className="text-[0.82rem] font-bold tracking-[0.08em] text-charcoal">电话咨询</div>
+                      <div className="mt-1 text-[1.35rem] font-black leading-tight tracking-tight text-charcoal">021-50583875</div>
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-4 rounded-[1.6rem] border border-white/40 bg-white/55 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_10px_30px_rgba(148,163,184,0.14)] backdrop-blur-xl">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-[1.35rem] bg-hermes text-white shadow-[0_12px_28px_rgba(255,121,0,0.26)]">
-                      <Mail size={20} />
+                  <div className="flex items-start gap-3 rounded-[1.6rem] border border-[#eef1f6] bg-white px-4 py-3 shadow-[0_12px_28px_rgba(148,163,184,0.12)]">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-[1.2rem] bg-[#edf0f5] text-charcoal shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
+                      <Mail size={18} />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-sm font-bold tracking-[0.08em] text-charcoal">邮件咨询</div>
-                      <div className="mt-1 break-all text-[1.05rem] font-black leading-8 tracking-tight text-charcoal">service@yuncan.com</div>
+                      <div className="text-[0.82rem] font-bold tracking-[0.08em] text-charcoal">邮件咨询</div>
+                      <div className="mt-1 break-all text-[0.98rem] font-black leading-6 tracking-tight text-charcoal">service@yuncan.com</div>
                     </div>
                   </div>
 
-                  <div className="rounded-[2rem] border border-white/45 bg-white/58 px-5 py-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_36px_rgba(148,163,184,0.16)] backdrop-blur-xl">
-                    <div className="mx-auto relative grid h-44 w-44 grid-cols-7 gap-1 rounded-[1.7rem] bg-white/88 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-                      {Array.from({ length: 49 }).map((_, index) => {
-                        const active = [0, 1, 2, 4, 6, 7, 8, 10, 12, 14, 18, 19, 20, 21, 24, 26, 28, 30, 31, 33, 35, 36, 40, 42, 43, 44, 46, 48].includes(index);
-                        return <span key={index} className={`rounded-[2px] ${active ? "bg-charcoal" : "bg-charcoal/10"}`} />;
-                      })}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-[1.35rem] border-4 border-white bg-hermes text-xl font-black text-white shadow-[0_14px_30px_rgba(255,121,0,0.22)]">
-                          Y
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-5 text-center text-[1.05rem] font-semibold leading-8 tracking-[0.04em] text-slate-500">
-                      微信扫码
-                      <br />
-                      添加专属顾问
+                  <div className="rounded-[2rem] border border-[#e7ecf4] bg-[#eef2f8] px-5 py-5 shadow-[0_14px_36px_rgba(148,163,184,0.16)]">
+                    <div className="flex justify-center overflow-hidden rounded-[1.7rem] bg-white p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+                      <Image
+                        alt="企微二维码"
+                        className="block h-44 w-44 rounded-[1.2rem] object-cover"
+                        height={176}
+                        src={contactQrPath}
+                        width={176}
+                      />
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="relative flex h-36 w-20 flex-col items-center justify-center gap-3 overflow-hidden rounded-l-[1.5rem] border border-white/40 bg-white/20 px-3 text-ink shadow-2xl shadow-white/10 backdrop-blur-2xl">
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.55),rgba(255,255,255,0.18))]" />
-              <div className="absolute inset-x-2 top-2 h-8 rounded-full bg-white/35 blur-xl" />
-              <div className="relative flex h-12 w-12 items-center justify-center rounded-full border border-white/50 bg-white/35 shadow-lg shadow-white/20 backdrop-blur-xl">
+            <div className="relative flex h-36 w-20 flex-col items-center justify-center gap-3 overflow-hidden rounded-l-[1.5rem] border border-[#e4e8ef] bg-[#f2f4f8] px-3 text-ink shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
+              <div className="relative flex h-12 w-12 items-center justify-center rounded-full border border-[#dde3eb] bg-white text-charcoal shadow-[0_10px_24px_rgba(148,163,184,0.18)]">
                 <Headset size={24} />
               </div>
               <div className="relative text-center text-xs font-bold leading-5 tracking-[0.12em] text-charcoal">
@@ -123,61 +119,77 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
 
       <footer className="bg-charcoal text-white pt-24 pb-12 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start gap-12 pb-16 border-b border-white/10">
-          <div className="max-w-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <Link className="w-10 h-10 bg-hermes rounded-lg flex items-center justify-center text-white font-black cursor-pointer" href="/">
-                Y
-              </Link>
-              <Link className="font-bold text-xl uppercase tracking-widest cursor-pointer" href="/">
-                Yuncan
-              </Link>
-            </div>
-            <p className="text-white/40 text-sm leading-relaxed mb-8">
-              始于2011，云璨始终坚持以技术为驱动，助力企业释放云端潜能。依托上海科技枢纽，服务全球数字化转型。
-            </p>
-            <div className="flex gap-4">
-              {[ExternalLink, Shield, Cloud].map((Icon, i) => (
-                <div
-                  key={i}
-                  className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/40 hover:text-hermes hover:border-hermes transition-all cursor-pointer"
-                >
-                  <Icon size={18} />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-12 lg:gap-24">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-12 lg:gap-20">
             <div>
-              <h5 className="font-bold mb-6 text-sm">服务指南</h5>
+              <h5 className="font-bold mb-6 text-sm">友情链接</h5>
               <ul className="space-y-4 text-sm text-white/40">
-                <li><Link className="hover:text-hermes cursor-pointer" href="/#服务体系">上云咨询</Link></li>
-                <li><Link className="hover:text-hermes cursor-pointer" href="/#服务体系">技术架构</Link></li>
-                <li><Link className="hover:text-hermes cursor-pointer" href="/#服务体系">运维巡检</Link></li>
-                <li><Link className="hover:text-hermes cursor-pointer" href="/#服务体系">费用调优</Link></li>
+                <li className="hover:text-hermes transition-colors">MDaemon中文站</li>
+                <li className="hover:text-hermes transition-colors">SecurityGateway中文站</li>
+                <li className="hover:text-hermes transition-colors">MailStore中文站</li>
+                <li className="hover:text-hermes transition-colors">可道云</li>
+                <li className="hover:text-hermes transition-colors">53AI</li>
               </ul>
             </div>
             <div>
-              <h5 className="font-bold mb-6 text-sm uppercase tracking-widest text-white/60">知识库</h5>
+              <h5 className="font-bold mb-6 text-sm">合作伙伴</h5>
               <ul className="space-y-4 text-sm text-white/40">
-                <li><Link className="hover:text-hermes cursor-pointer" href="/solutions">典型案例</Link></li>
-                <li><Link className="hover:text-hermes cursor-pointer" href="/solutions">架构方案</Link></li>
-                <li><Link className="hover:text-hermes cursor-pointer" href="/solutions">迁移指南</Link></li>
+                <li className="hover:text-hermes transition-colors">阿里云</li>
+                <li className="hover:text-hermes transition-colors">腾讯云</li>
+                <li className="hover:text-hermes transition-colors">MDaemon</li>
+                <li className="hover:text-hermes transition-colors">MailStore</li>
+                <li className="hover:text-hermes transition-colors">可道云</li>
+              </ul>
+            </div>
+            <div>
+              <h5 className="font-bold mb-6 text-sm">联系我们</h5>
+              <ul className="space-y-4 text-sm text-white/40">
+                <li>地址：</li>
+                <li>电话：021-50583875</li>
+                <li>邮箱：service@yuncan.com</li>
+                <li>
+                  <div className="space-y-3">
+                    <span className="block">企微二维码</span>
+                    <div className="w-24 rounded-2xl border border-white/10 bg-white p-2">
+                      <Image
+                        alt="企微二维码"
+                        className="h-20 w-20 rounded-xl object-cover"
+                        height={80}
+                        src={contactQrPath}
+                        width={80}
+                      />
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h5 className="font-bold mb-6 text-sm">关于我们</h5>
+              <ul className="space-y-4 text-sm text-white/40">
+                <li className="hover:text-hermes transition-colors">公司简介</li>
+                <li className="hover:text-hermes transition-colors">资质荣誉</li>
+                <li className="hover:text-hermes transition-colors">合作伙伴</li>
               </ul>
             </div>
             <div>
               <h5 className="font-bold mb-6 text-sm">法律合规</h5>
               <ul className="space-y-4 text-sm text-white/40">
-                <li className="hover:text-hermes cursor-pointer">隐私协议</li>
-                <li className="hover:text-hermes cursor-pointer">授权说明</li>
-                <li className="hover:text-hermes cursor-pointer">信息披露</li>
+                <li>
+                  <Link className="hover:text-hermes transition-colors" href="/legal/service-agreement">
+                    服务协议
+                  </Link>
+                </li>
+                <li>
+                  <Link className="hover:text-hermes transition-colors" href="/legal/privacy-policy">
+                    隐私协议
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>
         </div>
 
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center mt-12 text-white/20 text-[10px] font-bold uppercase tracking-[0.2em]">
-          <span>© 2024 上海云璨科技发展有限公司 ALL RIGHTS RESERVED.</span>
+          <span>2011-2026 上海云璨信息技术有限公司 all rights reserved</span>
           <div className="mt-4 md:mt-0 flex flex-col md:flex-row items-center gap-3 md:gap-8 normal-case tracking-normal text-center md:text-right">
             <a
               className="hover:text-hermes transition-colors"

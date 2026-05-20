@@ -117,6 +117,20 @@ export interface PublicArticle {
   };
 }
 
+export type PublicArticleSectionKey = "services" | "solutions" | "products" | "cases";
+
+export interface PublicArticleSectionConfig {
+  key: PublicArticleSectionKey;
+  slug: string;
+  title: string;
+  description: string;
+  route: string;
+  breadcrumbsLabel: string;
+  categorySlugs: string[];
+  tagSlugs: string[];
+  keywords: string[];
+}
+
 export interface SiteSeoContext {
   siteName: string;
   baseUrl: string;
@@ -248,11 +262,12 @@ export function buildArticleJsonLd(article: PublicArticle) {
   };
 }
 
-export function buildBreadcrumbJsonLd(article: PublicArticle) {
+export function buildBreadcrumbJsonLd(article: PublicArticle, section?: PublicArticleSectionConfig) {
   if (article.seoPayload.jsonLd.breadcrumb) {
     return article.seoPayload.jsonLd.breadcrumb;
   }
   const site = getSiteSeoContext();
+  const targetSection = section ?? getPublicArticleSectionConfig("solutions");
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -266,8 +281,8 @@ export function buildBreadcrumbJsonLd(article: PublicArticle) {
       {
         "@type": "ListItem",
         position: 2,
-        name: "解决方案",
-        item: new URL("/solutions", site.baseUrl).toString(),
+        name: targetSection.breadcrumbsLabel,
+        item: new URL(targetSection.route, site.baseUrl).toString(),
       },
       {
         "@type": "ListItem",
@@ -313,8 +328,98 @@ export async function fetchPublishedArticles(): Promise<PublicArticle[]> {
       const leftTime = left.published_at ? new Date(left.published_at).getTime() : 0;
       const rightTime = right.published_at ? new Date(right.published_at).getTime() : 0;
       return rightTime - leftTime;
-    })
-    .map(mapArticleToPublicArticle);
+  })
+  .map(mapArticleToPublicArticle);
+}
+
+export function getPublicArticleSectionConfig(section: PublicArticleSectionKey): PublicArticleSectionConfig {
+  const sectionConfigs: Record<PublicArticleSectionKey, PublicArticleSectionConfig> = {
+    services: {
+      key: "services",
+      slug: "services",
+      title: "上云服务",
+      description: "查看云璨公开发布的上云咨询、迁移托管与运维服务文章。",
+      route: "/services",
+      breadcrumbsLabel: "上云服务",
+      categorySlugs: ["services", "cloud-services", "service", "上云服务"],
+      tagSlugs: ["services", "cloud-services", "service", "上云服务"],
+      keywords: ["上云服务", "迁移", "运维", "托管", "咨询"],
+    },
+    solutions: {
+      key: "solutions",
+      slug: "solutions",
+      title: "解决方案",
+      description: "查看云璨公开发布的解决方案、架构实践与行业案例。",
+      route: "/solutions",
+      breadcrumbsLabel: "解决方案中心",
+      categorySlugs: ["solutions", "solution", "架构方案", "解决方案"],
+      tagSlugs: ["solutions", "solution", "架构方案", "解决方案"],
+      keywords: ["解决方案", "架构", "案例", "实践", "方案"],
+    },
+    products: {
+      key: "products",
+      slug: "products",
+      title: "产品中心",
+      description: "查看云璨公开发布的产品中心、工具与平台能力文章。",
+      route: "/products",
+      breadcrumbsLabel: "产品中心",
+      categorySlugs: ["products", "product", "product-center", "产品中心"],
+      tagSlugs: ["products", "product", "product-center", "产品中心"],
+      keywords: ["产品中心", "工具", "平台", "系统", "能力"],
+    },
+    cases: {
+      key: "cases",
+      slug: "cases",
+      title: "客户案例",
+      description: "查看云璨公开发布的客户案例与落地实践文章。",
+      route: "/cases",
+      breadcrumbsLabel: "客户案例",
+      categorySlugs: ["cases", "case", "customer-case", "客户案例"],
+      tagSlugs: ["cases", "case", "customer-case", "客户案例"],
+      keywords: ["客户案例", "案例", "落地", "实践", "复盘"],
+    },
+  };
+
+  return sectionConfigs[section];
+}
+
+function normalizeValue(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function isMatchedByKeywords(article: PublicArticle, keywords: string[]): boolean {
+  if (!keywords.length) {
+    return false;
+  }
+  const haystack = [
+    article.title,
+    article.excerpt,
+    article.category,
+    article.contentText,
+    ...article.tags,
+  ]
+    .join(" ")
+    .toLowerCase();
+  return keywords.some((keyword) => haystack.includes(normalizeValue(keyword)));
+}
+
+export function filterArticlesBySection(articles: PublicArticle[], section: PublicArticleSectionKey): PublicArticle[] {
+  const config = getPublicArticleSectionConfig(section);
+  const categorySlugs = config.categorySlugs.map(normalizeValue);
+  const tagSlugs = config.tagSlugs.map(normalizeValue);
+
+  return articles.filter((article) => {
+    const articleCategorySlug = normalizeValue(article.categorySlug || "");
+    const articleCategory = normalizeValue(article.category || "");
+    const articleTags = article.tags.map(normalizeValue);
+    const matchesCategory = categorySlugs.length
+      ? categorySlugs.includes(articleCategorySlug) || categorySlugs.includes(articleCategory)
+      : true;
+    const matchesTag = tagSlugs.length
+      ? articleTags.some((tag) => tagSlugs.includes(tag))
+      : false;
+    return matchesCategory || matchesTag || isMatchedByKeywords(article, config.keywords);
+  });
 }
 
 export async function fetchArticleDetailBySlug(slug: string): Promise<PublicArticle> {

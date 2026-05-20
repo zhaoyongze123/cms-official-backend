@@ -11,18 +11,19 @@ import {
 export const dynamic = "force-dynamic";
 
 const siteSeo = getSiteSeoContext();
+const section = getPublicArticleSectionConfig("services");
 
 export const metadata: Metadata = {
-  title: "解决方案 | 云璨科技",
-  description: "查看云璨科技公开发布的解决方案、架构实践与行业案例。",
+  title: `${section.title} | 云璨科技`,
+  description: section.description,
   alternates: {
-    canonical: "/solutions",
+    canonical: section.route,
   },
   openGraph: {
     type: "website",
-    title: "解决方案 | 云璨科技",
-    description: "查看云璨科技公开发布的解决方案、架构实践与行业案例。",
-    url: `${siteSeo.baseUrl}/solutions`,
+    title: `${section.title} | 云璨科技`,
+    description: section.description,
+    url: `${siteSeo.baseUrl}${section.route}`,
     siteName: siteSeo.siteName,
   },
   robots: {
@@ -31,17 +32,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function SolutionsPage({
+export default async function ServicesPage({
   searchParams,
 }: {
   searchParams?: Promise<{ category?: string; q?: string }>;
 }) {
   const articles = await fetchPublishedArticles();
-  const section = getPublicArticleSectionConfig("solutions");
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const selectedCategory = (resolvedSearchParams.category || "").trim();
   const searchQuery = (resolvedSearchParams.q || "").trim().toLowerCase();
-  const sectionArticles = filterArticlesBySection(articles, "solutions");
+  const sectionArticles = filterArticlesBySection(articles, "services");
   const categories = [
     { label: "全部", value: "" },
     ...Array.from(
@@ -54,15 +54,7 @@ export default async function SolutionsPage({
   ];
   const filteredArticles = sectionArticles.filter((article) => {
     const matchesCategory = selectedCategory ? article.categorySlug === selectedCategory : true;
-    const haystack = [
-      article.title,
-      article.excerpt,
-      article.category,
-      article.contentText,
-      ...article.tags,
-    ]
-      .join(" ")
-      .toLowerCase();
+    const haystack = [article.title, article.excerpt, article.category, article.contentText, ...article.tags].join(" ").toLowerCase();
     const matchesQuery = searchQuery ? haystack.includes(searchQuery) : true;
     return matchesCategory && matchesQuery;
   });

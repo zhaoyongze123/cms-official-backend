@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowRight, BookOpen, ChevronRight, Clock, Home, Search, Tag } from "lucide-react";
 import { motion } from "motion/react";
 
-import type { PublicArticle } from "../lib/articles-api";
+import type { PublicArticle, PublicArticleSectionConfig } from "../lib/articles-api";
 import ArticleHtmlContent from "./ArticleHtmlContent";
 
 type CategoryFilter = {
@@ -12,15 +12,21 @@ type CategoryFilter = {
   value: string;
 };
 
-function Breadcrumbs({ selectedArticle }: { selectedArticle?: PublicArticle }) {
+function Breadcrumbs({
+  section,
+  selectedArticle,
+}: {
+  section: PublicArticleSectionConfig;
+  selectedArticle?: PublicArticle;
+}) {
   return (
     <nav className="flex items-center gap-2 text-sm font-medium text-muted mb-8 overflow-hidden whitespace-nowrap">
       <Link href="/" className="hover:text-hermes flex items-center gap-1 transition-colors shrink-0">
         <Home size={14} /> 首页
       </Link>
       <ChevronRight size={14} className="shrink-0" />
-      <Link href="/solutions" className={`transition-colors shrink-0 ${!selectedArticle ? "text-charcoal font-bold" : "hover:text-hermes"}`}>
-        解决方案中心
+      <Link href={section.route} className={`transition-colors shrink-0 ${!selectedArticle ? "text-charcoal font-bold" : "hover:text-hermes"}`}>
+        {section.breadcrumbsLabel}
       </Link>
       {selectedArticle ? (
         <>
@@ -32,7 +38,13 @@ function Breadcrumbs({ selectedArticle }: { selectedArticle?: PublicArticle }) {
   );
 }
 
-function ArticleDetail({ article }: { article: PublicArticle }) {
+function ArticleDetail({
+  article,
+  section,
+}: {
+  article: PublicArticle;
+  section: PublicArticleSectionConfig;
+}) {
   return (
     <div className="space-y-12">
       <div className="space-y-6">
@@ -64,7 +76,7 @@ function ArticleDetail({ article }: { article: PublicArticle }) {
         </div>
       </div>
 
-      <Link href="/solutions" className="inline-flex items-center gap-3 bg-charcoal text-white px-8 py-4 rounded-2xl font-bold hover:bg-hermes transition-all shadow-xl shadow-ink/20">
+      <Link href={section.route} className="inline-flex items-center gap-3 bg-charcoal text-white px-8 py-4 rounded-2xl font-bold hover:bg-hermes transition-all shadow-xl shadow-ink/20">
         <ArrowRight className="rotate-180" size={20} /> 返回列表
       </Link>
     </div>
@@ -76,27 +88,29 @@ function ArticleList({
   categories,
   selectedCategory,
   searchQuery,
+  section,
 }: {
   articles: PublicArticle[];
   categories: CategoryFilter[];
   selectedCategory: string;
   searchQuery: string;
+  section: PublicArticleSectionConfig;
 }) {
   return (
     <>
       <div className="mb-12">
         <div className="flex items-baseline gap-4">
-          <h1 className="text-4xl md:text-5xl font-black text-charcoal mb-4 tracking-tight">解决方案</h1>
+          <h1 className="text-4xl md:text-5xl font-black text-charcoal mb-4 tracking-tight">{section.title}</h1>
           <div className="h-1 lg:h-2 w-20 lg:w-32 bg-hermes/30 rounded-full" />
         </div>
         <p className="text-muted text-lg max-w-3xl leading-relaxed">
-          深入探索云璨在各行业沉淀的技术成果与实践指南。我们拒绝泛泛而谈，致力于提供可落地的架构图景与优化细节。
+          {section.description}
         </p>
       </div>
 
       <div className="sticky top-24 z-30 mb-10 transition-all">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-4 bg-white p-2 rounded-3xl border border-line shadow-xl shadow-ink/5">
-          <form action="/solutions" className="relative flex-1">
+          <form action={section.route} className="relative flex-1">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-muted" size={18} />
             {selectedCategory ? <input name="category" type="hidden" value={selectedCategory} /> : null}
             <input
@@ -113,8 +127,8 @@ function ArticleList({
                 key={category.value || "all"}
                 href={
                   category.value
-                    ? `/solutions?category=${encodeURIComponent(category.value)}${searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""}`
-                    : `/solutions${searchQuery ? `?q=${encodeURIComponent(searchQuery)}` : ""}`
+                    ? `${section.route}?category=${encodeURIComponent(category.value)}${searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""}`
+                    : `${section.route}${searchQuery ? `?q=${encodeURIComponent(searchQuery)}` : ""}`
                 }
                 className={`px-5 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-colors ${
                   selectedCategory === category.value
@@ -134,7 +148,7 @@ function ArticleList({
           articles.map((article, idx) => (
             <Link
               key={article.id}
-              href={`/articles/${article.slug}`}
+              href={`/articles/${article.slug}?from=${encodeURIComponent(section.slug)}`}
               className="block"
               aria-label={article.title}
             >
@@ -210,21 +224,23 @@ export default function SolutionsCMS(
         categories: CategoryFilter[];
         selectedCategory?: string;
         searchQuery?: string;
+        section: PublicArticleSectionConfig;
       }
-    | { mode: "detail"; article: PublicArticle },
+    | { mode: "detail"; article: PublicArticle; section: PublicArticleSectionConfig },
 ) {
   return (
     <div className="pt-32 pb-24 px-6 bg-paper min-h-screen">
       <div className="max-w-6xl mx-auto">
-        <Breadcrumbs selectedArticle={props.mode === "detail" ? props.article : undefined} />
+        <Breadcrumbs section={props.section} selectedArticle={props.mode === "detail" ? props.article : undefined} />
         {props.mode === "detail" ? (
-          <ArticleDetail article={props.article} />
+          <ArticleDetail article={props.article} section={props.section} />
         ) : (
           <ArticleList
             articles={props.articles}
             categories={props.categories}
             selectedCategory={props.selectedCategory ?? ""}
             searchQuery={props.searchQuery ?? ""}
+            section={props.section}
           />
         )}
       </div>

@@ -1,11 +1,17 @@
 import PublicLayout from "./public-layout";
 import SolutionsCMS from "../../components/SolutionsCMS";
-import type { PublicArticle } from "../../lib/articles-api";
+import type { PublicArticle, PublicArticleSectionConfig } from "../../lib/articles-api";
 
-export default function PublicArticlePage({ article }: { article: PublicArticle }) {
+export default function PublicArticlePage({
+  article,
+  section,
+}: {
+  article: PublicArticle;
+  section: PublicArticleSectionConfig;
+}) {
   return (
-    <PublicLayout active="article">
-      <SolutionsCMS mode="detail" article={article} />
+    <PublicLayout active={section.key}>
+      <SolutionsCMS mode="detail" article={article} section={section} />
     </PublicLayout>
   );
 }
