@@ -165,9 +165,16 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
             <div>
               <h5 className="font-bold mb-6 text-sm">关于我们</h5>
               <ul className="space-y-4 text-sm text-white/40">
-                <li className="hover:text-hermes transition-colors">公司简介</li>
-                <li className="hover:text-hermes transition-colors">资质荣誉</li>
-                <li className="hover:text-hermes transition-colors">合作伙伴</li>
+                <li>
+                  <Link className="hover:text-hermes transition-colors" href="/about#company-intro">
+                    公司简介
+                  </Link>
+                </li>
+                <li>
+                  <Link className="hover:text-hermes transition-colors" href="/about#honors">
+                    资质荣誉
+                  </Link>
+                </li>
               </ul>
             </div>
             <div>
