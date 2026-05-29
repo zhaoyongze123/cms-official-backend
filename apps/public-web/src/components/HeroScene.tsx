@@ -2,6 +2,11 @@ import React, { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
+function pseudoRandom(seed: number) {
+  const value = Math.sin(seed * 12.9898) * 43758.5453;
+  return value - Math.floor(value);
+}
+
 function CloudParticles() {
   const points = useRef<THREE.Points>(null!);
   const count = 1500;
@@ -9,9 +14,9 @@ function CloudParticles() {
   const positions = useMemo(() => {
     const pos = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 15;
-      pos[i * 3 + 1] = (Math.random() - 0.5) * 15;
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 15;
+      pos[i * 3] = (pseudoRandom(i * 3 + 1) - 0.5) * 15;
+      pos[i * 3 + 1] = (pseudoRandom(i * 3 + 2) - 0.5) * 15;
+      pos[i * 3 + 2] = (pseudoRandom(i * 3 + 3) - 0.5) * 15;
     }
     return pos;
   }, [count]);
