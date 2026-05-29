@@ -152,6 +152,8 @@ class SiteSettingAdmin(admin.ModelAdmin):
             "fields": (
                 "site_title", "site_logo", "favicon",
                 "seo_keywords", "seo_description",
+                "third_party_head_scripts",
+                "third_party_body_end_scripts",
                 "storage_path", "allow_video", "max_upload_size",
             )
         }),

@@ -262,23 +262,54 @@ python3 -m json.tool contracts/tiptap-document.schema.json > /dev/null
 
 ### 部署阶段行为
 
-`deploy` 阶段会在通过验证后执行远程发布流程，包括：
+`build-and-push` 阶段会在通过验证后构建并推送生产镜像。
 
-1. 安装部署用 SSH 凭据
-2. 下发生产环境变量
-3. 上传发布包
-4. 触发远端部署脚本
+生产环境不再要求 GitHub Actions 直接 SSH 进服务器。推荐改为：
+
+1. GitHub Actions 负责测试、构建、推送镜像
+2. 生产服务器本机执行 `scripts/deploy_pull_prod.sh`
+3. 由服务器主动 `docker compose pull && up`
+
+这样发布链路不再依赖 GitHub Hosted Runner 的动态出口 IP。
 
 ### 需要配置的 GitHub Secrets
 
-- `PROD_SERVER_HOST`
-- `PROD_SERVER_USER`
-- `PROD_SSH_PRIVATE_KEY`
-- `PROD_DEPLOY_PATH`
-- `PROD_NGINX_SITE_PATH`
-- `PROD_ENV_FILE`
+- `ACR_USERNAME`
+- `ACR_PASSWORD`
 
-这些 Secret 应只在 GitHub 仓库设置页维护，不应出现在仓库文档、Issue、日志或代码示例中。
+如果服务器改走主动拉取部署，`PROD_SERVER_HOST`、`PROD_SERVER_USER`、`PROD_SSH_PRIVATE_KEY`、`PROD_DEPLOY_PATH`、`PROD_ENV_FILE` 不再是 GitHub Actions 主发布链路的必填项，而是只在你仍保留 SSH 辅助流程时才需要。
+
+### 服务器主动拉取部署
+
+服务器侧准备好 `.env.prod`、`docker-compose.prod.yml` 后，可直接执行：
+
+```bash
+cd /你的部署目录
+bash scripts/deploy_pull_prod.sh
+```
+
+如果部署目录本身就是这个仓库的工作副本，脚本会默认先执行：
+
+```bash
+git fetch --prune origin
+git checkout main
+git reset --hard origin/main
+```
+
+这样服务器会先拿到最新部署脚本与编排文件，再拉最新镜像。
+
+如果你不希望脚本自动同步仓库，可设置：
+
+```bash
+SKIP_GIT_SYNC=1
+```
+
+常见做法：
+
+- 手动执行一次
+- 用 `cron` 定时执行
+- 用 `systemd timer` 定时执行
+- 由你自己的内网 Runner / 运维机触发执行
 
 ## 🔌 API 与路由概览
 

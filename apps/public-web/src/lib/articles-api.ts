@@ -138,6 +138,15 @@ export interface SiteSeoContext {
   defaultDescription: string;
 }
 
+export interface PublicSiteSettings {
+  siteTitle: string;
+  seoDescription: string;
+  thirdPartyScripts: {
+    head: string;
+    bodyEnd: string;
+  };
+}
+
 export function mapArticleToPublicArticle(article: ArticleApiItem): PublicArticle {
   const textContent = stripHtml(article.content_html);
   const excerpt = article.summary || textContent.slice(0, 140) || '该文章暂未提供摘要。';
@@ -224,6 +233,38 @@ export function getSiteSeoContext(): SiteSeoContext {
     defaultTitle: "云璨科技 | 企业云服务与架构运维",
     defaultDescription: "云璨科技提供企业上云咨询、自动化运维、混合云治理与真实架构解决方案。",
   };
+}
+
+export async function getPublicSiteSettings(): Promise<PublicSiteSettings> {
+  try {
+    const payload = await requestJson<{
+      site_title?: string;
+      seo_description?: string;
+      third_party_scripts?: {
+        head?: string;
+        body_end?: string;
+      };
+    }>("/api/public/site-settings/");
+
+    return {
+      siteTitle: payload.site_title || "企业内容管理系统",
+      seoDescription: payload.seo_description || "",
+      thirdPartyScripts: {
+        head: payload.third_party_scripts?.head || "",
+        bodyEnd: payload.third_party_scripts?.body_end || "",
+      },
+    };
+  } catch (error) {
+    logPublicApiError("公开站点设置", error);
+    return {
+      siteTitle: "企业内容管理系统",
+      seoDescription: "",
+      thirdPartyScripts: {
+        head: "",
+        bodyEnd: "",
+      },
+    };
+  }
 }
 
 export function buildOrganizationJsonLd() {

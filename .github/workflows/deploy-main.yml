@@ -26,42 +26,9 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  deploy-preflight:
-    name: 生产 SSH 预检
-    runs-on: ubuntu-latest
-    steps:
-      - name: 安装 SSH 私钥
-        env:
-          PROD_SSH_PRIVATE_KEY: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
-          PROD_SERVER_HOST: ${{ secrets.PROD_SERVER_HOST }}
-        run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$PROD_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          CLEAN_HOST="$(printf '%s' "$PROD_SERVER_HOST" | tr -d '\r\n' | xargs)"
-          test -n "$CLEAN_HOST"
-          ssh-keyscan -H "$CLEAN_HOST" >> ~/.ssh/known_hosts
-
-      - name: 校验 SSH 与部署目录
-        env:
-          PROD_SERVER_HOST: ${{ secrets.PROD_SERVER_HOST }}
-          PROD_SERVER_USER: ${{ secrets.PROD_SERVER_USER }}
-          PROD_DEPLOY_PATH: ${{ secrets.PROD_DEPLOY_PATH }}
-        run: |
-          CLEAN_HOST="$(printf '%s' "$PROD_SERVER_HOST" | tr -d '\r\n' | xargs)"
-          CLEAN_USER="$(printf '%s' "$PROD_SERVER_USER" | tr -d '\r\n' | xargs)"
-          CLEAN_DEPLOY_PATH="$(printf '%s' "$PROD_DEPLOY_PATH" | tr -d '\r\n' | xargs)"
-          test -n "$CLEAN_HOST"
-          test -n "$CLEAN_USER"
-          test -n "$CLEAN_DEPLOY_PATH"
-          ssh -o BatchMode=yes -o ConnectTimeout=10 -i ~/.ssh/id_ed25519 \
-            "${CLEAN_USER}@${CLEAN_HOST}" \
-            "mkdir -p '${CLEAN_DEPLOY_PATH}' && echo 'ssh-preflight-ok'"
-
   verify:
     name: 测试与构建
     runs-on: ubuntu-latest
-    needs: deploy-preflight
     services:
       postgres:
         image: pgvector/pgvector:pg15
@@ -359,147 +326,13 @@ jobs:
           docker tag "${REDIS_IMAGE}:7-alpine" "${ACR_BASE}/cms-redis:7-alpine"
           docker push "${ACR_BASE}/cms-redis:7-alpine"
 
-  deploy:
-    name: SSH 部署生产环境
+  deploy-ready:
+    name: 服务器主动拉取提示
     runs-on: ubuntu-latest
     needs: build-and-push
-    environment: production
     steps:
-      - name: 检出代码
-        uses: actions/checkout@v4
-
-      - name: 安装 SSH 私钥
-        env:
-          PROD_SSH_PRIVATE_KEY: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
-          PROD_SERVER_HOST: ${{ secrets.PROD_SERVER_HOST }}
+      - name: 输出主动拉取部署说明
         run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$PROD_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          CLEAN_HOST="$(printf '%s' "$PROD_SERVER_HOST" | tr -d '\r\n' | xargs)"
-          ssh-keyscan -H "$CLEAN_HOST" >> ~/.ssh/known_hosts
-
-      - name: 上传生产环境变量
-        env:
-          PROD_SERVER_HOST: ${{ secrets.PROD_SERVER_HOST }}
-          PROD_SERVER_USER: ${{ secrets.PROD_SERVER_USER }}
-          PROD_DEPLOY_PATH: ${{ secrets.PROD_DEPLOY_PATH }}
-          PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
-        run: |
-          CLEAN_HOST="$(printf '%s' "$PROD_SERVER_HOST" | tr -d '\r\n' | xargs)"
-          CLEAN_USER="$(printf '%s' "$PROD_SERVER_USER" | tr -d '\r\n' | xargs)"
-          CLEAN_DEPLOY_PATH="$(printf '%s' "$PROD_DEPLOY_PATH" | tr -d '\r\n' | xargs)"
-          if [ -n "${ACR_REGISTRY}" ] && [ -n "${ACR_NAMESPACE}" ]; then
-            DEPLOY_IMAGE_BASE="${ACR_REGISTRY}/${ACR_NAMESPACE}"
-          else
-            DEPLOY_IMAGE_BASE="${IMAGE_NAMESPACE}"
-          fi
-          printf '%s\n' "$PROD_ENV_FILE" > .env.prod
-          {
-            echo "BACKEND_IMAGE=${DEPLOY_IMAGE_BASE}/cms-backend:${IMAGE_TAG}"
-            echo "STUDIO_IMAGE=${DEPLOY_IMAGE_BASE}/cms-studio-web:${IMAGE_TAG}"
-            echo "PUBLIC_IMAGE=${DEPLOY_IMAGE_BASE}/cms-public-web:${IMAGE_TAG}"
-            echo "DB_IMAGE=${DEPLOY_IMAGE_BASE}/cms-pgvector:pg15"
-            echo "REDIS_IMAGE=${DEPLOY_IMAGE_BASE}/cms-redis:7-alpine"
-          } >> .env.prod
-          ssh -i ~/.ssh/id_ed25519 "${CLEAN_USER}@${CLEAN_HOST}" "mkdir -p '${CLEAN_DEPLOY_PATH}'"
-          scp -i ~/.ssh/id_ed25519 .env.prod \
-            "${CLEAN_USER}@${CLEAN_HOST}:${CLEAN_DEPLOY_PATH}/.env.prod"
-
-      - name: 上传部署编排文件
-        env:
-          PROD_SERVER_HOST: ${{ secrets.PROD_SERVER_HOST }}
-          PROD_SERVER_USER: ${{ secrets.PROD_SERVER_USER }}
-          PROD_DEPLOY_PATH: ${{ secrets.PROD_DEPLOY_PATH }}
-        run: |
-          CLEAN_HOST="$(printf '%s' "$PROD_SERVER_HOST" | tr -d '\r\n' | xargs)"
-          CLEAN_USER="$(printf '%s' "$PROD_SERVER_USER" | tr -d '\r\n' | xargs)"
-          CLEAN_DEPLOY_PATH="$(printf '%s' "$PROD_DEPLOY_PATH" | tr -d '\r\n' | xargs)"
-          scp -i ~/.ssh/id_ed25519 docker-compose.prod.yml \
-            "${CLEAN_USER}@${CLEAN_HOST}:${CLEAN_DEPLOY_PATH}/docker-compose.prod.yml"
-
-      - name: 远程拉取并部署
-        env:
-          PROD_SERVER_HOST: ${{ secrets.PROD_SERVER_HOST }}
-          PROD_SERVER_USER: ${{ secrets.PROD_SERVER_USER }}
-          PROD_DEPLOY_PATH: ${{ secrets.PROD_DEPLOY_PATH }}
-          GHCR_USERNAME: ${{ github.actor }}
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
-          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-        run: |
-          CLEAN_HOST="$(printf '%s' "$PROD_SERVER_HOST" | tr -d '\r\n' | xargs)"
-          CLEAN_USER="$(printf '%s' "$PROD_SERVER_USER" | tr -d '\r\n' | xargs)"
-          CLEAN_DEPLOY_PATH="$(printf '%s' "$PROD_DEPLOY_PATH" | tr -d '\r\n' | xargs)"
-          ssh -i ~/.ssh/id_ed25519 "${CLEAN_USER}@${CLEAN_HOST}" "
-            set -eu
-            if [ -n '${ACR_REGISTRY}' ] && [ -n '${ACR_NAMESPACE}' ] && [ -n '${ACR_USERNAME}' ] && [ -n '${ACR_PASSWORD}' ]; then
-              echo '${ACR_PASSWORD}' | docker login '${ACR_REGISTRY}' -u '${ACR_USERNAME}' --password-stdin
-            else
-              echo '${GHCR_TOKEN}' | docker login ${{ env.REGISTRY }} -u '${GHCR_USERNAME}' --password-stdin
-            fi
-            cd '${CLEAN_DEPLOY_PATH}'
-            export COMPOSE_PROJECT_NAME=yuncan-cms
-            reserved_ports='15432 16379 18001 18002 13000 13003'
-            cleanup_ports() {
-              for port in \$reserved_ports; do
-                docker ps -a --filter publish=\${port} --format '{{.ID}}' | while read -r cid; do
-                  [ -z \"\$cid\" ] && continue
-                  docker rm -f \"\$cid\"
-                done
-
-                if command -v ss >/dev/null 2>&1 && ss -lnt \"sport = :\${port}\" | grep -q \":\${port}\"; then
-                  ss -ltnp \"sport = :\${port}\" || true
-                  ss -ltnp \"sport = :\${port}\" 2>/dev/null | sed -n 's/.*pid=\\([0-9]\\+\\).*/\\1/p' | sort -u | while read -r pid; do
-                    [ -z \"\$pid\" ] && continue
-                    kill -TERM \"\$pid\" 2>/dev/null || true
-                  done
-                  sleep 2
-                fi
-
-                if command -v ss >/dev/null 2>&1 && ss -lnt \"sport = :\${port}\" | grep -q \":\${port}\"; then
-                  ss -ltnp \"sport = :\${port}\" 2>/dev/null | sed -n 's/.*pid=\\([0-9]\\+\\).*/\\1/p' | sort -u | while read -r pid; do
-                    [ -z \"\$pid\" ] && continue
-                    kill -KILL \"\$pid\" 2>/dev/null || true
-                  done
-                  sleep 1
-                fi
-
-                if command -v ss >/dev/null 2>&1 && ss -lnt \"sport = :\${port}\" | grep -q \":\${port}\"; then
-                  echo \"端口 \${port} 仍被占用，终止部署\" >&2
-                  ss -ltnp \"sport = :\${port}\" >&2 || true
-                  exit 1
-                fi
-              done
-            }
-
-            wait_http() {
-              url=\"\$1\"
-              attempts=\"\$2\"
-              sleep_seconds=\"\$3\"
-              attempt=1
-              while [ \"\$attempt\" -le \"\$attempts\" ]; do
-                if curl -fsS --max-time 10 \"\$url\" >/dev/null; then
-                  return 0
-                fi
-                if [ \"\$attempt\" -eq \"\$attempts\" ]; then
-                  echo \"等待地址可用失败: \$url\" >&2
-                  return 1
-                fi
-                attempt=\$((attempt + 1))
-                sleep \"\$sleep_seconds\"
-              done
-            }
-
-            docker compose --env-file .env.prod -f docker-compose.prod.yml down --remove-orphans || true
-            cleanup_ports
-            docker compose --env-file .env.prod -f docker-compose.prod.yml pull db redis web ai-service worker public-web editor-web
-            docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --remove-orphans db redis web ai-service worker
-            wait_http 'http://127.0.0.1:18001/' 24 5
-            docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --remove-orphans public-web
-            wait_http 'http://127.0.0.1:13003/solutions' 24 5
-            docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --remove-orphans editor-web
-            wait_http 'http://127.0.0.1:13000/django-admin/next-editor/login' 24 5
-            docker image prune -f
-            docker system df
-          "
+          echo "生产镜像已推送完成。"
+          echo "请在服务器上执行 scripts/deploy_pull_prod.sh，或通过 cron/systemd 定时主动拉取部署。"
+          echo "建议服务器环境变量：DEPLOY_PATH、ENV_FILE、COMPOSE_PROJECT_NAME、ACR/GHCR 登录凭据。"

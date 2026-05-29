@@ -5,6 +5,7 @@ from cms_apps.articles.models import Article, Category, Tag
 from cms_apps.faq.models import FaqItem
 from cms_apps.seo.models.metadata import SeoMetadata
 from apps.media_library.models import ImageItem
+from apps.sys_settings.models import SiteSetting
 
 
 class ArticleApiTests(TestCase):
@@ -55,6 +56,10 @@ class ArticleApiTests(TestCase):
             og_description="公开 OG 描述",
             og_image=self.og_image,
         )
+        self.site_setting, _ = SiteSetting.objects.get_or_create(id=1)
+        self.site_setting.third_party_head_scripts = "<script>window.headTracker = true;</script>"
+        self.site_setting.third_party_body_end_scripts = "<script>window.bodyTracker = true;</script>"
+        self.site_setting.save()
         FaqItem.objects.create(
             article=self.article,
             question="什么是 SEO 文章？",
@@ -333,3 +338,13 @@ class ArticleApiTests(TestCase):
         response = self.client.get(f"/api/public/articles/{self.draft_article.slug}/")
 
         self.assertEqual(response.status_code, 404)
+
+    def test_public_site_settings_returns_third_party_scripts(self):
+        response = self.client.get("/api/public/site-settings/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["site_title"], self.site_setting.site_title)
+        self.assertEqual(payload["seo_description"], self.site_setting.seo_description)
+        self.assertEqual(payload["third_party_scripts"]["head"], "<script>window.headTracker = true;</script>")
+        self.assertEqual(payload["third_party_scripts"]["body_end"], "<script>window.bodyTracker = true;</script>")

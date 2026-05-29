@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
 
 import "../src/index.css";
-import { buildOrganizationJsonLd, buildWebsiteJsonLd, getSiteSeoContext } from "../src/lib/articles-api";
+import {
+  buildOrganizationJsonLd,
+  buildWebsiteJsonLd,
+  getPublicSiteSettings,
+  getSiteSeoContext,
+} from "../src/lib/articles-api";
+
+export const dynamic = "force-dynamic";
 
 const siteSeo = getSiteSeoContext();
 
@@ -30,30 +37,37 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const publicSiteSettings = await getPublicSiteSettings();
+  const headScripts = publicSiteSettings.thirdPartyScripts.head.trim();
+  const bodyEndScripts = publicSiteSettings.thirdPartyScripts.bodyEnd.trim();
+
   return (
     <html lang="zh-CN">
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `var _hmt = _hmt || [];
-(function() {
-  var hm = document.createElement("script");
-  hm.src = "https://hm.baidu.com/hm.js?89f24b4516d0d355ef517486ac72aa96";
-  var s = document.getElementsByTagName("script")[0];
-  s.parentNode.insertBefore(hm, s);
-})();`,
-          }}
-        />
+        {headScripts ? (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: headScripts,
+            }}
+          />
+        ) : null}
       </head>
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(buildOrganizationJsonLd()) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(buildWebsiteJsonLd()) }} />
         {children}
+        {bodyEndScripts ? (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: bodyEndScripts,
+            }}
+          />
+        ) : null}
       </body>
     </html>
   );

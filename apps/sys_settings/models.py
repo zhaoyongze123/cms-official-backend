@@ -62,6 +62,18 @@ class SiteSetting(models.Model):
 
     seo_keywords = models.CharField("默认 Meta Keywords", max_length=500, blank=True)
     seo_description = models.TextField("默认 Meta Description", blank=True)
+    third_party_head_scripts = models.TextField(
+        "第三方 Head 统计代码",
+        blank=True,
+        default="",
+        help_text="粘贴需要注入到官网 <head> 的统计或验证脚本代码。",
+    )
+    third_party_body_end_scripts = models.TextField(
+        "第三方 Body 底部统计代码",
+        blank=True,
+        default="",
+        help_text="粘贴需要注入到官网 </body> 前的统计或营销脚本代码。",
+    )
 
     ai_review_model = models.CharField(
         "AI 审核与扩展生成默认模型",
