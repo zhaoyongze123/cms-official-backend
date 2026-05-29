@@ -37,6 +37,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "https://hm.baidu.com/hm.js?89f24b4516d0d355ef517486ac72aa96";
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(hm, s);
+})();`,
+          }}
+        />
+      </head>
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(buildOrganizationJsonLd()) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(buildWebsiteJsonLd()) }} />
