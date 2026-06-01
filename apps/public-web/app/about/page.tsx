@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 
 import PublicAboutPage from "../../src/features/public-site/public-about-page";
-import { getSiteSeoContext } from "../../src/lib/articles-api";
-
-const siteSeo = getSiteSeoContext();
+import { buildAbsoluteSiteUrl } from "../../src/lib/articles-api";
 
 export const metadata: Metadata = {
   title: "关于我们 | 云璨科技",
@@ -15,8 +13,13 @@ export const metadata: Metadata = {
     type: "website",
     title: "关于我们 | 云璨科技",
     description: "了解上海云璨信息技术有限公司的企业背景、服务方向与技术能力。",
-    url: `${siteSeo.baseUrl}/about`,
-    siteName: siteSeo.siteName,
+    url: buildAbsoluteSiteUrl("/about"),
+    siteName: "云璨科技",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "关于我们 | 云璨科技",
+    description: "了解上海云璨信息技术有限公司的企业背景、服务方向与技术能力。",
   },
   robots: {
     index: true,

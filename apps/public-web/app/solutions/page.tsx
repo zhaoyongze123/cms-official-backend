@@ -2,15 +2,13 @@ import type { Metadata } from "next";
 
 import PublicArticleSectionPage from "../../src/features/public-site/public-article-section-page";
 import {
+  buildAbsoluteSiteUrl,
   fetchPublishedArticles,
   filterArticlesBySection,
   getPublicArticleSectionConfig,
-  getSiteSeoContext,
 } from "../../src/lib/articles-api";
 
 export const dynamic = "force-dynamic";
-
-const siteSeo = getSiteSeoContext();
 
 export const metadata: Metadata = {
   title: "解决方案 | 云璨科技",
@@ -22,8 +20,13 @@ export const metadata: Metadata = {
     type: "website",
     title: "解决方案 | 云璨科技",
     description: "查看云璨科技公开发布的解决方案、架构实践与行业案例。",
-    url: `${siteSeo.baseUrl}/solutions`,
-    siteName: siteSeo.siteName,
+    url: buildAbsoluteSiteUrl("/solutions"),
+    siteName: "云璨科技",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "解决方案 | 云璨科技",
+    description: "查看云璨科技公开发布的解决方案、架构实践与行业案例。",
   },
   robots: {
     index: true,

@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 
 import PublicLegalPage from "../../../src/features/public-site/public-legal-page";
-import { getSiteSeoContext } from "../../../src/lib/articles-api";
-
-const siteSeo = getSiteSeoContext();
+import { buildAbsoluteSiteUrl } from "../../../src/lib/articles-api";
 
 export const metadata: Metadata = {
   title: "服务协议 | 云璨科技",
@@ -15,8 +13,13 @@ export const metadata: Metadata = {
     type: "website",
     title: "服务协议 | 云璨科技",
     description: "查看云璨科技服务协议页面，了解服务范围、交付边界与合作约定。",
-    url: `${siteSeo.baseUrl}/legal/service-agreement`,
-    siteName: siteSeo.siteName,
+    url: buildAbsoluteSiteUrl("/legal/service-agreement"),
+    siteName: "云璨科技",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "服务协议 | 云璨科技",
+    description: "查看云璨科技服务协议页面，了解服务范围、交付边界与合作约定。",
   },
   robots: {
     index: true,

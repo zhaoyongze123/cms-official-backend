@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { getSiteSeoContext } from "../src/lib/articles-api";
+import { buildAbsoluteSiteUrl, getSiteSeoContext } from "../src/lib/articles-api";
 
 export default function robots(): MetadataRoute.Robots {
   const siteSeo = getSiteSeoContext();
@@ -10,7 +10,7 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
     },
-    sitemap: `${siteSeo.baseUrl}/sitemap.xml`,
+    sitemap: buildAbsoluteSiteUrl("/sitemap.xml"),
     host: siteSeo.baseUrl,
   };
 }

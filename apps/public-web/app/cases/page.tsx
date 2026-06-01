@@ -2,15 +2,14 @@ import type { Metadata } from "next";
 
 import PublicArticleSectionPage from "../../src/features/public-site/public-article-section-page";
 import {
+  buildAbsoluteSiteUrl,
   fetchPublishedArticles,
   filterArticlesBySection,
   getPublicArticleSectionConfig,
-  getSiteSeoContext,
 } from "../../src/lib/articles-api";
 
 export const dynamic = "force-dynamic";
 
-const siteSeo = getSiteSeoContext();
 const section = getPublicArticleSectionConfig("cases");
 
 export const metadata: Metadata = {
@@ -23,8 +22,13 @@ export const metadata: Metadata = {
     type: "website",
     title: `${section.title} | 云璨科技`,
     description: section.description,
-    url: `${siteSeo.baseUrl}${section.route}`,
-    siteName: siteSeo.siteName,
+    url: buildAbsoluteSiteUrl(section.route),
+    siteName: "云璨科技",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${section.title} | 云璨科技`,
+    description: section.description,
   },
   robots: {
     index: true,

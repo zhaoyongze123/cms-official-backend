@@ -1,7 +1,15 @@
 const isServer = typeof window === "undefined";
-const publicSiteBaseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://127.0.0.1:3003";
+const publicSiteBaseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_SITE_URL || "http://127.0.0.1:3003");
 const configuredApiBaseUrl = process.env.NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL || "http://127.0.0.1:8001";
 const serverBaseUrl = configuredApiBaseUrl;
+
+function normalizeBaseUrl(value: string): string {
+  return value.replace(/\/+$/, "");
+}
+
+export function buildAbsoluteSiteUrl(path: string): string {
+  return new URL(path, `${publicSiteBaseUrl}/`).toString();
+}
 
 export interface ArticleApiCategory {
   category_id: number;
@@ -323,7 +331,7 @@ export function buildBreadcrumbJsonLd(article: PublicArticle, section?: PublicAr
         "@type": "ListItem",
         position: 2,
         name: targetSection.breadcrumbsLabel,
-        item: new URL(targetSection.route, site.baseUrl).toString(),
+        item: buildAbsoluteSiteUrl(targetSection.route),
       },
       {
         "@type": "ListItem",

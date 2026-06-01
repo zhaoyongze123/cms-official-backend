@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 
 import PublicLegalPage from "../../../src/features/public-site/public-legal-page";
-import { getSiteSeoContext } from "../../../src/lib/articles-api";
-
-const siteSeo = getSiteSeoContext();
+import { buildAbsoluteSiteUrl } from "../../../src/lib/articles-api";
 
 export const metadata: Metadata = {
   title: "隐私协议 | 云璨科技",
@@ -15,8 +13,13 @@ export const metadata: Metadata = {
     type: "website",
     title: "隐私协议 | 云璨科技",
     description: "查看云璨科技隐私协议页面，了解信息收集、使用方式与数据保护原则。",
-    url: `${siteSeo.baseUrl}/legal/privacy-policy`,
-    siteName: siteSeo.siteName,
+    url: buildAbsoluteSiteUrl("/legal/privacy-policy"),
+    siteName: "云璨科技",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "隐私协议 | 云璨科技",
+    description: "查看云璨科技隐私协议页面，了解信息收集、使用方式与数据保护原则。",
   },
   robots: {
     index: true,
