@@ -288,7 +288,24 @@ cd /你的部署目录
 bash scripts/deploy_pull_prod.sh
 ```
 
-如果部署目录本身就是这个仓库的工作副本，脚本会默认先执行：
+脚本默认会：
+
+- 跳过 GitHub 仓库同步
+- 直接使用服务器当前目录里的部署脚本和编排文件
+- 从镜像仓库拉取最新镜像并重建容器
+
+这样可以避免生产服务器发布时依赖 GitHub 网络连通性。
+
+如果你明确需要服务器先同步仓库代码，再继续部署，可显式开启：
+
+```bash
+SKIP_GIT_SYNC=0 \
+APP_BRANCH=main \
+APP_REPO=https://github.com/zhaoyongze123/cms-official-backend.git \
+bash scripts/deploy_pull_prod.sh
+```
+
+开启后脚本会先执行：
 
 ```bash
 git fetch --prune origin
@@ -297,12 +314,6 @@ git reset --hard origin/main
 ```
 
 这样服务器会先拿到最新部署脚本与编排文件，再拉最新镜像。
-
-如果你不希望脚本自动同步仓库，可设置：
-
-```bash
-SKIP_GIT_SYNC=1
-```
 
 常见做法：
 

@@ -4,7 +4,7 @@ set -euo pipefail
 DEPLOY_PATH="${DEPLOY_PATH:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 APP_BRANCH="${APP_BRANCH:-main}"
 APP_REPO="${APP_REPO:-}"
-SKIP_GIT_SYNC="${SKIP_GIT_SYNC:-0}"
+SKIP_GIT_SYNC="${SKIP_GIT_SYNC:-1}"
 ENV_FILE="${ENV_FILE:-.env.prod}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-yuncan-cms}"
@@ -44,7 +44,7 @@ if [[ "${SKIP_GIT_SYNC}" != "1" ]]; then
   git checkout "${APP_BRANCH}"
   git reset --hard "origin/${APP_BRANCH}"
 else
-  echo "[deploy-pull] 跳过 Git 同步，使用当前目录已有部署文件"
+  echo "[deploy-pull] 默认跳过 Git 同步，使用当前目录已有部署文件并从镜像仓库拉取最新镜像"
 fi
 
 if [[ ! -f "${ENV_FILE}" ]]; then
