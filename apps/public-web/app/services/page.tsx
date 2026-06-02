@@ -13,22 +13,32 @@ export const dynamic = "force-dynamic";
 const section = getPublicArticleSectionConfig("services");
 
 export const metadata: Metadata = {
-  title: `${section.title} | 云璨科技`,
-  description: section.description,
+  title: "上云服务 - 公有云迁移·私有化实施·AI开发 | 云璨信息",
+  description: "云璨信息提供企业上云全流程服务：公有云资源采购与迁移、私有化本地部署实施、AI应用定制开发，涵盖AI助手、智能问答、知识库等场景。阿里云授权合作伙伴，从需求评估到上线交付提供全程技术支持。",
+  keywords: [
+    "企业上云服务",
+    "公有云迁移",
+    "私有化实施",
+    "AI应用开发",
+    "AI助手定制",
+    "阿里云代理商",
+    "混合云部署",
+    "上海云服务商",
+  ],
   alternates: {
     canonical: section.route,
   },
   openGraph: {
     type: "website",
-    title: `${section.title} | 云璨科技`,
-    description: section.description,
+    title: "上云服务 - 公有云迁移·私有化实施·AI开发 | 云璨信息",
+    description: "云璨信息提供企业上云全流程服务：公有云资源采购与迁移、私有化本地部署实施、AI应用定制开发，涵盖AI助手、智能问答、知识库等场景。阿里云授权合作伙伴，从需求评估到上线交付提供全程技术支持。",
     url: buildAbsoluteSiteUrl(section.route),
-    siteName: "云璨科技",
+    siteName: "云璨信息",
   },
   twitter: {
     card: "summary_large_image",
-    title: `${section.title} | 云璨科技`,
-    description: section.description,
+    title: "上云服务 - 公有云迁移·私有化实施·AI开发 | 云璨信息",
+    description: "云璨信息提供企业上云全流程服务：公有云资源采购与迁移、私有化本地部署实施、AI应用定制开发，涵盖AI助手、智能问答、知识库等场景。阿里云授权合作伙伴，从需求评估到上线交付提供全程技术支持。",
   },
   robots: {
     index: true,

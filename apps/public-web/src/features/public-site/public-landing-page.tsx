@@ -149,7 +149,15 @@ function ConsultationModal({ open, onClose }: { open: boolean; onClose: () => vo
   );
 }
 
-export default function PublicLandingPage() {
+interface PublicLandingPageProps {
+  articleLinks: {
+    services: string;
+    solutions: string;
+    cases: string;
+  };
+}
+
+export default function PublicLandingPage({ articleLinks }: PublicLandingPageProps) {
   const titleContainerRef = useRef<HTMLDivElement>(null);
   const [consultationOpen, setConsultationOpen] = useState(false);
 
@@ -312,7 +320,7 @@ export default function PublicLandingPage() {
           </div>
 
           <div className="relative">
-            <InteractiveCard />
+            <InteractiveCard articleLinks={articleLinks} />
           </div>
         </div>
       </section>

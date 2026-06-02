@@ -11,22 +11,35 @@ import {
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "解决方案 | 云璨科技",
-  description: "查看云璨科技公开发布的解决方案、架构实践与行业案例。",
+  title: "解决方案 - 公有云·私有化部署·AI应用 | 云璨信息",
+  description: "云璨信息解决方案中心，提供公有云资源、私有化本地部署及AI应用定制开发方案，涵盖企业网盘、邮件系统、AI助手、智能问答、知识库等场景，支持云上与本地灵活选择。含真实行业落地案例与完整技术文档，欢迎查看或咨询。",
+  keywords: [
+    "企业云解决方案",
+    "私有化部署方案",
+    "AI助手定制",
+    "AI知识库搭建",
+    "智能问答系统",
+    "企业网盘部署",
+    "邮件系统解决方案",
+    "邮件归档解决方案",
+    "邮件安全网关解决方案",
+    "公有云方案",
+    "本地化部署",
+  ],
   alternates: {
     canonical: "/solutions",
   },
   openGraph: {
     type: "website",
-    title: "解决方案 | 云璨科技",
-    description: "查看云璨科技公开发布的解决方案、架构实践与行业案例。",
+    title: "解决方案 - 公有云·私有化部署·AI应用 | 云璨信息",
+    description: "云璨信息解决方案中心，提供公有云资源、私有化本地部署及AI应用定制开发方案，涵盖企业网盘、邮件系统、AI助手、智能问答、知识库等场景，支持云上与本地灵活选择。含真实行业落地案例与完整技术文档，欢迎查看或咨询。",
     url: buildAbsoluteSiteUrl("/solutions"),
-    siteName: "云璨科技",
+    siteName: "云璨信息",
   },
   twitter: {
     card: "summary_large_image",
-    title: "解决方案 | 云璨科技",
-    description: "查看云璨科技公开发布的解决方案、架构实践与行业案例。",
+    title: "解决方案 - 公有云·私有化部署·AI应用 | 云璨信息",
+    description: "云璨信息解决方案中心，提供公有云资源、私有化本地部署及AI应用定制开发方案，涵盖企业网盘、邮件系统、AI助手、智能问答、知识库等场景，支持云上与本地灵活选择。含真实行业落地案例与完整技术文档，欢迎查看或咨询。",
   },
   robots: {
     index: true,

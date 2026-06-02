@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteSeo.baseUrl),
   title: siteSeo.defaultTitle,
   description: siteSeo.defaultDescription,
+  keywords: siteSeo.defaultKeywords,
   alternates: {
     canonical: "/",
   },

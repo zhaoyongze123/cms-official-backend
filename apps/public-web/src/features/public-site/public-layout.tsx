@@ -4,7 +4,7 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useScroll, useSpring } from "motion/react";
-import { ArrowRight, Cloud, ExternalLink, Headset, Mail, Phone, Shield } from "lucide-react";
+import { Headset, Mail, Menu, Phone, X } from "lucide-react";
 
 interface PublicLayoutProps {
   active: "landing" | "services" | "solutions" | "products" | "cases" | "about" | "article";
@@ -13,6 +13,7 @@ interface PublicLayoutProps {
 
 export default function PublicLayout({ active, children }: PublicLayoutProps) {
   const { scrollYProgress } = useScroll();
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const scaleX = useSpring(scrollYProgress, {
     stiffness: 100,
     damping: 30,
@@ -20,13 +21,20 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
   });
   const contactQrPath = "/contact-qr.png";
   const logoPath = "/yuncan-logo.png";
+  const navItems = [
+    { href: "/services", label: "上云服务", active: active === "services" },
+    { href: "/solutions", label: "解决方案", active: active === "solutions" || active === "article" },
+    { href: "/cases", label: "客户案例", active: active === "cases" },
+    { href: "/products", label: "产品中心", active: active === "products" },
+    { href: "/about", label: "关于我们", active: active === "about" },
+  ];
 
   return (
     <div className="relative min-h-screen selection:bg-hermes/30 bg-paper overflow-x-hidden">
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-line px-6 py-4 shadow-sm">
         <motion.div className="absolute bottom-0 left-0 right-0 h-[2px] bg-hermes origin-left" style={{ scaleX }} />
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link className="flex items-center gap-3 cursor-pointer" href="/">
+        <div className="relative max-w-7xl mx-auto flex items-center justify-between gap-4">
+          <Link className="flex items-center gap-3 cursor-pointer shrink-0" href="/">
             <Image
               alt="YUNCAN professional service"
               className="h-auto w-[15.2rem] max-w-none"
@@ -36,30 +44,50 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
               width={2164}
             />
           </Link>
-          <div className="hidden md:flex items-center gap-8 lg:gap-10">
-            <Link className={`text-sm font-semibold transition-colors relative group ${active === "services" ? "text-hermes" : "text-charcoal hover:text-hermes"}`} href="/services">
-              上云服务
-            </Link>
-            <Link className={`text-sm font-semibold transition-colors relative group ${active === "solutions" || active === "article" ? "text-hermes" : "text-charcoal hover:text-hermes"}`} href="/solutions">
-              解决方案
-            </Link>
-            <Link className={`text-sm font-semibold transition-colors relative group ${active === "cases" ? "text-hermes" : "text-charcoal hover:text-hermes"}`} href="/cases">
-              客户案例
-            </Link>
-            <Link className={`text-sm font-semibold transition-colors relative group ${active === "products" ? "text-hermes" : "text-charcoal hover:text-hermes"}`} href="/products">
-              产品中心
-            </Link>
-            <Link className={`text-sm font-semibold transition-colors relative group ${active === "about" ? "text-hermes" : "text-charcoal hover:text-hermes"}`} href="/about">
-              关于我们
-            </Link>
+          <div className="absolute left-1/2 hidden -translate-x-1/2 md:flex items-center justify-center gap-8 lg:gap-10">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                className={`text-sm font-semibold transition-colors relative group ${item.active ? "text-hermes" : "text-charcoal hover:text-hermes"}`}
+                href={item.href}
+              >
+                {item.label}
+              </Link>
+            ))}
           </div>
-          <Link
-            href="/solutions"
-            className="bg-ink text-white px-5 lg:px-6 py-2.5 rounded-full text-xs lg:text-sm font-bold shadow-lg shadow-ink/20 hover:bg-hermes transition-colors shrink-0"
+          <div className="hidden md:block h-14 w-[15.2rem] shrink-0" aria-hidden="true" />
+          <button
+            type="button"
+            aria-label={mobileMenuOpen ? "关闭导航菜单" : "打开导航菜单"}
+            onClick={() => setMobileMenuOpen((open) => !open)}
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[1.6rem] border border-line bg-white text-charcoal shadow-[0_18px_35px_rgba(15,23,42,0.08)] transition-colors hover:border-hermes hover:text-hermes md:hidden"
           >
-            架构知识库
-          </Link>
+            {mobileMenuOpen ? <X size={26} strokeWidth={1.8} /> : <Menu size={26} strokeWidth={1.8} />}
+          </button>
         </div>
+        <motion.div
+          initial={false}
+          animate={{
+            height: mobileMenuOpen ? "auto" : 0,
+            opacity: mobileMenuOpen ? 1 : 0,
+            marginTop: mobileMenuOpen ? 16 : 0,
+          }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="mx-auto max-w-7xl overflow-hidden md:hidden"
+        >
+          <div className="rounded-[1.8rem] border border-line bg-white p-3 shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block rounded-[1.1rem] px-4 py-3 text-sm font-bold transition-colors ${item.active ? "bg-hermes/10 text-hermes" : "text-charcoal hover:bg-mist"}`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </motion.div>
       </nav>
 
       {children}

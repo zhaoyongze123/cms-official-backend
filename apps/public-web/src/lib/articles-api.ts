@@ -144,6 +144,7 @@ export interface SiteSeoContext {
   baseUrl: string;
   defaultTitle: string;
   defaultDescription: string;
+  defaultKeywords: string[];
 }
 
 export interface PublicSiteSettings {
@@ -236,10 +237,24 @@ function logPublicApiError(scope: string, error: unknown) {
 
 export function getSiteSeoContext(): SiteSeoContext {
   return {
-    siteName: "云璨科技",
+    siteName: "云璨信息",
     baseUrl: publicSiteBaseUrl,
-    defaultTitle: "云璨科技 | 企业云服务与架构运维",
-    defaultDescription: "云璨科技提供企业上云咨询、自动化运维、混合云治理与真实架构解决方案。",
+    defaultTitle: "云璨信息 - 上海云服务商 | 公有云·私有化部署·AI应用解决方案",
+    defaultDescription: "云璨信息是上海专业云服务商，为金融、政务、制造业企业提供公有云资源、私有化部署、企业邮件及AI应用的一站式解决方案。依托真实行业落地案例，从选型、开发到交付全程支持。阿里云授权合作伙伴，欢迎咨询方案报价。",
+    defaultKeywords: [
+      "阿里云代理商",
+      "私有化部署",
+      "企业AI解决方案",
+      "公有云解决方案",
+      "邮件系统",
+      "邮件归档",
+      "邮件安全网关",
+      "MailStore",
+      "MDaemon",
+      "SecurityGateway",
+      "上海云服务",
+      "企业数字化",
+    ],
   };
 }
 
@@ -392,7 +407,17 @@ export function getPublicArticleSectionConfig(section: PublicArticleSectionKey):
       breadcrumbsLabel: "上云服务",
       categorySlugs: ["services", "cloud-services", "service", "上云服务"],
       tagSlugs: ["services", "cloud-services", "service", "上云服务"],
-      keywords: ["上云服务", "迁移", "运维", "托管", "咨询"],
+      keywords: [
+        "上云服务",
+        "云上",
+        "迁移",
+        "运维",
+        "托管",
+        "咨询",
+        "数据备份",
+        "邮件归档",
+        "企业邮箱",
+      ],
     },
     solutions: {
       key: "solutions",
@@ -403,7 +428,7 @@ export function getPublicArticleSectionConfig(section: PublicArticleSectionKey):
       breadcrumbsLabel: "解决方案中心",
       categorySlugs: ["solutions", "solution", "架构方案", "解决方案"],
       tagSlugs: ["solutions", "solution", "架构方案", "解决方案"],
-      keywords: ["解决方案", "架构", "案例", "实践", "方案"],
+      keywords: ["解决方案", "架构", "方案", "网盘", "建站", "ChatGPT", "企业邮箱"],
     },
     products: {
       key: "products",
@@ -425,7 +450,7 @@ export function getPublicArticleSectionConfig(section: PublicArticleSectionKey):
       breadcrumbsLabel: "客户案例",
       categorySlugs: ["cases", "case", "customer-case", "客户案例"],
       tagSlugs: ["cases", "case", "customer-case", "客户案例"],
-      keywords: ["客户案例", "案例", "落地", "实践", "复盘"],
+      keywords: ["客户案例", "案例", "落地", "实践", "试点", "观察", "复盘", "AI验证"],
     },
   };
 
@@ -445,6 +470,8 @@ function isMatchedByKeywords(article: PublicArticle, keywords: string[]): boolea
     article.excerpt,
     article.category,
     article.contentText,
+    article.seo.metaTitle,
+    article.seo.metaDescription,
     ...article.tags,
   ]
     .join(" ")
