@@ -17,6 +17,13 @@ export const metadata: Metadata = {
   title: siteSeo.defaultTitle,
   description: siteSeo.defaultDescription,
   keywords: siteSeo.defaultKeywords,
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", type: "image/png", sizes: "1254x1254" },
+    ],
+    shortcut: ["/favicon.ico"],
+  },
   alternates: {
     canonical: "/",
   },
