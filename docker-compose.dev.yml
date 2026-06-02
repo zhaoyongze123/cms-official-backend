@@ -130,7 +130,7 @@ services:
     env_file:
       - .env
     environment:
-      NEXT_EDITOR_DEV_ORIGIN: http://127.0.0.1:3000
+      NEXT_EDITOR_DEV_ORIGIN: http://127.0.0.1:8001
       WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"
       NODE_ENV: development

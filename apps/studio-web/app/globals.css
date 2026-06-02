@@ -19,6 +19,11 @@
   --editor-warning-bg: #fff9ec;
   --editor-warning-border: #f6df9f;
   --editor-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --editor-paper-width: 794px;
+  --editor-paper-height: 1123px;
+  --editor-paper-padding-x: 88px;
+  --editor-paper-padding-top: 82px;
+  --editor-paper-padding-bottom: 110px;
 }
 
 * {
@@ -29,10 +34,15 @@ html,
 body {
   margin: 0;
   padding: 0;
+  height: 100%;
   min-height: 100%;
   background: var(--editor-bg);
   color: var(--editor-text);
   font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+body {
+  overflow: auto;
 }
 
 button,
@@ -432,7 +442,93 @@ main {
 }
 
 .editor-workspace.embedded {
-  min-height: auto;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.editor-workspace.embedded,
+.editor-workspace.embedded > * {
+  min-height: 0;
+}
+
+.editor-workspace.embedded .word-titlebar {
+  flex: 0 0 auto;
+}
+
+.editor-workspace.embedded .word-workspace {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.editor-workspace.embedded .word-sidebar {
+  height: 100%;
+  position: static;
+  top: auto;
+}
+
+.editor-workspace.embedded .word-main {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.editor-workspace.embedded .word-ribbon-host {
+  flex: 0 0 auto;
+}
+
+.editor-workspace.embedded .word-canvas-shell {
+  min-height: 0;
+  height: 100%;
+}
+
+.editor-workspace.embedded .editor-content-shell {
+  min-height: 0;
+  height: 100%;
+  padding-bottom: 0;
+}
+
+.editor-workspace.embedded .editor-body-panel {
+  min-height: 0;
+  height: 100%;
+}
+
+.editor-workspace.embedded .editor-article-preview {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.editor-workspace.embedded .tiptap-editor-shell {
+  min-height: 0;
+  height: 100%;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.editor-workspace.embedded .tiptap-editor-layout {
+  min-height: 0;
+  height: 100%;
+}
+
+.editor-workspace.embedded .tiptap-editor-main {
+  min-height: 0;
+  height: 100%;
+  display: grid;
+}
+
+.editor-workspace.embedded .tiptap-editor-content {
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.editor-workspace.embedded .word-statusbar {
+  flex: 0 0 auto;
 }
 
 .word-titlebar {
@@ -758,7 +854,8 @@ main {
 
 .word-main {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 0;
   background: #e5e5e5;
 }
 
@@ -961,7 +1058,9 @@ main {
   display: grid;
   grid-template-columns: repeat(18, minmax(0, 1fr));
   align-items: end;
-  padding: 0 110px 0 120px;
+  width: var(--editor-paper-width);
+  margin: 0 auto;
+  padding: 0 var(--editor-paper-padding-x);
   border-bottom: 1px solid #c7c7c7;
   background: #f8f8f8;
   color: #666;
@@ -1387,6 +1486,9 @@ main {
 
 .tiptap-editor-content {
   position: relative;
+  display: grid;
+  align-content: start;
+  justify-items: center;
   border: 0;
   border-radius: 0;
   background: #dcdcdc;
@@ -1407,7 +1509,7 @@ main {
   position: absolute;
   top: 16px;
   left: 50%;
-  width: 816px;
+  width: var(--editor-paper-width);
   height: 40px;
   transform: translateX(-50%);
   border-top: 2px solid rgba(24, 90, 189, 0.95);
@@ -1431,21 +1533,40 @@ main {
   letter-spacing: 0.04em;
 }
 
-.tiptap-editor-content .tiptap {
-  min-height: 980px;
-  width: 816px;
+.tiptap-paper-shell {
+  width: var(--editor-paper-width);
   margin: 0 auto;
-  padding: 82px 88px 110px;
+  min-height: var(--editor-paper-height);
   border: 1px solid #c6c6c6;
   border-radius: 0;
   background: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16);
+}
+
+.tiptap-paper-shell.is-hidden {
+  display: none;
+}
+
+.tiptap-paper {
+  width: 100%;
+  min-height: var(--editor-paper-height);
+}
+
+.tiptap-paper.ProseMirror,
+.tiptap-paper.tiptap,
+.tiptap-paper .ProseMirror,
+.tiptap-paper .tiptap {
+  min-height: var(--editor-paper-height);
+  width: 100%;
+  padding: var(--editor-paper-padding-top) var(--editor-paper-padding-x) var(--editor-paper-padding-bottom);
+  border: 0;
   outline: none;
   line-height: 1.7;
   color: var(--editor-text);
+  background: transparent;
 }
 
-.tiptap-editor-content .tiptap p.is-editor-empty:first-child::before {
+.tiptap-paper p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
   color: #9aa6bd;
@@ -1453,46 +1574,46 @@ main {
   height: 0;
 }
 
-.tiptap-editor-content .tiptap h1,
-.tiptap-editor-content .tiptap h2,
-.tiptap-editor-content .tiptap h3 {
+.tiptap-paper h1,
+.tiptap-paper h2,
+.tiptap-paper h3 {
   margin: 1.2em 0 0.55em;
   line-height: 1.3;
 }
 
-.tiptap-editor-content .tiptap h1 {
+.tiptap-paper h1 {
   font-size: 2rem;
 }
 
-.tiptap-editor-content .tiptap h2 {
+.tiptap-paper h2 {
   font-size: 1.45rem;
 }
 
-.tiptap-editor-content .tiptap h3 {
+.tiptap-paper h3 {
   font-size: 1.15rem;
 }
 
-.tiptap-editor-content .tiptap p,
-.tiptap-editor-content .tiptap ul,
-.tiptap-editor-content .tiptap ol,
-.tiptap-editor-content .tiptap blockquote,
-.tiptap-editor-content .tiptap pre {
+.tiptap-paper p,
+.tiptap-paper ul,
+.tiptap-paper ol,
+.tiptap-paper blockquote,
+.tiptap-paper pre {
   margin: 0.85em 0;
 }
 
-.tiptap-editor-content .tiptap ul,
-.tiptap-editor-content .tiptap ol {
+.tiptap-paper ul,
+.tiptap-paper ol {
   padding-left: 1.4rem;
 }
 
-.tiptap-editor-content .tiptap blockquote {
+.tiptap-paper blockquote {
   padding-left: 16px;
   border-left: 3px solid rgba(99, 91, 255, 0.28);
   color: #566177;
   background: rgba(99, 91, 255, 0.04);
 }
 
-.tiptap-editor-content .tiptap pre {
+.tiptap-paper pre {
   padding: 14px 16px;
   border-radius: 14px;
   background: #101728;
@@ -1500,7 +1621,7 @@ main {
   overflow-x: auto;
 }
 
-.tiptap-editor-content .tiptap img {
+.tiptap-paper img {
   display: block;
   max-width: 100%;
   margin: 16px 0;
@@ -1508,7 +1629,7 @@ main {
   box-shadow: none;
 }
 
-.tiptap-editor-content .tiptap [data-resize-container] {
+.tiptap-paper [data-resize-container] {
   position: relative;
   display: flex;
   width: fit-content;
@@ -1516,106 +1637,106 @@ main {
   margin: 18px 0;
 }
 
-.tiptap-editor-content .tiptap [data-resize-wrapper] {
+.tiptap-paper [data-resize-wrapper] {
   position: relative;
   display: inline-block;
   max-width: 100%;
   line-height: 0;
 }
 
-.tiptap-editor-content .tiptap [data-resize-wrapper] img {
+.tiptap-paper [data-resize-wrapper] img {
   margin: 0;
 }
 
-.tiptap-editor-content .tiptap [data-resize-handle] {
+.tiptap-paper [data-resize-handle] {
   position: absolute;
   z-index: 3;
   background: rgba(36, 96, 188, 0.14);
 }
 
-.tiptap-editor-content .tiptap [data-resize-handle="top"],
-.tiptap-editor-content .tiptap [data-resize-handle="bottom"] {
+.tiptap-paper [data-resize-handle="top"],
+.tiptap-paper [data-resize-handle="bottom"] {
   left: 0;
   width: 100%;
   height: 8px;
   cursor: ns-resize;
 }
 
-.tiptap-editor-content .tiptap [data-resize-handle="top"] {
+.tiptap-paper [data-resize-handle="top"] {
   top: -4px;
 }
 
-.tiptap-editor-content .tiptap [data-resize-handle="bottom"] {
+.tiptap-paper [data-resize-handle="bottom"] {
   bottom: -4px;
 }
 
-.tiptap-editor-content .tiptap [data-resize-handle="left"],
-.tiptap-editor-content .tiptap [data-resize-handle="right"] {
+.tiptap-paper [data-resize-handle="left"],
+.tiptap-paper [data-resize-handle="right"] {
   top: 0;
   width: 8px;
   height: 100%;
   cursor: ew-resize;
 }
 
-.tiptap-editor-content .tiptap [data-resize-handle="left"] {
+.tiptap-paper [data-resize-handle="left"] {
   left: -4px;
 }
 
-.tiptap-editor-content .tiptap [data-resize-handle="right"] {
+.tiptap-paper [data-resize-handle="right"] {
   right: -4px;
 }
 
-.tiptap-editor-content .tiptap [data-resize-handle="top-left"],
-.tiptap-editor-content .tiptap [data-resize-handle="top-right"],
-.tiptap-editor-content .tiptap [data-resize-handle="bottom-left"],
-.tiptap-editor-content .tiptap [data-resize-handle="bottom-right"] {
+.tiptap-paper [data-resize-handle="top-left"],
+.tiptap-paper [data-resize-handle="top-right"],
+.tiptap-paper [data-resize-handle="bottom-left"],
+.tiptap-paper [data-resize-handle="bottom-right"] {
   width: 12px;
   height: 12px;
   border: 1px solid #2460bc;
   background: #ffffff;
 }
 
-.tiptap-editor-content .tiptap [data-resize-handle="top-left"] {
+.tiptap-paper [data-resize-handle="top-left"] {
   top: -6px;
   left: -6px;
   cursor: nwse-resize;
 }
 
-.tiptap-editor-content .tiptap [data-resize-handle="top-right"] {
+.tiptap-paper [data-resize-handle="top-right"] {
   top: -6px;
   right: -6px;
   cursor: nesw-resize;
 }
 
-.tiptap-editor-content .tiptap [data-resize-handle="bottom-left"] {
+.tiptap-paper [data-resize-handle="bottom-left"] {
   bottom: -6px;
   left: -6px;
   cursor: nesw-resize;
 }
 
-.tiptap-editor-content .tiptap [data-resize-handle="bottom-right"] {
+.tiptap-paper [data-resize-handle="bottom-right"] {
   right: -6px;
   bottom: -6px;
   cursor: nwse-resize;
 }
 
-.tiptap-editor-content .tiptap img.ProseMirror-selectednode,
-.tiptap-editor-content .tiptap .ProseMirror-selectednode img,
-.tiptap-editor-content .tiptap .editor-inline-image.ProseMirror-selectednode,
-.tiptap-editor-content .tiptap [data-resize-container][data-resize-state="true"],
-.tiptap-editor-content .tiptap .ProseMirror-selectednode[data-resize-container] {
+.tiptap-paper img.ProseMirror-selectednode,
+.tiptap-paper .ProseMirror-selectednode img,
+.tiptap-paper .editor-inline-image.ProseMirror-selectednode,
+.tiptap-paper [data-resize-container][data-resize-state="true"],
+.tiptap-paper .ProseMirror-selectednode[data-resize-container] {
   outline: 3px solid rgba(73, 118, 255, 0.32);
   outline-offset: 4px;
 }
 
-.tiptap-editor-content .tiptap a {
+.tiptap-paper a {
   color: var(--editor-primary-deep);
   text-decoration: underline;
 }
 
 .tiptap-html-source-panel {
-  width: 920px;
-  min-height: 980px;
+  width: var(--editor-paper-width);
+  min-height: var(--editor-paper-height);
   margin: 0 auto;
   border: 1px solid #20242f;
   background: #1e1e1e;
@@ -2135,9 +2256,23 @@ main {
     height: 34px;
   }
 
-  .tiptap-editor-content .tiptap {
+  .tiptap-paper-shell {
     width: calc(100vw - 32px);
     min-height: 480px;
+  }
+
+  .tiptap-paper,
+  .tiptap-paper.ProseMirror,
+  .tiptap-paper.tiptap,
+  .tiptap-paper .ProseMirror,
+  .tiptap-paper .tiptap {
+    min-height: 480px;
+  }
+
+  .tiptap-paper.ProseMirror,
+  .tiptap-paper.tiptap,
+  .tiptap-paper .ProseMirror,
+  .tiptap-paper .tiptap {
     padding: 48px 24px 56px;
   }
 

@@ -27,21 +27,38 @@
 </div>
 
 <style>
+  :root {
+    --next-editor-frame-height: 1440px;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
   .next-editor-admin-shell {
     display: flex;
     flex-direction: column;
+    min-height: var(--next-editor-frame-height);
   }
 
   .next-editor-admin-frame {
+    flex: 1 1 auto;
+    min-height: var(--next-editor-frame-height);
     border-radius: 18px;
     border: 1px solid var(--admin-border);
     box-shadow: var(--admin-shadow);
     overflow: hidden;
   }
 
+  .next-editor-admin-frame .card-body {
+    height: 100%;
+    min-height: var(--next-editor-frame-height);
+  }
+
   .next-editor-frame {
     width: 100%;
-    min-height: 1180px;
+    height: var(--next-editor-frame-height);
+    min-height: var(--next-editor-frame-height);
     border: 0;
     display: block;
     background: transparent;
@@ -51,33 +68,26 @@
 <script>
   (function () {
     const frame = document.getElementById("next-editor-frame");
+    const fixedFrameHeight = 1440;
     if (!frame) {
       return;
     }
 
+    if (window.history && "scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+    window.scrollTo({ top: 0, behavior: "auto" });
+
     function syncFrameHeight() {
-      try {
-        const body = frame.contentWindow.document.body;
-        const documentElement = frame.contentWindow.document.documentElement;
-        const nextHeight = Math.max(
-          body ? body.scrollHeight : 0,
-          documentElement ? documentElement.scrollHeight : 0,
-          1180
-        );
-        frame.style.height = `${nextHeight}px`;
-      } catch (error) {
-        frame.style.height = "1180px";
-      }
+      const nextHeight = fixedFrameHeight;
+      frame.style.height = `${nextHeight}px`;
+      frame.style.minHeight = `${nextHeight}px`;
+      document.documentElement.style.setProperty("--next-editor-frame-height", `${nextHeight}px`);
     }
 
     frame.addEventListener("load", syncFrameHeight);
     window.addEventListener("resize", syncFrameHeight);
-    window.addEventListener("message", function (event) {
-      if (!event.data || event.data.type !== "next-editor-resize") {
-        return;
-      }
-      frame.style.height = `${Math.max(event.data.height || 0, 1180)}px`;
-    });
+    window.requestAnimationFrame(syncFrameHeight);
   })();
 </script>
 {% endblock %}
