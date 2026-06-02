@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { fetchServerDashboardSeoAudit, fetchServerDashboardSeoSummary } from "../../lib/server-analytics";
-import { studioProxyPath } from "../../lib/routes";
+import { studioBrowserPath } from "../../lib/routes";
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("zh-CN").format(value);
@@ -61,7 +61,7 @@ export async function SeoMonitoringDashboard({ embedded = false }: { embedded?: 
         <div className="seo-monitor-toolbar">
           <button className="seo-filter-chip" type="button">默认站点</button>
           <button className="seo-filter-chip" type="button">最近快照</button>
-          <a className="seo-filter-chip is-primary" href={studioProxyPath("/api/dashboard/seo-summary/")} target="_blank" rel="noreferrer">
+          <a className="seo-filter-chip is-primary" href={studioBrowserPath("/api/dashboard/seo-summary/")} target="_blank" rel="noreferrer">
             导出 JSON
           </a>
         </div>
@@ -228,7 +228,7 @@ export async function SeoMonitoringDashboard({ embedded = false }: { embedded?: 
               </div>
               <div className="seo-detail-actions">
                 <Link className="seo-inline-button is-primary" href={`/studio/articles/${selectedRow.article.article_id}`}>打开编辑器</Link>
-                <a className="seo-inline-button" href={studioProxyPath(`/api/articles/${selectedRow.article.article_id}/analytics/`)} target="_blank" rel="noreferrer">查看快照 JSON</a>
+                <a className="seo-inline-button" href={studioBrowserPath(`/api/articles/${selectedRow.article.article_id}/analytics/`)} target="_blank" rel="noreferrer">查看快照 JSON</a>
                 <button className="seo-inline-button" type="button">标记已处理</button>
               </div>
             </div>

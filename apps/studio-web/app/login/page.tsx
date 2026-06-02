@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { studioProxyPath } from "../../lib/routes";
+import { studioBrowserPath, studioProxyPath } from "../../lib/routes";
 import { DJANGO_SESSION_COOKIE } from "../../lib/session";
 
 const djangoSiteOrigin =
@@ -28,7 +28,7 @@ export default async function LoginPage() {
             <a className="cta primary" href={`${djangoSiteOrigin}/django-admin/login/?next=/django-admin/next-editor/studio/articles`}>
               前往 Django Admin 登录
             </a>
-            <a className="cta" href={studioProxyPath("/api/articles")} target="_blank" rel="noreferrer">
+            <a className="cta" href={studioBrowserPath("/api/articles")} target="_blank" rel="noreferrer">
               查看 Django API
             </a>
           </div>

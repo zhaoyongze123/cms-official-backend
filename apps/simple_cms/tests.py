@@ -9,6 +9,7 @@ from django.test import RequestFactory, SimpleTestCase, TestCase, override_setti
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.simple_cms.admin import ArticleAdmin
 from apps.simple_cms.admin_views import next_editor_proxy
 from apps.media_library.models import ImageItem
 
@@ -355,3 +356,21 @@ class NextEditorProxyTests(SimpleTestCase):
         self.assertEqual(upstream_request.data, request.body)
         self.assertEqual(response.status_code, 200)
         self.assertJSONEqual(response.content, {"ok": True})
+
+
+@override_settings(ROOT_URLCONF="config.urls")
+class ArticleAdminEditorUrlTests(SimpleTestCase):
+    @override_settings(NEXT_PUBLIC_EDITOR_BASE_URL="http://127.0.0.1:3000")
+    def test_build_next_editor_url_prefers_public_editor_origin(self):
+        url = ArticleAdmin._build_next_editor_url("/django-admin/articles/17/")
+
+        self.assertEqual(
+            url,
+            "http://127.0.0.1:3000/django-admin/next-editor/django-admin/articles/17/",
+        )
+
+    @override_settings(NEXT_PUBLIC_EDITOR_BASE_URL="")
+    def test_build_next_editor_url_falls_back_to_proxy(self):
+        url = ArticleAdmin._build_next_editor_url("/django-admin/articles/new/")
+
+        self.assertEqual(url, "/django-admin/next-editor/django-admin/articles/new/")

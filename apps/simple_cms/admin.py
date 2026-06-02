@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -122,16 +123,29 @@ class ArticleAdmin(admin.ModelAdmin):
     class Media:
         js = ("js/admin_article_draft_guard.js",)
 
+    @staticmethod
+    def _build_next_editor_url(path: str) -> str:
+        editor_base_url = getattr(settings, "NEXT_PUBLIC_EDITOR_BASE_URL", "").rstrip("/")
+        editor_base_path = "/django-admin/next-editor"
+
+        if editor_base_url:
+            normalized_path = path if path.startswith("/") else f"/{path}"
+            return f"{editor_base_url}{editor_base_path}{normalized_path}"
+
+        proxy_base = reverse("next_editor_proxy_root")
+        normalized_proxy_path = path.lstrip("/")
+        return f"{proxy_base}{normalized_proxy_path}"
+
     def change_view(self, request, object_id, form_url="", extra_context=None):
         extra_context = extra_context or {}
-        extra_context["next_editor_url"] = reverse("next_editor_proxy_root") + f"django-admin/articles/{object_id}/"
+        extra_context["next_editor_url"] = self._build_next_editor_url(f"/django-admin/articles/{object_id}/")
         extra_context["workspace_mode"] = "change"
         extra_context["workspace_title"] = "编辑文章"
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
 
     def add_view(self, request, form_url="", extra_context=None):
         extra_context = extra_context or {}
-        extra_context["next_editor_url"] = reverse("next_editor_proxy_root") + "django-admin/articles/new/"
+        extra_context["next_editor_url"] = self._build_next_editor_url("/django-admin/articles/new/")
         extra_context["workspace_mode"] = "add"
         extra_context["workspace_title"] = "新建文章"
         return super().add_view(request, form_url, extra_context=extra_context)

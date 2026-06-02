@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { BubbleMenu, FloatingMenu } from "@tiptap/react/menus";
-import { Extension, mergeAttributes, ResizableNodeView } from "@tiptap/core";
+import { Editor as TiptapRuntimeEditor, Extension, mergeAttributes, ResizableNodeView } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
@@ -281,7 +281,50 @@ function normalizeDocumentShape(document: TipTapDocument): TipTapDocument {
   } as TipTapDocument;
 }
 
-function getCurrentHeadingBlockId(editor: NonNullable<ReturnType<typeof useEditor>>) {
+type NormalizableDocumentNode = {
+  attrs?: Record<string, unknown>;
+  content?: NormalizableDocumentNode[];
+  marks?: Array<Record<string, unknown>>;
+  text?: string;
+  type?: string;
+};
+
+function sanitizeDocumentNode(node: NormalizableDocumentNode | null | undefined): NormalizableDocumentNode | null {
+  if (!node || typeof node !== "object") {
+    return null;
+  }
+
+  if (node.type === "text") {
+    if (typeof node.text !== "string" || node.text.length === 0) {
+      return null;
+    }
+
+    return {
+      ...node,
+      text: node.text,
+    };
+  }
+
+  const nextNode: NormalizableDocumentNode = {
+    ...node,
+  };
+
+  if (Array.isArray(node.content)) {
+    const nextContent = node.content
+      .map((childNode) => sanitizeDocumentNode(childNode))
+      .filter((childNode): childNode is NormalizableDocumentNode => Boolean(childNode));
+
+    if (nextContent.length > 0) {
+      nextNode.content = nextContent;
+    } else {
+      delete nextNode.content;
+    }
+  }
+
+  return nextNode;
+}
+
+function getCurrentHeadingBlockId(editor: TiptapRuntimeEditor) {
   const selectionFrom = editor.state.selection.from;
   let currentHeadingBlockId: string | null = null;
 
@@ -304,7 +347,7 @@ function getCurrentHeadingBlockId(editor: NonNullable<ReturnType<typeof useEdito
 }
 
 function getVisibleHeadingBlockId(
-  editor: NonNullable<ReturnType<typeof useEditor>>,
+  editor: TiptapRuntimeEditor,
   container: HTMLDivElement,
 ) {
   const containerRect = container.getBoundingClientRect();
@@ -375,8 +418,21 @@ function scrollClosestScrollableAncestorIntoView(targetElement: HTMLElement, fal
 }
 
 function normalizeBlockIds(document: TipTapDocument): TipTapDocument {
-  const safeDocument = normalizeDocumentShape(document);
+  const safeDocument = normalizeDocumentShape({
+    ...normalizeDocumentShape(document),
+    content: normalizeDocumentShape(document).content
+      .map((node) => sanitizeDocumentNode(node as NormalizableDocumentNode))
+      .filter((node): node is NormalizableDocumentNode => Boolean(node)) as TipTapDocument["content"],
+  });
   let blockIndex = 1;
+
+  if (safeDocument.content.length === 0) {
+    safeDocument.content = [
+      {
+        type: "paragraph" as const,
+      },
+    ];
+  }
 
   return {
     ...safeDocument,
@@ -1000,8 +1056,8 @@ export function TipTapEditor({
     });
   }, [collapsedHtmlBlocks, formattedHtmlPreview]);
 
-  const editor = useEditor({
-    extensions: [
+  const editorExtensions = useMemo(
+    () => [
       BlockIdExtension,
       StarterKit.configure({
         heading: {
@@ -1050,6 +1106,11 @@ export function TipTapEditor({
       Highlight,
       CharacterCount,
     ],
+    [],
+  );
+
+  const editor = useEditor({
+    extensions: editorExtensions,
     content: normalizedValue,
     editable: !readOnly,
     immediatelyRender: false,
@@ -1136,9 +1197,10 @@ export function TipTapEditor({
       },
     },
     onUpdate({ editor: currentEditor }) {
-    onChange(normalizeBlockIds(currentEditor.getJSON() as TipTapDocument));
+      onChange(normalizeBlockIds(currentEditor.getJSON() as TipTapDocument));
     },
   });
+
   const blockTypeValue = editor?.isActive("heading", { level: 1 })
     ? "h1"
     : editor?.isActive("heading", { level: 2 })
@@ -1153,7 +1215,7 @@ export function TipTapEditor({
       : "paragraph";
 
   useEffect(() => {
-    if (!editor) {
+    if (!editor || editor.isDestroyed) {
       return;
     }
 
@@ -1164,7 +1226,7 @@ export function TipTapEditor({
   }, [editor, value]);
 
   useEffect(() => {
-    if (!editor || !onEditorReady) {
+    if (!editor || editor.isDestroyed || !onEditorReady) {
       return;
     }
 
@@ -1172,7 +1234,7 @@ export function TipTapEditor({
   }, [editor, onEditorReady]);
 
   useEffect(() => {
-    if (!editor || !onActiveHeadingChange) {
+    if (!editor || editor.isDestroyed || !onActiveHeadingChange) {
       return;
     }
 
@@ -1199,7 +1261,7 @@ export function TipTapEditor({
   }, [editor, onActiveHeadingChange]);
 
   useEffect(() => {
-    if (!editor || !onActiveHeadingChange || htmlMode) {
+    if (!editor || editor.isDestroyed || !onActiveHeadingChange || htmlMode) {
       return;
     }
 
@@ -1237,7 +1299,7 @@ export function TipTapEditor({
   }, [editor, htmlMode, onActiveHeadingChange]);
 
   useEffect(() => {
-    if (!editor || !navigationRequest?.blockId) {
+    if (!editor || editor.isDestroyed || !navigationRequest?.blockId) {
       return;
     }
 
@@ -2065,13 +2127,6 @@ export function TipTapEditor({
           ) : null}
 
           <div className="tiptap-editor-content" ref={editorContentRef}>
-            {!htmlMode ? (
-              <div aria-hidden="true" className="tiptap-navigation-guide">
-                <div className="tiptap-navigation-guide-band">
-                  <span className="tiptap-navigation-guide-label">目录定位区</span>
-                </div>
-              </div>
-            ) : null}
             {htmlMode ? (
               <div className="tiptap-html-source-panel">
                 <div className="tiptap-html-toolbar">
@@ -2123,9 +2178,12 @@ export function TipTapEditor({
                   ))}
                 </div>
               </div>
-            ) : (
-              <EditorContent editor={editor} />
-            )}
+            ) : null}
+            <div className={`tiptap-paper-shell${htmlMode ? " is-hidden" : ""}`}>
+              <div className="tiptap-paper">
+                <EditorContent editor={editor} />
+              </div>
+            </div>
           </div>
           {imageContextState.open ? (
             <div

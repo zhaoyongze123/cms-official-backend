@@ -24,3 +24,20 @@ export function studioProxyPath(path: string): RouteImpl {
 
   return `/${path}`;
 }
+
+export function studioBrowserPath(path: string): string {
+  if (!path) {
+    return STUDIO_PROXY_BASE_PATH;
+  }
+
+  if (path === STUDIO_PROXY_BASE_PATH) {
+    return STUDIO_PROXY_BASE_PATH;
+  }
+
+  if (path.startsWith(`${STUDIO_PROXY_BASE_PATH}/`)) {
+    return path;
+  }
+
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${STUDIO_PROXY_BASE_PATH}${normalizedPath}`;
+}

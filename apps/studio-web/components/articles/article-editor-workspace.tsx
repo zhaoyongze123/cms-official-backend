@@ -21,7 +21,7 @@ import {
   type AiReviewSuggestionRecord,
   type AiPatchRecord,
 } from "../../lib/ai-review";
-import { studioProxyPath } from "../../lib/routes";
+import { studioBrowserPath } from "../../lib/routes";
 import {
   type ArticleRecord,
   type ArticleStatus,
@@ -159,6 +159,8 @@ function createFallbackDocument(article: ArticleRecord) {
     return article.content_json as unknown as TipTapDocument;
   }
 
+  const fallbackText = stripHtml(article.content_html);
+
   const fallbackDocument: TipTapDocument = {
     type: "doc" as const,
     content: [
@@ -167,12 +169,16 @@ function createFallbackDocument(article: ArticleRecord) {
         attrs: {
           blockId: `blk_${article.article_id}_1`,
         },
-        content: [
-          {
-            type: "text" as const,
-            text: stripHtml(article.content_html),
-          },
-        ],
+        ...(fallbackText
+          ? {
+              content: [
+                {
+                  type: "text" as const,
+                  text: fallbackText,
+                },
+              ],
+            }
+          : {}),
       },
     ],
   };
@@ -180,12 +186,68 @@ function createFallbackDocument(article: ArticleRecord) {
   return fallbackDocument;
 }
 
+type NormalizableDocumentNode = {
+  attrs?: Record<string, unknown>;
+  content?: NormalizableDocumentNode[];
+  marks?: Array<Record<string, unknown>>;
+  text?: string;
+  type?: string;
+};
+
+function sanitizeDocumentNode(node: NormalizableDocumentNode | null | undefined): NormalizableDocumentNode | null {
+  if (!node || typeof node !== "object") {
+    return null;
+  }
+
+  if (node.type === "text") {
+    if (typeof node.text !== "string" || node.text.length === 0) {
+      return null;
+    }
+    return {
+      ...node,
+      text: node.text,
+    };
+  }
+
+  const nextNode: NormalizableDocumentNode = {
+    ...node,
+  };
+
+  if (Array.isArray(node.content)) {
+    const nextContent = node.content
+      .map((childNode) => sanitizeDocumentNode(childNode))
+      .filter((childNode): childNode is NormalizableDocumentNode => Boolean(childNode));
+
+    if (nextContent.length > 0) {
+      nextNode.content = nextContent;
+    } else {
+      delete nextNode.content;
+    }
+  }
+
+  return nextNode;
+}
+
 function normalizeBlockIds(document: TipTapDocument) {
   const safeDocument: TipTapDocument = {
     type: document?.type ?? "doc",
-    content: Array.isArray(document?.content) ? document.content : [],
+    content: (
+      Array.isArray(document?.content)
+        ? document.content
+            .map((node) => sanitizeDocumentNode(node as NormalizableDocumentNode))
+            .filter((node): node is NormalizableDocumentNode => Boolean(node))
+        : []
+    ) as TipTapDocument["content"],
   };
   let blockIndex = 1;
+
+  if (safeDocument.content.length === 0) {
+    safeDocument.content = [
+      {
+        type: "paragraph" as const,
+      },
+    ];
+  }
 
   return {
     ...safeDocument,
@@ -569,24 +631,8 @@ export function ArticleEditorWorkspace({
       return;
     }
 
-    const postHeight = () => {
-      window.parent.postMessage(
-        {
-          type: "next-editor-resize",
-          height: document.documentElement.scrollHeight,
-        },
-        "*",
-      );
-    };
-
-    postHeight();
-    const timeout = window.setTimeout(postHeight, 120);
-    window.addEventListener("resize", postHeight);
-    return () => {
-      window.clearTimeout(timeout);
-      window.removeEventListener("resize", postHeight);
-    };
-  }, [draft, embedded]);
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, [embedded]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1005,7 +1051,7 @@ export function ArticleEditorWorkspace({
           </Link>
           <a
             className="word-window-button"
-            href={studioProxyPath(`/api/articles/${article.article_id}`)}
+            href={studioBrowserPath(`/api/articles/${article.article_id}`)}
             target="_blank"
             rel="noreferrer"
           >
@@ -1016,33 +1062,6 @@ export function ArticleEditorWorkspace({
 
       <div className="word-workspace">
         <aside className="word-sidebar">
-          <div className="word-sidebar-section">
-            <div className="word-sidebar-title">文档导航</div>
-            <div className="word-outline-list">
-              {outlineItems.length > 0 ? (
-                outlineItems.map((item) => (
-                  <button
-                    key={item.id}
-                    className={`word-outline-item level-${item.level}${activeOutlineBlockId === item.id ? " is-active" : ""}`}
-                    onClick={() =>
-                      {
-                        setActiveOutlineBlockId(item.id);
-                        setNavigationRequest({
-                          blockId: item.id,
-                          nonce: Date.now(),
-                        });
-                      }
-                    }
-                    type="button"
-                  >
-                    {item.text}
-                  </button>
-                ))
-              ) : (
-                <div className="word-outline-empty">暂无标题，插入 H1/H2/H3 后显示目录。</div>
-              )}
-            </div>
-          </div>
           <div className="word-sidebar-section">
             <div className="word-sidebar-title">文档信息</div>
             <div className="word-info-grid">

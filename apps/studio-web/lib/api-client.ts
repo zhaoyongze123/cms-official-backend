@@ -11,7 +11,7 @@ import {
   type AiReviewRunListResponse,
   type AiReviewSuggestionListResponse,
 } from "./ai-review";
-import { studioProxyPath } from "./routes";
+import { studioBrowserPath } from "./routes";
 
 type DjangoErrorResponse = {
   error?: {
@@ -73,7 +73,7 @@ function buildSearchParams(query?: string, status?: string) {
 }
 
 export async function fetchArticles(query?: string, status?: string) {
-  const response = await fetch(studioProxyPath(`/api/articles/${buildSearchParams(query, status)}`), {
+  const response = await fetch(studioBrowserPath(`/api/articles/${buildSearchParams(query, status)}`), {
     method: "GET",
     cache: "no-store",
   });
@@ -83,7 +83,7 @@ export async function fetchArticles(query?: string, status?: string) {
 }
 
 export async function fetchArticle(articleId: number) {
-  const response = await fetch(studioProxyPath(`/api/articles/${articleId}/`), {
+  const response = await fetch(studioBrowserPath(`/api/articles/${articleId}/`), {
     method: "GET",
     cache: "no-store",
   });
@@ -209,7 +209,7 @@ export type DashboardSeoAuditResponse = {
 };
 
 export async function fetchArticleAnalytics(articleId: number) {
-  const response = await fetch(studioProxyPath(`/api/articles/${articleId}/analytics/`), {
+  const response = await fetch(studioBrowserPath(`/api/articles/${articleId}/analytics/`), {
     method: "GET",
     cache: "no-store",
   });
@@ -218,7 +218,7 @@ export async function fetchArticleAnalytics(articleId: number) {
 }
 
 export async function fetchDashboardSeoSummary() {
-  const response = await fetch(studioProxyPath("/api/dashboard/seo-summary/"), {
+  const response = await fetch(studioBrowserPath("/api/dashboard/seo-summary/"), {
     method: "GET",
     cache: "no-store",
   });
@@ -230,7 +230,7 @@ export async function updateArticleDraft(
   articleId: number,
   payload: Partial<ArticleRecord>
 ) {
-  const response = await fetch(studioProxyPath(`/api/articles/${articleId}/`), {
+  const response = await fetch(studioBrowserPath(`/api/articles/${articleId}/`), {
     method: "PATCH",
     headers: buildJsonHeaders(),
     body: JSON.stringify(payload),
@@ -243,7 +243,7 @@ export async function updateArticleDraft(
 export async function createArticle(
   payload: Partial<ArticleRecord>
 ) {
-  const response = await fetch(studioProxyPath("/api/articles/"), {
+  const response = await fetch(studioBrowserPath("/api/articles/"), {
     method: "POST",
     headers: buildJsonHeaders(),
     body: JSON.stringify(payload),
@@ -263,7 +263,7 @@ type PublishArticleResponse = {
 };
 
 export async function publishArticle(articleId: number) {
-  const response = await fetch(studioProxyPath(`/api/articles/${articleId}/publish/`), {
+  const response = await fetch(studioBrowserPath(`/api/articles/${articleId}/publish/`), {
     method: "POST",
     headers: buildJsonHeaders(),
   });
@@ -281,7 +281,7 @@ export async function fetchTagSuggestions(query = "") {
     searchParams.set("q", query.trim());
   }
   const suffix = searchParams.toString() ? `?${searchParams.toString()}` : "";
-  const response = await fetch(studioProxyPath(`/api/tags/${suffix}`), {
+  const response = await fetch(studioBrowserPath(`/api/tags/${suffix}`), {
     method: "GET",
     cache: "no-store",
   });
@@ -295,7 +295,7 @@ export async function fetchCategorySuggestions(query = "") {
     searchParams.set("q", query.trim());
   }
   const suffix = searchParams.toString() ? `?${searchParams.toString()}` : "";
-  const response = await fetch(studioProxyPath(`/api/categories/${suffix}`), {
+  const response = await fetch(studioBrowserPath(`/api/categories/${suffix}`), {
     method: "GET",
     cache: "no-store",
   });
@@ -357,7 +357,7 @@ export async function uploadEditorImage(file: File, altText = "", title = "") {
   formData.append("title", title || file.name.replace(/\.[^.]+$/, ""));
 
   const csrfToken = getCsrfToken();
-  const response = await fetch(studioProxyPath("/api/media/upload/"), {
+  const response = await fetch(studioBrowserPath("/api/media/upload/"), {
     method: "POST",
     headers: {
       ...(csrfToken ? { "X-CSRFToken": csrfToken } : {}),
@@ -373,7 +373,7 @@ export async function uploadEditorImage(file: File, altText = "", title = "") {
 }
 
 export async function fetchMediaLibraryImages() {
-  const response = await fetch(studioProxyPath("/api/media/images/"), {
+  const response = await fetch(studioBrowserPath("/api/media/images/"), {
     method: "GET",
     cache: "no-store",
   });
@@ -409,7 +409,7 @@ export async function updateMediaLibraryImage(
     body = JSON.stringify(payload);
   }
 
-  const response = await fetch(studioProxyPath(`/api/media/images/${imageId}/`), {
+  const response = await fetch(studioBrowserPath(`/api/media/images/${imageId}/`), {
     method: "PATCH",
     headers,
     body,
@@ -423,7 +423,7 @@ export async function updateMediaLibraryImage(
 }
 
 export async function fetchMediaLibraryFiles() {
-  const response = await fetch(studioProxyPath("/api/media/files/"), {
+  const response = await fetch(studioBrowserPath("/api/media/files/"), {
     method: "GET",
     cache: "no-store",
   });
@@ -441,7 +441,7 @@ export async function uploadEditorFile(file: File, title = "") {
   formData.append("title", title || file.name);
 
   const csrfToken = getCsrfToken();
-  const response = await fetch(studioProxyPath("/api/media/files/upload/"), {
+  const response = await fetch(studioBrowserPath("/api/media/files/upload/"), {
     method: "POST",
     headers: {
       ...(csrfToken ? { "X-CSRFToken": csrfToken } : {}),

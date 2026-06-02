@@ -1,4 +1,4 @@
-import { studioProxyPath } from "./routes";
+import { studioBrowserPath } from "./routes";
 
 type DjangoErrorResponse = {
   error?: {
@@ -75,7 +75,7 @@ export type AiGenerationSettingsUpdatePayload = {
 };
 
 export async function fetchAiGenerationSettings() {
-  const response = await fetch(studioProxyPath("/api/ai/settings/generation/"), {
+  const response = await fetch(studioBrowserPath("/api/ai/settings/generation/"), {
     method: "GET",
     cache: "no-store",
   });
@@ -85,7 +85,7 @@ export async function fetchAiGenerationSettings() {
 
 export async function updateAiGenerationSettings(payload: AiGenerationSettingsUpdatePayload) {
   const csrfToken = getCsrfToken();
-  const response = await fetch(studioProxyPath("/api/ai/settings/generation/"), {
+  const response = await fetch(studioBrowserPath("/api/ai/settings/generation/"), {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",

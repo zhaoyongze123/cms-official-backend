@@ -6,7 +6,7 @@ type DjangoErrorResponse = {
   };
 };
 
-import { studioProxyPath } from "./routes";
+import { studioBrowserPath } from "./routes";
 
 async function readJson<T>(response: Response) {
   if (!response.ok) {
@@ -154,7 +154,7 @@ export function getReviewSummaryLabel(count: number) {
 }
 
 export async function submitAiReview(articleId: number, payload: Record<string, unknown> = {}) {
-  const response = await fetch(studioProxyPath(`/api/articles/${articleId}/ai-review/`), {
+  const response = await fetch(studioBrowserPath(`/api/articles/${articleId}/ai-review/`), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -167,7 +167,7 @@ export async function submitAiReview(articleId: number, payload: Record<string, 
 }
 
 export async function fetchArticleAiReviewRuns(articleId: number) {
-  const response = await fetch(studioProxyPath(`/api/articles/${articleId}/ai-review-runs/`), {
+  const response = await fetch(studioBrowserPath(`/api/articles/${articleId}/ai-review-runs/`), {
     method: "GET",
     cache: "no-store",
   });
@@ -176,7 +176,7 @@ export async function fetchArticleAiReviewRuns(articleId: number) {
 }
 
 export async function fetchAiReviewRunSuggestions(runId: string) {
-  const response = await fetch(studioProxyPath(`/api/ai-review-runs/${runId}/suggestions/`), {
+  const response = await fetch(studioBrowserPath(`/api/ai-review-runs/${runId}/suggestions/`), {
     method: "GET",
     cache: "no-store",
   });
@@ -185,7 +185,7 @@ export async function fetchAiReviewRunSuggestions(runId: string) {
 }
 
 export async function generateMetadata(articleId: number, payload: Record<string, unknown> = {}) {
-  const response = await fetch(studioProxyPath(`/api/articles/${articleId}/ai-generate-metadata/`), {
+  const response = await fetch(studioBrowserPath(`/api/articles/${articleId}/ai-generate-metadata/`), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -198,7 +198,7 @@ export async function generateMetadata(articleId: number, payload: Record<string
 }
 
 export async function generateTitle(articleId: number, payload: Record<string, unknown> = {}) {
-  const response = await fetch(studioProxyPath(`/api/articles/${articleId}/ai-generate-title/`), {
+  const response = await fetch(studioBrowserPath(`/api/articles/${articleId}/ai-generate-title/`), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -211,7 +211,7 @@ export async function generateTitle(articleId: number, payload: Record<string, u
 }
 
 export async function generateSlug(articleId: number, payload: Record<string, unknown> = {}) {
-  const response = await fetch(studioProxyPath(`/api/articles/${articleId}/ai-generate-slug/`), {
+  const response = await fetch(studioBrowserPath(`/api/articles/${articleId}/ai-generate-slug/`), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -224,7 +224,7 @@ export async function generateSlug(articleId: number, payload: Record<string, un
 }
 
 export async function generateTags(articleId: number, payload: Record<string, unknown> = {}) {
-  const response = await fetch(studioProxyPath(`/api/articles/${articleId}/ai-generate-tags/`), {
+  const response = await fetch(studioBrowserPath(`/api/articles/${articleId}/ai-generate-tags/`), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -237,7 +237,7 @@ export async function generateTags(articleId: number, payload: Record<string, un
 }
 
 export async function generateDescription(articleId: number, payload: Record<string, unknown> = {}) {
-  const response = await fetch(studioProxyPath(`/api/articles/${articleId}/ai-generate-description/`), {
+  const response = await fetch(studioBrowserPath(`/api/articles/${articleId}/ai-generate-description/`), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -250,7 +250,7 @@ export async function generateDescription(articleId: number, payload: Record<str
 }
 
 export async function generateAlt(articleId: number, payload: Record<string, unknown> = {}) {
-  const response = await fetch(studioProxyPath(`/api/articles/${articleId}/ai-generate-alt/`), {
+  const response = await fetch(studioBrowserPath(`/api/articles/${articleId}/ai-generate-alt/`), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

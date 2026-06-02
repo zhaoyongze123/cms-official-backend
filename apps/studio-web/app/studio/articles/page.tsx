@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { studioProxyPath } from "../../../lib/routes";
+import { studioBrowserPath } from "../../../lib/routes";
 import { fetchServerArticles } from "../../../lib/server-articles";
 
 type SearchParams = Promise<{
@@ -31,7 +31,7 @@ export default async function StudioArticlesPage({
           `cms-editor-web` 现在只保留文章列表与正文编辑，不再展示工作台侧边栏。
         </p>
         <div className="toolbar">
-          <form className="search-form" action={studioProxyPath("/studio/articles")}>
+          <form className="search-form" action={studioBrowserPath("/studio/articles")}>
             <input defaultValue={query} name="q" placeholder="搜索标题、slug 或摘要" />
             <select defaultValue={status} name="status">
               <option value="all">全部状态</option>
@@ -107,7 +107,7 @@ export default async function StudioArticlesPage({
                   </Link>
                   <a
                     className="cta"
-                    href={studioProxyPath(`/api/articles/${article.article_id}`)}
+                    href={studioBrowserPath(`/api/articles/${article.article_id}`)}
                     target="_blank"
                     rel="noreferrer"
                   >
