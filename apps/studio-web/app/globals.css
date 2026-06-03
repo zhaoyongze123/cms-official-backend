@@ -1486,9 +1486,10 @@ main {
 
 .tiptap-editor-content {
   position: relative;
-  display: grid;
-  align-content: start;
-  justify-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
   border: 0;
   border-radius: 0;
   background: #dcdcdc;
@@ -1536,6 +1537,8 @@ main {
 .tiptap-paper-shell {
   width: var(--editor-paper-width);
   margin: 0 auto;
+  flex: 0 0 auto;
+  align-self: center;
   min-height: var(--editor-paper-height);
   border: 1px solid #c6c6c6;
   border-radius: 0;
@@ -1550,6 +1553,7 @@ main {
 .tiptap-paper {
   width: 100%;
   min-height: var(--editor-paper-height);
+  background: #fff;
 }
 
 .tiptap-paper.ProseMirror,
@@ -1563,7 +1567,7 @@ main {
   outline: none;
   line-height: 1.7;
   color: var(--editor-text);
-  background: transparent;
+  background: #fff;
 }
 
 .tiptap-paper p.is-editor-empty:first-child::before {

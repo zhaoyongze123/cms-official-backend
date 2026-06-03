@@ -68,7 +68,14 @@
 <script>
   (function () {
     const frame = document.getElementById("next-editor-frame");
-    const fixedFrameHeight = 1440;
+    const minimumFrameHeight = 960;
+    const frameOrigin = (() => {
+      try {
+        return new URL(frame?.src || "", window.location.href).origin;
+      } catch {
+        return "";
+      }
+    })();
     if (!frame) {
       return;
     }
@@ -78,16 +85,52 @@
     }
     window.scrollTo({ top: 0, behavior: "auto" });
 
-    function syncFrameHeight() {
-      const nextHeight = fixedFrameHeight;
+    function applyFrameHeight(rawHeight) {
+      const numericHeight = Number(rawHeight);
+      const nextHeight = Number.isFinite(numericHeight)
+        ? Math.max(minimumFrameHeight, Math.ceil(numericHeight))
+        : minimumFrameHeight;
+
       frame.style.height = `${nextHeight}px`;
       frame.style.minHeight = `${nextHeight}px`;
       document.documentElement.style.setProperty("--next-editor-frame-height", `${nextHeight}px`);
     }
 
-    frame.addEventListener("load", syncFrameHeight);
-    window.addEventListener("resize", syncFrameHeight);
-    window.requestAnimationFrame(syncFrameHeight);
+    function requestFrameHeight() {
+      if (!frame.contentWindow) {
+        return;
+      }
+
+      frame.contentWindow.postMessage(
+        {
+          type: "cms-next-editor:request-height",
+        },
+        frameOrigin || "*"
+      );
+    }
+
+    function handleFrameMessage(event) {
+      if (frameOrigin && event.origin !== frameOrigin) {
+        return;
+      }
+
+      if (!event.data || event.data.type !== "cms-next-editor:content-height") {
+        return;
+      }
+
+      applyFrameHeight(event.data.height);
+    }
+
+    frame.addEventListener("load", function () {
+      applyFrameHeight(minimumFrameHeight);
+      window.requestAnimationFrame(requestFrameHeight);
+    });
+    window.addEventListener("message", handleFrameMessage);
+    window.addEventListener("resize", requestFrameHeight);
+    window.requestAnimationFrame(function () {
+      applyFrameHeight(minimumFrameHeight);
+      requestFrameHeight();
+    });
   })();
 </script>
 {% endblock %}
