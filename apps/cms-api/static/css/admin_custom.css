@@ -56,3 +56,8 @@ h1, h2, h3, h4, .brand-text {
 .dashboard-section .module .addlink:hover, .dashboard-section .module .changelink:hover, .dashboard-section .module .viewlink:hover { background: rgba(99, 102, 241, 0.2); }
 .dashboard-section .module .actions { text-align: right; }
 .dashboard-section #recent-actions-module { grid-column: 1 / -1; }
+
+/* 隐藏关联字段右侧的新增/编辑/删除/查看快捷按钮，避免前台内容页出现冗余操作图标。 */
+.related-widget-wrapper-link {
+  display: none !important;
+}
