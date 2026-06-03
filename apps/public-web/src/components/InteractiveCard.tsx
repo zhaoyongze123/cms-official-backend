@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence, type Variants } from 'motion/react';
 import { Layers, Users, Zap, RotateCw } from 'lucide-react';
+import type { PublicArticle } from '../lib/articles-api';
 
 interface CardInfo {
   id: number;
@@ -16,52 +16,63 @@ interface CardInfo {
 }
 
 interface InteractiveCardProps {
-  articleLinks: {
-    services: string;
-    solutions: string;
-    cases: string;
-  };
+  articles: PublicArticle[];
 }
 
-function buildCardData(articleLinks: InteractiveCardProps["articleLinks"]): CardInfo[] {
-  return [
-  {
-    id: 1,
-    type: 'poster',
-    title: '邮件数据归档，安全合规，尽在掌控',
-    subtitle: 'Mail Archive',
-    description: '邮件归档解决方案，帮助企业实现邮件数据本地化存储，支持压缩、审计、快速检索与统一管理。',
-    image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop',
-    color: '#FF5F1F',
-    href: articleLinks.services,
-  },
-  {
-    id: 2,
-    type: 'case',
-    title: 'AI 真实提效，填表不再耗时',
-    subtitle: 'AI Automation',
-    description: 'AI 驱动的表格自动化解决方案，实现表格读取、查询、分类与填充的智能化处理，大幅减少人工操作，显著提升填表效率。',
-    image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=800&auto=format&fit=crop',
-    color: '#00D1FF',
-    href: articleLinks.solutions,
-  },
-  {
-    id: 3,
-    type: 'feedback',
-    title: 'AI + 网盘，落地效果出乎意料',
-    subtitle: 'AI Knowledge Base',
-    description: '以企业网盘作为 AI 数据底座，一举解决落地 AI 的三大痛点：数据孤岛、场景缺失与数据安全，让 AI 真正在企业内部跑起来。',
-    image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=800&auto=format&fit=crop',
-    color: '#32CD32',
-    href: articleLinks.cases,
+function buildCardData(articles: InteractiveCardProps["articles"]): CardInfo[] {
+  const fallbackCards: CardInfo[] = [
+    {
+      id: 1,
+      type: 'poster',
+      title: '邮件数据归档，安全合规，尽在掌控',
+      subtitle: 'Mail Archive',
+      description: '邮件归档解决方案，帮助企业实现邮件数据本地化存储，支持压缩、审计、快速检索与统一管理。',
+      image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop',
+      color: '#FF5F1F',
+      href: '/services',
+    },
+    {
+      id: 2,
+      type: 'case',
+      title: 'AI 真实提效，填表不再耗时',
+      subtitle: 'AI Automation',
+      description: 'AI 驱动的表格自动化解决方案，实现表格读取、查询、分类与填充的智能化处理，大幅减少人工操作，显著提升填表效率。',
+      image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=800&auto=format&fit=crop',
+      color: '#00D1FF',
+      href: '/solutions',
+    },
+    {
+      id: 3,
+      type: 'feedback',
+      title: 'AI + 网盘，落地效果出乎意料',
+      subtitle: 'AI Knowledge Base',
+      description: '以企业网盘作为 AI 数据底座，一举解决落地 AI 的三大痛点：数据孤岛、场景缺失与数据安全，让 AI 真正在企业内部跑起来。',
+      image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=800&auto=format&fit=crop',
+      color: '#32CD32',
+      href: '/cases',
+    }
+  ];
+
+  if (articles.length < 3) {
+    return fallbackCards;
   }
-];
+
+  return articles.slice(0, 3).map((article, index) => ({
+    id: index + 1,
+    type: fallbackCards[index].type,
+    title: article.title,
+    subtitle: article.category || fallbackCards[index].subtitle,
+    description: article.excerpt,
+    image: article.seo.ogImageUrl || fallbackCards[index].image,
+    color: fallbackCards[index].color,
+    href: `/articles/${article.slug}?from=${encodeURIComponent(article.categorySlug || "homepage")}`,
+  }));
 }
 
-export const InteractiveCard = ({ articleLinks }: InteractiveCardProps) => {
+export const InteractiveCard = ({ articles }: InteractiveCardProps) => {
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(1);
-  const cardData = buildCardData(articleLinks);
+  const cardData = buildCardData(articles);
 
   const currentCard = cardData[index % cardData.length];
 
@@ -129,12 +140,11 @@ export const InteractiveCard = ({ articleLinks }: InteractiveCardProps) => {
               <div className="w-full h-full flex flex-col">
                 {/* Image Header with Liquid Overlay */}
                 <div className="relative h-[60%] overflow-hidden">
-                  <Image
+                  <img
                     src={currentCard.image}
                     alt={currentCard.title}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 448px"
                     className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                    loading="eager"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                   

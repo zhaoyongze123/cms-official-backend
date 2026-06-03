@@ -9,6 +9,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import PublicLayout from "./public-layout";
 import HeroScene from "../../components/HeroScene";
 import { InteractiveCard } from "../../components/InteractiveCard";
+import type { PublicArticle } from "../../lib/articles-api";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -29,10 +30,57 @@ function FeatureCard({ icon: Icon, title, desc, index }: { icon: React.Component
   );
 }
 
-function SolutionItem({ title, tag, desc }: { title: string; tag: string; desc: string }) {
+interface HomepageSolutionEntry {
+  title: string;
+  tag: string;
+  desc: string;
+  href: string;
+}
+
+const FALLBACK_SOLUTION_ITEMS: HomepageSolutionEntry[] = [
+  {
+    tag: "Cloud Infrastructure",
+    title: "通用上云方案",
+    desc: "针对异地多活、弹性扩容等痛点，提供标准化计算、存储及灾备链路，快速构建稳健云底座。",
+    href: "/solutions",
+  },
+  {
+    tag: "Collaboration",
+    title: "Zimbra 企业邮箱解决方案",
+    desc: "高效协同的邮件系统，支持海量存储、智能过滤及多端同步，深度契合B端办公场景。",
+    href: "/solutions",
+  },
+  {
+    tag: "Cloud Storage",
+    title: "可道云 (KodCloud) 企业网盘",
+    desc: "私有化部署的最佳选择，集文件管理、在线编辑、协作分享于一体的云端资源中心。",
+    href: "/solutions",
+  },
+  {
+    tag: "Security",
+    title: "等保合规与安全加固",
+    desc: "全方位安全防护体系，助力企业快速通过等保测评，构建从边缘到核心的纵深防御架构。",
+    href: "/solutions",
+  },
+];
+
+function buildHomepageSolutionItems(solutionArticles: PublicArticle[]): HomepageSolutionEntry[] {
+  if (solutionArticles.length < 4) {
+    return FALLBACK_SOLUTION_ITEMS;
+  }
+
+  return solutionArticles.slice(0, 4).map((article) => ({
+    title: article.title,
+    tag: article.categorySlug || "solutions",
+    desc: article.excerpt,
+    href: `/articles/${article.slug}?from=${encodeURIComponent(article.categorySlug || "solutions")}`,
+  }));
+}
+
+function SolutionItem({ title, tag, desc, href }: HomepageSolutionEntry) {
   return (
     <motion.a
-      href="/solutions"
+      href={href}
       whileHover={{ x: 10 }}
       className="group flex flex-col md:flex-row md:items-center justify-between py-8 border-b border-line cursor-pointer"
     >
@@ -150,16 +198,14 @@ function ConsultationModal({ open, onClose }: { open: boolean; onClose: () => vo
 }
 
 interface PublicLandingPageProps {
-  articleLinks: {
-    services: string;
-    solutions: string;
-    cases: string;
-  };
+  featuredArticles: PublicArticle[];
+  solutionArticles: PublicArticle[];
 }
 
-export default function PublicLandingPage({ articleLinks }: PublicLandingPageProps) {
+export default function PublicLandingPage({ featuredArticles, solutionArticles }: PublicLandingPageProps) {
   const titleContainerRef = useRef<HTMLDivElement>(null);
   const [consultationOpen, setConsultationOpen] = useState(false);
+  const homepageSolutionItems = buildHomepageSolutionItems(solutionArticles);
 
   useEffect(() => {
     const lens = document.getElementById("hero-lens");
@@ -320,7 +366,7 @@ export default function PublicLandingPage({ articleLinks }: PublicLandingPagePro
           </div>
 
           <div className="relative">
-            <InteractiveCard articleLinks={articleLinks} />
+            <InteractiveCard articles={featuredArticles} />
           </div>
         </div>
       </section>
@@ -374,10 +420,15 @@ export default function PublicLandingPage({ articleLinks }: PublicLandingPagePro
             </div>
 
             <div className="space-y-2">
-              <SolutionItem tag="Cloud Infrastructure" title="通用上云方案" desc="针对异地多活、弹性扩容等痛点，提供标准化计算、存储及灾备链路，快速构建稳健云底座。" />
-              <SolutionItem tag="Collaboration" title="Zimbra 企业邮箱解决方案" desc="高效协同的邮件系统，支持海量存储、智能过滤及多端同步，深度契合B端办公场景。" />
-              <SolutionItem tag="Cloud Storage" title="可道云 (KodCloud) 企业网盘" desc="私有化部署的最佳选择，集文件管理、在线编辑、协作分享于一体的云端资源中心。" />
-              <SolutionItem tag="Security" title="等保合规与安全加固" desc="全方位安全防护体系，助力企业快速通过等保测评，构建从边缘到核心的纵深防御架构。" />
+              {homepageSolutionItems.map((item) => (
+                <SolutionItem
+                  key={`${item.href}-${item.title}`}
+                  title={item.title}
+                  tag={item.tag}
+                  desc={item.desc}
+                  href={item.href}
+                />
+              ))}
             </div>
           </div>
         </div>

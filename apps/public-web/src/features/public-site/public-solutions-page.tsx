@@ -4,14 +4,10 @@ import type { PublicArticle, PublicArticleSectionConfig } from "../../lib/articl
 
 export default function PublicSolutionsPage({
   articles,
-  categories,
-  selectedCategory,
   searchQuery,
   section,
 }: {
   articles: PublicArticle[];
-  categories: Array<{ label: string; value: string }>;
-  selectedCategory?: string;
   searchQuery?: string;
   section: PublicArticleSectionConfig;
 }) {
@@ -20,8 +16,6 @@ export default function PublicSolutionsPage({
       <SolutionsCMS
         mode="list"
         articles={articles}
-        categories={categories}
-        selectedCategory={selectedCategory}
         searchQuery={searchQuery}
         section={section}
       />

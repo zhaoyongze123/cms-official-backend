@@ -74,6 +74,76 @@ class SiteSetting(models.Model):
         default="",
         help_text="粘贴需要注入到官网 </body> 前的统计或营销脚本代码。",
     )
+    homepage_featured_article_primary = models.ForeignKey(
+        "simple_cms.Article",
+        verbose_name="首页卡片一文章",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        limit_choices_to={"status": "published"},
+        help_text="用于首页第一张轮播卡片，前台会读取文章标题、摘要和 OG 图片。",
+    )
+    homepage_featured_article_secondary = models.ForeignKey(
+        "simple_cms.Article",
+        verbose_name="首页卡片二文章",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        limit_choices_to={"status": "published"},
+        help_text="用于首页第二张轮播卡片，前台会读取文章标题、摘要和 OG 图片。",
+    )
+    homepage_featured_article_tertiary = models.ForeignKey(
+        "simple_cms.Article",
+        verbose_name="首页卡片三文章",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        limit_choices_to={"status": "published"},
+        help_text="用于首页第三张轮播卡片，前台会读取文章标题、摘要和 OG 图片。",
+    )
+    homepage_solution_article_1 = models.ForeignKey(
+        "simple_cms.Article",
+        verbose_name="首页解决方案一文章",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        limit_choices_to={"status": "published"},
+        help_text="用于首页解决方案区第一条，前台会读取文章分类、标题和摘要。",
+    )
+    homepage_solution_article_2 = models.ForeignKey(
+        "simple_cms.Article",
+        verbose_name="首页解决方案二文章",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        limit_choices_to={"status": "published"},
+        help_text="用于首页解决方案区第二条，前台会读取文章分类、标题和摘要。",
+    )
+    homepage_solution_article_3 = models.ForeignKey(
+        "simple_cms.Article",
+        verbose_name="首页解决方案三文章",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        limit_choices_to={"status": "published"},
+        help_text="用于首页解决方案区第三条，前台会读取文章分类、标题和摘要。",
+    )
+    homepage_solution_article_4 = models.ForeignKey(
+        "simple_cms.Article",
+        verbose_name="首页解决方案四文章",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        limit_choices_to={"status": "published"},
+        help_text="用于首页解决方案区第四条，前台会读取文章分类、标题和摘要。",
+    )
 
     ai_review_model = models.CharField(
         "AI 审核与扩展生成默认模型",

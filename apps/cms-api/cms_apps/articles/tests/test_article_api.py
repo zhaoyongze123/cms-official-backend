@@ -348,3 +348,39 @@ class ArticleApiTests(TestCase):
         self.assertEqual(payload["seo_description"], self.site_setting.seo_description)
         self.assertEqual(payload["third_party_scripts"]["head"], "<script>window.headTracker = true;</script>")
         self.assertEqual(payload["third_party_scripts"]["body_end"], "<script>window.bodyTracker = true;</script>")
+        self.assertEqual(payload["homepage_featured_articles"], [None, None, None])
+        self.assertEqual(payload["homepage_solution_articles"], [None, None, None, None])
+
+    def test_public_site_settings_returns_featured_articles(self):
+        self.site_setting.homepage_featured_article_primary = self.article
+        self.site_setting.homepage_featured_article_secondary = self.article
+        self.site_setting.homepage_featured_article_tertiary = self.article
+        self.site_setting.save()
+
+        response = self.client.get("/api/public/site-settings/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload["homepage_featured_articles"]), 3)
+        self.assertEqual(payload["homepage_featured_articles"][0]["article_id"], self.article.id)
+        self.assertEqual(payload["homepage_featured_articles"][0]["title"], self.article.title)
+        self.assertEqual(
+            payload["homepage_featured_articles"][0]["seo"]["og_image_url"],
+            self.og_image.file.url,
+        )
+
+    def test_public_site_settings_returns_solution_articles(self):
+        self.site_setting.homepage_solution_article_1 = self.article
+        self.site_setting.homepage_solution_article_2 = self.article
+        self.site_setting.homepage_solution_article_3 = self.article
+        self.site_setting.homepage_solution_article_4 = self.article
+        self.site_setting.save()
+
+        response = self.client.get("/api/public/site-settings/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload["homepage_solution_articles"]), 4)
+        self.assertEqual(payload["homepage_solution_articles"][0]["article_id"], self.article.id)
+        self.assertEqual(payload["homepage_solution_articles"][0]["title"], self.article.title)
+        self.assertEqual(payload["homepage_solution_articles"][0]["category"]["slug"], self.category.slug)

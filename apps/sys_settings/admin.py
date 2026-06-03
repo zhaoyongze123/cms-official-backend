@@ -157,6 +157,17 @@ class SiteSettingAdmin(admin.ModelAdmin):
                 "storage_path", "allow_video", "max_upload_size",
             )
         }),
+        ("前台内容", {
+            "fields": (
+                "homepage_featured_article_primary",
+                "homepage_featured_article_secondary",
+                "homepage_featured_article_tertiary",
+                "homepage_solution_article_1",
+                "homepage_solution_article_2",
+                "homepage_solution_article_3",
+                "homepage_solution_article_4",
+            )
+        }),
         ("AI 模型与 Prompt", {
             "fields": (
                 "siliconflow_api_key",
@@ -223,6 +234,16 @@ class SiteSettingAdmin(admin.ModelAdmin):
         if db_field.name == "aliyun_access_key_secret":
             kwargs["widget"] = forms.PasswordInput(render_value=True)
         return super().formfield_for_dbfield(db_field, **kwargs)
+
+    autocomplete_fields = (
+        "homepage_featured_article_primary",
+        "homepage_featured_article_secondary",
+        "homepage_featured_article_tertiary",
+        "homepage_solution_article_1",
+        "homepage_solution_article_2",
+        "homepage_solution_article_3",
+        "homepage_solution_article_4",
+    )
 
     def has_add_permission(self, request):
         return False

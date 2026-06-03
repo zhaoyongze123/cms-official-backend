@@ -7,11 +7,6 @@ import { motion } from "motion/react";
 import type { PublicArticle, PublicArticleSectionConfig } from "../lib/articles-api";
 import ArticleHtmlContent from "./ArticleHtmlContent";
 
-type CategoryFilter = {
-  label: string;
-  value: string;
-};
-
 function Breadcrumbs({
   section,
   selectedArticle,
@@ -85,14 +80,10 @@ function ArticleDetail({
 
 function ArticleList({
   articles,
-  categories,
-  selectedCategory,
   searchQuery,
   section,
 }: {
   articles: PublicArticle[];
-  categories: CategoryFilter[];
-  selectedCategory: string;
   searchQuery: string;
   section: PublicArticleSectionConfig;
 }) {
@@ -109,10 +100,9 @@ function ArticleList({
       </div>
 
       <div className="sticky top-24 z-30 mb-10 transition-all">
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-4 bg-white p-2 rounded-3xl border border-line shadow-xl shadow-ink/5">
+        <div className="bg-white p-2 rounded-3xl border border-line shadow-xl shadow-ink/5">
           <form action={section.route} className="relative flex-1">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-muted" size={18} />
-            {selectedCategory ? <input name="category" type="hidden" value={selectedCategory} /> : null}
             <input
               className="w-full bg-mist/50 border border-transparent rounded-2xl py-3.5 pl-14 pr-6 outline-none transition-all font-medium text-charcoal placeholder:text-muted"
               defaultValue={searchQuery}
@@ -121,25 +111,6 @@ function ArticleList({
               type="search"
             />
           </form>
-          <div className="flex items-center gap-2 overflow-x-auto px-4 lg:px-0 no-scrollbar">
-            {categories.map((category) => (
-              <Link
-                key={category.value || "all"}
-                href={
-                  category.value
-                    ? `${section.route}?category=${encodeURIComponent(category.value)}${searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""}`
-                    : `${section.route}${searchQuery ? `?q=${encodeURIComponent(searchQuery)}` : ""}`
-                }
-                className={`px-5 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-colors ${
-                  selectedCategory === category.value
-                    ? "bg-charcoal text-white"
-                    : "bg-mist/50 text-muted hover:bg-hermes/10 hover:text-hermes"
-                }`}
-              >
-                {category.label}
-              </Link>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -205,8 +176,8 @@ function ArticleList({
             </div>
             <h3 className="text-xl font-bold text-charcoal mb-2">暂无可展示的已发布文章</h3>
             <p className="text-muted">
-              {selectedCategory || searchQuery
-                ? "当前筛选条件下还没有已发布文章。"
+              {searchQuery
+                ? "当前搜索条件下还没有已发布文章。"
                 : "当前 CMS 公开接口还没有返回可用文章。"}
             </p>
           </div>
@@ -221,8 +192,6 @@ export default function SolutionsCMS(
     | {
         mode: "list";
         articles: PublicArticle[];
-        categories: CategoryFilter[];
-        selectedCategory?: string;
         searchQuery?: string;
         section: PublicArticleSectionConfig;
       }
@@ -237,8 +206,6 @@ export default function SolutionsCMS(
         ) : (
           <ArticleList
             articles={props.articles}
-            categories={props.categories}
-            selectedCategory={props.selectedCategory ?? ""}
             searchQuery={props.searchQuery ?? ""}
             section={props.section}
           />

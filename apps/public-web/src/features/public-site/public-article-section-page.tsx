@@ -6,14 +6,10 @@ import SolutionsCMS from "../../components/SolutionsCMS";
 
 export default function PublicArticleSectionPage({
   articles,
-  categories,
-  selectedCategory,
   searchQuery,
   section,
 }: {
   articles: PublicArticle[];
-  categories: Array<{ label: string; value: string }>;
-  selectedCategory?: string;
   searchQuery?: string;
   section: PublicArticleSectionConfig;
 }) {
@@ -22,8 +18,6 @@ export default function PublicArticleSectionPage({
       <SolutionsCMS
         mode="list"
         articles={articles}
-        categories={categories}
-        selectedCategory={selectedCategory}
         searchQuery={searchQuery}
         section={section}
       />
