@@ -1,7 +1,7 @@
-import { proxyDjangoRequest } from "../../../../lib/django-proxy";
+import { proxyNormalizedMediaResponse } from "../shared";
 
 export async function GET(request: Request) {
-  return proxyDjangoRequest("/api/media/files/", {
+  return proxyNormalizedMediaResponse(request, "/api/media/files/", {
     method: "GET",
     headers: {
       Accept: request.headers.get("accept") ?? "application/json",

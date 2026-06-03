@@ -1,4 +1,4 @@
-import { proxyDjangoRequest } from "../../../../../lib/django-proxy";
+import { proxyNormalizedMediaResponse } from "../../shared";
 
 type RouteContext = {
   params: Promise<{
@@ -13,7 +13,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     ? await request.arrayBuffer()
     : await request.text();
 
-  return proxyDjangoRequest(`/api/media/images/${params.id}/`, {
+  return proxyNormalizedMediaResponse(request, `/api/media/images/${params.id}/`, {
     method: "PATCH",
     headers: {
       "Content-Type": contentType,

@@ -1,9 +1,9 @@
-import { proxyDjangoRequest } from "../../../../../lib/django-proxy";
+import { proxyNormalizedMediaResponse } from "../../shared";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
 
-  return proxyDjangoRequest("/api/media/files/upload/", {
+  return proxyNormalizedMediaResponse(request, "/api/media/files/upload/", {
     method: "POST",
     headers: {
       Accept: request.headers.get("accept") ?? "application/json",

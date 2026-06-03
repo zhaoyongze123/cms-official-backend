@@ -8,6 +8,7 @@ import {
   publishArticle,
   type MediaLibraryImageRecord,
   updateArticleDraft,
+  uploadEditorImage,
 } from "../../lib/api-client";
 import {
   fetchAiReviewRunSuggestions,
@@ -481,12 +482,14 @@ export function ArticleEditorWorkspace({
   const [showOgImagePicker, setShowOgImagePicker] = useState(false);
   const [ogImageLibrary, setOgImageLibrary] = useState<MediaLibraryImageRecord[]>([]);
   const [ogImageLibraryStatus, setOgImageLibraryStatus] = useState("");
+  const [isUploadingOgImage, setIsUploadingOgImage] = useState(false);
   const [navigationRequest, setNavigationRequest] = useState<{ blockId: string; nonce: number } | null>(null);
   const [activeOutlineBlockId, setActiveOutlineBlockId] = useState<string | null>(null);
   const editorDocumentGetterRef = useRef<null | (() => TipTapDocument)>(null);
   const editorDocumentRef = useRef<TipTapDocument | null>(createDraft(article).content_json);
   const tagInputRef = useRef<HTMLInputElement | null>(null);
   const categoryInputRef = useRef<HTMLInputElement | null>(null);
+  const ogImageUploadInputRef = useRef<HTMLInputElement | null>(null);
   const [saveMessage, setSaveMessage] = useState("当前内容尚未提交到 Django。");
   const [saveTime, setSaveTime] = useState(article.updated_at);
   const [reviewState, setReviewState] = useState<ReviewState>({
@@ -880,6 +883,36 @@ export function ArticleEditorWorkspace({
     setShowOgImagePicker(false);
   }
 
+  async function handleUploadOgImage(file: File | null) {
+    if (!file) {
+      return;
+    }
+
+    const fallbackTitle = file.name.replace(/\.[^.]+$/, "");
+    setIsUploadingOgImage(true);
+    setOgImageLibraryStatus("正在上传 OG 图片到 Django 媒体库...");
+
+    try {
+      const uploadedImage = await uploadEditorImage(
+        file,
+        draft.ogImage?.alt_text ?? "",
+        draft.ogImage?.title || fallbackTitle,
+      );
+      updateField("ogImage", uploadedImage);
+      setOgImageLibrary((currentImages) => {
+        const nextImages = currentImages.filter((image) => image.image_id !== uploadedImage.image_id);
+        return [uploadedImage, ...nextImages];
+      });
+      setShowOgImagePicker(false);
+      setOgImageLibraryStatus(`OG 图片已上传并选中，image_id=${uploadedImage.image_id}。`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "未知错误";
+      setOgImageLibraryStatus(`OG 图片上传失败：${message}`);
+    } finally {
+      setIsUploadingOgImage(false);
+    }
+  }
+
   function handleTagKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -1201,6 +1234,14 @@ export function ArticleEditorWorkspace({
                     <button className="word-sidebar-mini-button" onClick={() => setShowOgImagePicker(true)} type="button">
                       从媒体库选择
                     </button>
+                    <button
+                      className="word-sidebar-mini-button"
+                      disabled={isUploadingOgImage}
+                      onClick={() => ogImageUploadInputRef.current?.click()}
+                      type="button"
+                    >
+                      {isUploadingOgImage ? "上传中..." : "本地上传"}
+                    </button>
                     {draft.ogImage ? (
                       <button
                         className="word-sidebar-mini-button is-muted"
@@ -1236,6 +1277,16 @@ export function ArticleEditorWorkspace({
                       </div>
                     </div>
                   ) : null}
+                  <input
+                    ref={ogImageUploadInputRef}
+                    className="tiptap-upload-input"
+                    onChange={(event) => {
+                      void handleUploadOgImage(event.target.files?.[0] ?? null);
+                      event.currentTarget.value = "";
+                    }}
+                    type="file"
+                    accept="image/*"
+                  />
                 </div>
               </div>
               <div className="word-sidebar-field">

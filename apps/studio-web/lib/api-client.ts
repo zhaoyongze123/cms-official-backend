@@ -327,7 +327,22 @@ export type MediaLibraryFileRecord = {
 };
 
 function getDjangoPublicBaseUrl() {
-  return (process.env.NEXT_PUBLIC_DJANGO_BASE_URL ?? "http://127.0.0.1:8001").replace(/\/+$/, "");
+  const rawBaseUrl = (process.env.NEXT_PUBLIC_DJANGO_BASE_URL ?? "http://127.0.0.1:8001").replace(/\/+$/, "");
+
+  try {
+    const parsedUrl = new URL(rawBaseUrl);
+    const normalizedPath = parsedUrl.pathname
+      .replace(/\/django\/django-admin\/?$/i, "")
+      .replace(/\/django-admin\/?$/i, "")
+      .replace(/\/django\/?$/i, "")
+      .replace(/\/+$/, "");
+    return `${parsedUrl.origin}${normalizedPath}`;
+  } catch {
+    return rawBaseUrl
+      .replace(/\/django\/django-admin\/?$/i, "")
+      .replace(/\/django-admin\/?$/i, "")
+      .replace(/\/django\/?$/i, "");
+  }
 }
 
 function normalizeUploadedFileUrl(fileUrl: string) {

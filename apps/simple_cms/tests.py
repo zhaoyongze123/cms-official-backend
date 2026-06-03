@@ -369,6 +369,15 @@ class ArticleAdminEditorUrlTests(SimpleTestCase):
             "http://127.0.0.1:3000/django-admin/next-editor/django-admin/articles/17/",
         )
 
+    @override_settings(NEXT_PUBLIC_EDITOR_BASE_URL="https://www.yuncan.com/django-admin/next-editor")
+    def test_build_next_editor_url_avoids_duplicate_editor_base_path(self):
+        url = ArticleAdmin._build_next_editor_url("/django-admin/articles/17/")
+
+        self.assertEqual(
+            url,
+            "https://www.yuncan.com/django-admin/next-editor/django-admin/articles/17/",
+        )
+
     @override_settings(NEXT_PUBLIC_EDITOR_BASE_URL="")
     def test_build_next_editor_url_falls_back_to_proxy(self):
         url = ArticleAdmin._build_next_editor_url("/django-admin/articles/new/")

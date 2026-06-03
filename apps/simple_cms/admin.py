@@ -155,6 +155,8 @@ class ArticleAdmin(admin.ModelAdmin):
         editor_base_path = "/django-admin/next-editor"
 
         if editor_base_url:
+            if editor_base_url.endswith(editor_base_path):
+                editor_base_url = editor_base_url.removesuffix(editor_base_path)
             normalized_path = path if path.startswith("/") else f"/{path}"
             return f"{editor_base_url}{editor_base_path}{normalized_path}"
 
