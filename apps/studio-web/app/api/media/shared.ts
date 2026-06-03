@@ -1,5 +1,28 @@
 import { proxyDjangoRequest } from "../../../lib/django-proxy";
 
+function resolvePublicOrigin(request: Request) {
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = request.headers.get("host")?.trim();
+  const candidateHost = forwardedHost || host;
+
+  if (candidateHost) {
+    const protocol = forwardedProto || (candidateHost.startsWith("127.0.0.1") || candidateHost.startsWith("localhost") ? "http" : "https");
+    return `${protocol}://${candidateHost}`;
+  }
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (siteUrl) {
+    try {
+      return new URL(siteUrl).origin;
+    } catch {
+      // 忽略非法站点配置，继续回退
+    }
+  }
+
+  return new URL(request.url).origin;
+}
+
 function normalizeMediaFileUrl(fileUrl: string, publicOrigin: string) {
   if (!fileUrl) {
     return fileUrl;
@@ -54,7 +77,7 @@ export async function proxyNormalizedMediaResponse(
   }
 
   const payload = await response.json();
-  const publicOrigin = new URL(request.url).origin;
+  const publicOrigin = resolvePublicOrigin(request);
   const normalizedPayload = normalizeMediaPayload(payload, publicOrigin);
 
   return Response.json(normalizedPayload, {
