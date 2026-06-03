@@ -50,26 +50,14 @@ export const metadata: Metadata = {
 export default async function SolutionsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ category?: string; q?: string }>;
+  searchParams?: Promise<{ q?: string }>;
 }) {
   const articles = await fetchPublishedArticles();
   const section = getPublicArticleSectionConfig("solutions");
   const resolvedSearchParams = searchParams ? await searchParams : {};
-  const selectedCategory = (resolvedSearchParams.category || "").trim();
   const searchQuery = (resolvedSearchParams.q || "").trim().toLowerCase();
   const sectionArticles = filterArticlesBySection(articles, "solutions");
-  const categories = [
-    { label: "全部", value: "" },
-    ...Array.from(
-      new Map(
-        sectionArticles
-          .filter((article) => article.categorySlug)
-          .map((article) => [article.categorySlug, { label: article.category, value: article.categorySlug }]),
-      ).values(),
-    ),
-  ];
   const filteredArticles = sectionArticles.filter((article) => {
-    const matchesCategory = selectedCategory ? article.categorySlug === selectedCategory : true;
     const haystack = [
       article.title,
       article.excerpt,
@@ -80,14 +68,12 @@ export default async function SolutionsPage({
       .join(" ")
       .toLowerCase();
     const matchesQuery = searchQuery ? haystack.includes(searchQuery) : true;
-    return matchesCategory && matchesQuery;
+    return matchesQuery;
   });
 
   return (
     <PublicArticleSectionPage
       articles={filteredArticles}
-      categories={categories}
-      selectedCategory={selectedCategory}
       searchQuery={resolvedSearchParams.q || ""}
       section={section}
     />

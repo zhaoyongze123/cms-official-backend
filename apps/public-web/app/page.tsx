@@ -5,6 +5,7 @@ import {
   buildAbsoluteSiteUrl,
   fetchPublishedArticles,
   filterArticlesBySection,
+  getPublicSiteSettings,
   getSiteSeoContext,
 } from "../src/lib/articles-api";
 
@@ -37,15 +38,20 @@ export const metadata: Metadata = {
 
 export default async function HomePage() {
   const articles = await fetchPublishedArticles();
+  const publicSiteSettings = await getPublicSiteSettings();
   const servicesArticles = filterArticlesBySection(articles, "services");
   const solutionsArticles = filterArticlesBySection(articles, "solutions");
   const casesArticles = filterArticlesBySection(articles, "cases");
+  const featuredArticles = publicSiteSettings.homepageFeaturedArticles.length >= 3
+    ? publicSiteSettings.homepageFeaturedArticles
+    : [
+        servicesArticles[0],
+        solutionsArticles[0],
+        casesArticles[0],
+      ].filter((article): article is NonNullable<typeof article> => Boolean(article));
+  const homepageSolutionArticles = publicSiteSettings.homepageSolutionArticles.length >= 4
+    ? publicSiteSettings.homepageSolutionArticles
+    : [];
 
-  const articleLinks = {
-    services: servicesArticles[0] ? `/articles/${servicesArticles[0].slug}?from=services` : "/services",
-    solutions: solutionsArticles[0] ? `/articles/${solutionsArticles[0].slug}?from=solutions` : "/solutions",
-    cases: casesArticles[0] ? `/articles/${casesArticles[0].slug}?from=cases` : "/cases",
-  };
-
-  return <PublicLandingPage articleLinks={articleLinks} />;
+  return <PublicLandingPage featuredArticles={featuredArticles} solutionArticles={homepageSolutionArticles} />;
 }

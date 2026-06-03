@@ -1,5 +1,7 @@
+from django import forms
 from django.contrib import admin
 from django.conf import settings
+from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils import timezone
 
@@ -7,6 +9,7 @@ from cms_apps.articles.models import Article, ArticleRevision, Category, Tag
 from cms_apps.faq.models import FaqItem
 from cms_apps.knowledge.models import KnowledgeChunk, KnowledgeSource
 from cms_apps.seo.models import SeoMetadata
+from apps.sys_settings.models import SiteSetting
 
 
 class ArticleRevisionInline(admin.TabularInline):
@@ -53,6 +56,28 @@ class SeoMetadataInline(admin.StackedInline):
     )
 
 
+class FrontendContentSetting(SiteSetting):
+    class Meta:
+        proxy = True
+        app_label = "simple_cms"
+        verbose_name = "前台内容"
+        verbose_name_plural = "前台内容"
+
+
+class FrontendContentSettingForm(forms.ModelForm):
+    class Meta:
+        model = FrontendContentSetting
+        fields = (
+            "homepage_featured_article_primary",
+            "homepage_featured_article_secondary",
+            "homepage_featured_article_tertiary",
+            "homepage_solution_article_1",
+            "homepage_solution_article_2",
+            "homepage_solution_article_3",
+            "homepage_solution_article_4",
+        )
+
+
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
     list_display = ("name", "slug", "created_at")
@@ -76,6 +101,7 @@ class ArticleAdmin(admin.ModelAdmin):
     list_display = ("title", "category", "status", "publish_date", "created_at", "updated_at")
     list_filter = ("status", "category", "created_at")
     search_fields = ("title", "slug", "body", "content_html")
+    autocomplete_fields = ("category", "cover_image")
     date_hierarchy = "created_at"
     prepopulated_fields = {"slug": ("title",)}
     filter_horizontal = ("tags",)
@@ -179,6 +205,58 @@ class ArticleAdmin(admin.ModelAdmin):
             article.save()
             count += 1
         self.message_user(request, f"已归档 {count} 篇文章")
+
+
+@admin.register(FrontendContentSetting)
+class FrontendContentSettingAdmin(admin.ModelAdmin):
+    form = FrontendContentSettingForm
+    autocomplete_fields = (
+        "homepage_featured_article_primary",
+        "homepage_featured_article_secondary",
+        "homepage_featured_article_tertiary",
+        "homepage_solution_article_1",
+        "homepage_solution_article_2",
+        "homepage_solution_article_3",
+        "homepage_solution_article_4",
+    )
+    fieldsets = (
+        (
+            "首页轮播卡片",
+            {
+                "description": "设置官网首页右侧三张轮播卡片对应的文章。前台会自动读取文章标题、摘要和 OG 图片。",
+                "fields": (
+                    "homepage_featured_article_primary",
+                    "homepage_featured_article_secondary",
+                    "homepage_featured_article_tertiary",
+                ),
+                "classes": ("wide", "admin-section"),
+            },
+        ),
+        (
+            "首页解决方案四条",
+            {
+                "description": "设置官网首页解决方案区四条内容对应的文章。前台会自动读取文章分类 slug、标题和摘要，并跳转到文章详情页。",
+                "fields": (
+                    "homepage_solution_article_1",
+                    "homepage_solution_article_2",
+                    "homepage_solution_article_3",
+                    "homepage_solution_article_4",
+                ),
+                "classes": ("wide", "admin-section"),
+            },
+        ),
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        obj, _ = self.model.objects.get_or_create(id=1)
+        url = reverse("admin:simple_cms_frontendcontentsetting_change", args=[obj.id])
+        return HttpResponseRedirect(url)
 
 
 @admin.register(KnowledgeSource)

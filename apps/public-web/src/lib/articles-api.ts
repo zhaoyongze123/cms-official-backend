@@ -134,9 +134,6 @@ export interface PublicArticleSectionConfig {
   description: string;
   route: string;
   breadcrumbsLabel: string;
-  categorySlugs: string[];
-  tagSlugs: string[];
-  keywords: string[];
 }
 
 export interface SiteSeoContext {
@@ -154,6 +151,8 @@ export interface PublicSiteSettings {
     head: string;
     bodyEnd: string;
   };
+  homepageFeaturedArticles: PublicArticle[];
+  homepageSolutionArticles: PublicArticle[];
 }
 
 export function mapArticleToPublicArticle(article: ArticleApiItem): PublicArticle {
@@ -267,6 +266,8 @@ export async function getPublicSiteSettings(): Promise<PublicSiteSettings> {
         head?: string;
         body_end?: string;
       };
+      homepage_featured_articles?: ArticleApiItem[];
+      homepage_solution_articles?: ArticleApiItem[];
     }>("/api/public/site-settings/");
 
     return {
@@ -276,6 +277,12 @@ export async function getPublicSiteSettings(): Promise<PublicSiteSettings> {
         head: payload.third_party_scripts?.head || "",
         bodyEnd: payload.third_party_scripts?.body_end || "",
       },
+      homepageFeaturedArticles: (payload.homepage_featured_articles || [])
+        .filter((item): item is ArticleApiItem => Boolean(item))
+        .map(mapArticleToPublicArticle),
+      homepageSolutionArticles: (payload.homepage_solution_articles || [])
+        .filter((item): item is ArticleApiItem => Boolean(item))
+        .map(mapArticleToPublicArticle),
     };
   } catch (error) {
     logPublicApiError("公开站点设置", error);
@@ -286,6 +293,8 @@ export async function getPublicSiteSettings(): Promise<PublicSiteSettings> {
         head: "",
         bodyEnd: "",
       },
+      homepageFeaturedArticles: [],
+      homepageSolutionArticles: [],
     };
   }
 }
@@ -405,19 +414,6 @@ export function getPublicArticleSectionConfig(section: PublicArticleSectionKey):
       description: "查看云璨公开发布的上云咨询、迁移托管与运维服务文章。",
       route: "/services",
       breadcrumbsLabel: "上云服务",
-      categorySlugs: ["services", "cloud-services", "service", "上云服务"],
-      tagSlugs: ["services", "cloud-services", "service", "上云服务"],
-      keywords: [
-        "上云服务",
-        "云上",
-        "迁移",
-        "运维",
-        "托管",
-        "咨询",
-        "数据备份",
-        "邮件归档",
-        "企业邮箱",
-      ],
     },
     solutions: {
       key: "solutions",
@@ -426,9 +422,6 @@ export function getPublicArticleSectionConfig(section: PublicArticleSectionKey):
       description: "查看云璨公开发布的解决方案、架构实践与行业案例。",
       route: "/solutions",
       breadcrumbsLabel: "解决方案中心",
-      categorySlugs: ["solutions", "solution", "架构方案", "解决方案"],
-      tagSlugs: ["solutions", "solution", "架构方案", "解决方案"],
-      keywords: ["解决方案", "架构", "方案", "网盘", "建站", "ChatGPT", "企业邮箱"],
     },
     products: {
       key: "products",
@@ -437,9 +430,6 @@ export function getPublicArticleSectionConfig(section: PublicArticleSectionKey):
       description: "查看云璨公开发布的产品中心、工具与平台能力文章。",
       route: "/products",
       breadcrumbsLabel: "产品中心",
-      categorySlugs: ["products", "product", "product-center", "产品中心"],
-      tagSlugs: ["products", "product", "product-center", "产品中心"],
-      keywords: ["产品中心", "工具", "平台", "系统", "能力"],
     },
     cases: {
       key: "cases",
@@ -448,9 +438,6 @@ export function getPublicArticleSectionConfig(section: PublicArticleSectionKey):
       description: "查看云璨公开发布的客户案例与落地实践文章。",
       route: "/cases",
       breadcrumbsLabel: "客户案例",
-      categorySlugs: ["cases", "case", "customer-case", "客户案例"],
-      tagSlugs: ["cases", "case", "customer-case", "客户案例"],
-      keywords: ["客户案例", "案例", "落地", "实践", "试点", "观察", "复盘", "AI验证"],
     },
   };
 
@@ -461,40 +448,12 @@ function normalizeValue(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function isMatchedByKeywords(article: PublicArticle, keywords: string[]): boolean {
-  if (!keywords.length) {
-    return false;
-  }
-  const haystack = [
-    article.title,
-    article.excerpt,
-    article.category,
-    article.contentText,
-    article.seo.metaTitle,
-    article.seo.metaDescription,
-    ...article.tags,
-  ]
-    .join(" ")
-    .toLowerCase();
-  return keywords.some((keyword) => haystack.includes(normalizeValue(keyword)));
-}
-
 export function filterArticlesBySection(articles: PublicArticle[], section: PublicArticleSectionKey): PublicArticle[] {
   const config = getPublicArticleSectionConfig(section);
-  const categorySlugs = config.categorySlugs.map(normalizeValue);
-  const tagSlugs = config.tagSlugs.map(normalizeValue);
+  const sectionSlug = normalizeValue(config.slug);
 
   return articles.filter((article) => {
-    const articleCategorySlug = normalizeValue(article.categorySlug || "");
-    const articleCategory = normalizeValue(article.category || "");
-    const articleTags = article.tags.map(normalizeValue);
-    const matchesCategory = categorySlugs.length
-      ? categorySlugs.includes(articleCategorySlug) || categorySlugs.includes(articleCategory)
-      : true;
-    const matchesTag = tagSlugs.length
-      ? articleTags.some((tag) => tagSlugs.includes(tag))
-      : false;
-    return matchesCategory || matchesTag || isMatchedByKeywords(article, config.keywords);
+    return normalizeValue(article.categorySlug || "") === sectionSlug;
   });
 }
 

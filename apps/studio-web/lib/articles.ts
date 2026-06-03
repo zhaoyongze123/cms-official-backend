@@ -68,7 +68,38 @@ export type DjangoArticleRecord = {
   };
 };
 
+function getDjangoPublicBaseUrl() {
+  return (process.env.NEXT_PUBLIC_DJANGO_BASE_URL ?? "http://127.0.0.1:8001").replace(/\/+$/, "");
+}
+
+function normalizeDjangoFileUrl(fileUrl: string | undefined) {
+  if (!fileUrl) {
+    return fileUrl ?? "";
+  }
+
+  if (fileUrl.startsWith("/")) {
+    return `${getDjangoPublicBaseUrl()}${fileUrl}`;
+  }
+
+  try {
+    const parsedUrl = new URL(fileUrl);
+    if (parsedUrl.hostname === "web" || parsedUrl.hostname === "localhost") {
+      return `${getDjangoPublicBaseUrl()}${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+    }
+    return parsedUrl.toString();
+  } catch {
+    return fileUrl;
+  }
+}
+
 export function toStudioArticleRecord(article: DjangoArticleRecord): ArticleRecord {
+  const normalizedOgImage = article.seo?.og_image
+    ? {
+        ...article.seo.og_image,
+        file_url: normalizeDjangoFileUrl(article.seo.og_image.file_url),
+      }
+    : null;
+
   return {
     article_id: article.article_id,
     schema_version: article.schema_version,
@@ -96,6 +127,15 @@ export function toStudioArticleRecord(article: DjangoArticleRecord): ArticleReco
       og_image: null,
       og_image_url: "",
     },
+    ...(article.seo
+      ? {
+          seo: {
+            ...article.seo,
+            og_image: normalizedOgImage,
+            og_image_url: normalizeDjangoFileUrl(article.seo.og_image_url),
+          },
+        }
+      : {}),
     seo_payload: article.seo_payload ?? {},
   };
 }

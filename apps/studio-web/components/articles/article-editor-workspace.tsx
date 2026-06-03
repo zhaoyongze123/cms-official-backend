@@ -1,6 +1,4 @@
 "use client";
-
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import {
@@ -21,7 +19,6 @@ import {
   type AiReviewSuggestionRecord,
   type AiPatchRecord,
 } from "../../lib/ai-review";
-import { studioBrowserPath } from "../../lib/routes";
 import {
   type ArticleRecord,
   type ArticleStatus,
@@ -635,6 +632,88 @@ export function ArticleEditorWorkspace({
   }, [embedded]);
 
   useEffect(() => {
+    if (!embedded || typeof window === "undefined" || window.parent === window) {
+      return;
+    }
+
+    const parentOrigin = (() => {
+      if (!document.referrer) {
+        return "*";
+      }
+
+      try {
+        return new URL(document.referrer).origin;
+      } catch {
+        return "*";
+      }
+    })();
+
+    const root = document.documentElement;
+    const body = document.body;
+    let frameId = 0;
+
+    const reportFrameHeight = () => {
+      frameId = 0;
+      const nextHeight = Math.ceil(
+        Math.max(
+          root.scrollHeight,
+          root.offsetHeight,
+          root.clientHeight,
+          body?.scrollHeight ?? 0,
+          body?.offsetHeight ?? 0,
+          body?.clientHeight ?? 0,
+        ),
+      );
+
+      window.parent.postMessage(
+        {
+          type: "cms-next-editor:content-height",
+          height: nextHeight,
+        },
+        parentOrigin,
+      );
+    };
+
+    const scheduleFrameHeightReport = () => {
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+      }
+      frameId = window.requestAnimationFrame(reportFrameHeight);
+    };
+
+    const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(scheduleFrameHeightReport) : null;
+    resizeObserver?.observe(root);
+    if (body) {
+      resizeObserver?.observe(body);
+    }
+
+    const handleParentMessage = (event: MessageEvent) => {
+      if (parentOrigin !== "*" && event.origin !== parentOrigin) {
+        return;
+      }
+
+      if (event.data?.type === "cms-next-editor:request-height") {
+        scheduleFrameHeightReport();
+      }
+    };
+
+    scheduleFrameHeightReport();
+    window.addEventListener("load", scheduleFrameHeightReport);
+    window.addEventListener("resize", scheduleFrameHeightReport);
+    window.addEventListener("message", handleParentMessage);
+
+    return () => {
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+      }
+      resizeObserver?.disconnect();
+      window.removeEventListener("load", scheduleFrameHeightReport);
+      window.removeEventListener("resize", scheduleFrameHeightReport);
+      window.removeEventListener("message", handleParentMessage);
+    };
+  }, [embedded]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function loadLatestReview(pollAttempt = 0) {
@@ -1038,25 +1117,6 @@ export function ArticleEditorWorkspace({
             <strong>{draft.title || "未命名文档"}</strong>
             <span>cms-editor-web</span>
           </div>
-        </div>
-        <div className="word-titlebar-right">
-          <button className="word-window-button" type="button">
-            返回列表
-          </button>
-          <button className="word-window-button" type="button">
-            JSON
-          </button>
-          <Link className="word-window-button" href="/studio/articles">
-            列表
-          </Link>
-          <a
-            className="word-window-button"
-            href={studioBrowserPath(`/api/articles/${article.article_id}`)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Django
-          </a>
         </div>
       </header>
 
