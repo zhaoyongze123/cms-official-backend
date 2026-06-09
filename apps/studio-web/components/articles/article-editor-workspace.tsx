@@ -1306,9 +1306,6 @@ export function ArticleEditorWorkspace({
     if (!draft.metaDescription.trim()) {
       nextErrors.summary = "摘要不能为空。";
     }
-    if (!draft.canonicalUrl.trim() && draft.status === "published") {
-      nextErrors.canonical_url = "发布前请确认标准地址，建议显式填写 Canonical。";
-    }
     if (isDocumentEffectivelyEmpty(latestDocument)) {
       nextErrors.content_json = "正文不能为空。";
     }
@@ -1586,10 +1583,14 @@ export function ArticleEditorWorkspace({
                 <span>Canonical</span>
                 <input
                   onChange={(event) => updateField("canonicalUrl", event.target.value)}
-                  placeholder="留空则自动回退公开 URL"
+                  placeholder="留空则自动使用 https://www.yuncan.com/articles/{slug}/"
                   value={draft.canonicalUrl}
                 />
-                {fieldErrors.canonical_url ? <small className="field-error-text">{fieldErrors.canonical_url}</small> : null}
+                {fieldErrors.canonical_url ? (
+                  <small className="field-error-text">{fieldErrors.canonical_url}</small>
+                ) : (
+                  <small className="word-sidebar-hint">留空时会自动使用公开文章链接作为标准地址。</small>
+                )}
               </label>
               <label className="word-sidebar-field">
                 <span>Robots</span>
