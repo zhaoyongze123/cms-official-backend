@@ -543,6 +543,32 @@ main {
   border-bottom: 1px solid #0c3f87;
 }
 
+.word-success-toast {
+  position: fixed;
+  right: 28px;
+  bottom: 74px;
+  z-index: 80;
+  display: grid;
+  gap: 4px;
+  min-width: 220px;
+  max-width: 360px;
+  padding: 12px 14px;
+  border: 1px solid #9fd5b4;
+  background: linear-gradient(180deg, #f3fff6 0%, #e6f8eb 100%);
+  box-shadow: 0 10px 24px rgba(20, 83, 45, 0.14);
+  color: #166534;
+}
+
+.word-success-toast strong {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.word-success-toast span {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .word-titlebar-left,
 .word-titlebar-right,
 .word-titlebar-copy,
@@ -758,6 +784,13 @@ main {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+.word-sidebar-media-preview-trigger {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
 }
 
 .word-sidebar-media-picker,
@@ -1119,6 +1152,15 @@ main {
   color: #4f4f4f;
 }
 
+.save-notice-success {
+  color: #0f766e;
+}
+
+.save-notice-error {
+  color: #b42318;
+  font-weight: 700;
+}
+
 .word-save-button {
   border: 1px solid #9aaed1;
   background: #ffffff;
@@ -1222,6 +1264,36 @@ main {
 .tiptap-toolbar-group-divider {
   padding-left: 10px;
   border-left: 1px solid #d0d0d0;
+}
+
+.tiptap-table-toolbar {
+  padding: 4px 8px;
+  background: #fcfcfc;
+  border: 1px solid #dcdcdc;
+  border-radius: 4px;
+  gap: 6px;
+}
+
+.tiptap-table-toolbar-button {
+  min-width: 36px;
+  gap: 4px;
+}
+
+.tiptap-table-toolbar-label {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.tiptap-media-toolbar-button {
+  gap: 4px;
+}
+
+.tiptap-media-toolbar-label {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .tiptap-toolbar-select select {
@@ -1372,6 +1444,33 @@ main {
   padding: 8px 10px;
   border-bottom: 1px solid #d8d8d8;
   background: #ffffff;
+}
+
+.tiptap-table-bubble-menu {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.tiptap-table-bubble-button {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid #d7dee8;
+  border-radius: 6px;
+  background: #fff;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tiptap-table-bubble-button:hover {
+  background: #f8fafc;
+  border-color: #c6d3e1;
 }
 
 .tiptap-media-library-modal {
@@ -1605,6 +1704,17 @@ main {
   margin: 0.85em 0;
 }
 
+.field-error-text,
+.editor-panel-error {
+  color: #b42318;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.editor-panel-error {
+  margin-top: 8px;
+}
+
 .tiptap-paper ul,
 .tiptap-paper ol {
   padding-left: 1.4rem;
@@ -1625,12 +1735,69 @@ main {
   overflow-x: auto;
 }
 
+.tiptap-paper table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  border: 1px solid #d6dde8;
+  background: #fff;
+  font-size: 0.96rem;
+  line-height: 1.55;
+}
+
+.tiptap-paper th,
+.tiptap-paper td {
+  border: 1px solid #d6dde8;
+  padding: 8px 10px;
+  vertical-align: top;
+  text-align: left;
+}
+
+.tiptap-paper th {
+  background: #f6f8fb;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.tiptap-paper td > :first-child,
+.tiptap-paper th > :first-child {
+  margin-top: 0;
+}
+
+.tiptap-paper td > :last-child,
+.tiptap-paper th > :last-child {
+  margin-bottom: 0;
+}
+
+.tiptap-paper tr:nth-child(even) td {
+  background: #fcfdff;
+}
+
 .tiptap-paper img {
   display: block;
   max-width: 100%;
+  height: auto;
   margin: 16px 0;
   border-radius: 0;
   box-shadow: none;
+}
+
+.tiptap-paper figure[data-align="left"] img,
+.tiptap-paper img[data-align="left"] {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.tiptap-paper figure[data-align="center"] img,
+.tiptap-paper img[data-align="center"] {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.tiptap-paper figure[data-align="right"] img,
+.tiptap-paper img[data-align="right"] {
+  margin-left: auto;
+  margin-right: 0;
 }
 
 .tiptap-paper [data-resize-container] {
@@ -2244,6 +2411,11 @@ main {
     margin-right: 0;
     border-left: 0;
     border-right: 0;
+  }
+
+  .tiptap-table-toolbar {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .tiptap-toolbar-select select {

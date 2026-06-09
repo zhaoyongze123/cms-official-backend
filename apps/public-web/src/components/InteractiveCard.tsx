@@ -65,7 +65,7 @@ function buildCardData(articles: InteractiveCardProps["articles"]): CardInfo[] {
     description: article.excerpt,
     image: article.seo.ogImageUrl || fallbackCards[index].image,
     color: fallbackCards[index].color,
-    href: `/articles/${article.slug}?from=${encodeURIComponent(article.categorySlug || "homepage")}`,
+    href: `/articles/${article.slug}`,
   }));
 }
 
@@ -169,7 +169,7 @@ export const InteractiveCard = ({ articles }: InteractiveCardProps) => {
                   </p>
 
                   <div className="flex items-center justify-between pt-6">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center">
                       <div 
                         className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform duration-500 group-hover:rotate-12"
                         style={{ backgroundColor: currentCard.color }}
@@ -177,10 +177,6 @@ export const InteractiveCard = ({ articles }: InteractiveCardProps) => {
                         {currentCard.type === 'poster' && <Zap size={22} />}
                         {currentCard.type === 'case' && <Layers size={22} />}
                         {currentCard.type === 'feedback' && <Users size={22} />}
-                      </div>
-                      <div>
-                        <div className="text-[10px] font-black text-muted uppercase tracking-[0.2em] mb-0.5">Explorer</div>
-                        <div className="text-xs font-bold text-charcoal">0{ (index % cardData.length) + 1 } / 03</div>
                       </div>
                     </div>
                     

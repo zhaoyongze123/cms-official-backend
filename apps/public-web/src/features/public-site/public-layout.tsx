@@ -137,8 +137,9 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
               <div className="relative flex h-12 w-12 items-center justify-center rounded-full border border-[#dde3eb] bg-white text-charcoal shadow-[0_10px_24px_rgba(148,163,184,0.18)]">
                 <Headset size={24} />
               </div>
-              <div className="relative text-center text-xs font-bold leading-5 tracking-[0.12em] text-charcoal">
-                联 系 我 们
+              <div className="relative text-center text-xs font-bold leading-5 text-charcoal">
+                <span className="block">联系</span>
+                <span className="block">我们</span>
               </div>
             </div>
           </div>

@@ -17,24 +17,40 @@ type DjangoErrorResponse = {
   error?: {
     code?: string;
     message?: string;
-    details?: unknown;
+    details?: Record<string, unknown> | string[] | string;
   };
 };
+
+export class DjangoValidationError extends Error {
+  code: string;
+  details: Record<string, unknown> | string[] | string | null;
+
+  constructor(message: string, code = "request_failed", details: Record<string, unknown> | string[] | string | null = null) {
+    super(message);
+    this.name = "DjangoValidationError";
+    this.code = code;
+    this.details = details;
+  }
+}
 
 async function readJson<T>(response: Response) {
   if (!response.ok) {
     let errorMessage = `请求失败: ${response.status}`;
+    let errorCode = "request_failed";
+    let errorDetails: Record<string, unknown> | string[] | string | null = null;
     try {
       const payload = (await response.json()) as DjangoErrorResponse;
       const message = payload.error?.message;
       const code = payload.error?.code;
+      errorCode = code ?? errorCode;
+      errorDetails = payload.error?.details ?? null;
       if (message) {
         errorMessage = code ? `${code}: ${message}` : message;
       }
     } catch {
       // 保留默认错误文案
     }
-    throw new Error(errorMessage);
+    throw new DjangoValidationError(errorMessage, errorCode, errorDetails);
   }
 
   return (await response.json()) as T;
@@ -345,19 +361,43 @@ function getDjangoPublicBaseUrl() {
   }
 }
 
+function getNormalizedMediaPath(pathname: string) {
+  if (pathname.startsWith("/django/media/")) {
+    return pathname.replace(/^\/django\/media\//, "/media/");
+  }
+  return pathname;
+}
+
+function getConfiguredMediaBasePath() {
+  const configuredPath = process.env.NEXT_PUBLIC_DJANGO_MEDIA_URL?.trim() || "/media/";
+  const normalizedPath = configuredPath.startsWith("/") ? configuredPath : `/${configuredPath}`;
+  return normalizedPath.replace(/\/+$/, "") || "/media";
+}
+
+function getResolvedMediaPath(pathname: string) {
+  const normalizedPath = getNormalizedMediaPath(pathname);
+  const configuredMediaBasePath = getConfiguredMediaBasePath();
+
+  if (configuredMediaBasePath !== "/media" && normalizedPath.startsWith("/media/")) {
+    return normalizedPath.replace(/^\/media\//, `${configuredMediaBasePath}/`);
+  }
+
+  return normalizedPath;
+}
+
 function normalizeUploadedFileUrl(fileUrl: string) {
   if (!fileUrl) {
     return fileUrl;
   }
 
   if (fileUrl.startsWith("/")) {
-    return `${getDjangoPublicBaseUrl()}${fileUrl}`;
+    return `${getDjangoPublicBaseUrl()}${getResolvedMediaPath(fileUrl)}`;
   }
 
   try {
     const parsedUrl = new URL(fileUrl);
-    if (parsedUrl.hostname === "web" || parsedUrl.hostname === "localhost") {
-      return `${getDjangoPublicBaseUrl()}${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+    if (parsedUrl.hostname === "web" || parsedUrl.hostname === "localhost" || parsedUrl.hostname === "127.0.0.1") {
+      return `${getDjangoPublicBaseUrl()}${getResolvedMediaPath(parsedUrl.pathname)}${parsedUrl.search}${parsedUrl.hash}`;
     }
     return parsedUrl.toString();
   } catch {

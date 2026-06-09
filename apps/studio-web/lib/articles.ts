@@ -39,6 +39,7 @@ export type DjangoArticleRecord = {
   slug: string;
   status: ArticleRecord["status"];
   category: DjangoArticleCategory;
+  cover_image?: DjangoArticleImage | null;
   tags: DjangoArticleTag[];
   content_json: ArticleRecord["content_json"];
   content_html: string;
@@ -60,6 +61,12 @@ export type DjangoArticleRecord = {
   };
   seo_payload?: {
     canonical_url_resolved?: string;
+    breadcrumbs?: Array<{
+      "@type": string;
+      position: number;
+      name: string;
+      item: string;
+    }>;
     faq_items?: DjangoArticleFaqItem[];
     json_ld?: {
       breadcrumb?: Record<string, unknown>;
@@ -87,19 +94,43 @@ function getDjangoPublicBaseUrl() {
   }
 }
 
+function getNormalizedMediaPath(pathname: string) {
+  if (pathname.startsWith("/django/media/")) {
+    return pathname.replace(/^\/django\/media\//, "/media/");
+  }
+  return pathname;
+}
+
+function getConfiguredMediaBasePath() {
+  const configuredPath = process.env.NEXT_PUBLIC_DJANGO_MEDIA_URL?.trim() || "/media/";
+  const normalizedPath = configuredPath.startsWith("/") ? configuredPath : `/${configuredPath}`;
+  return normalizedPath.replace(/\/+$/, "") || "/media";
+}
+
+function getResolvedMediaPath(pathname: string) {
+  const normalizedPath = getNormalizedMediaPath(pathname);
+  const configuredMediaBasePath = getConfiguredMediaBasePath();
+
+  if (configuredMediaBasePath !== "/media" && normalizedPath.startsWith("/media/")) {
+    return normalizedPath.replace(/^\/media\//, `${configuredMediaBasePath}/`);
+  }
+
+  return normalizedPath;
+}
+
 function normalizeDjangoFileUrl(fileUrl: string | undefined) {
   if (!fileUrl) {
     return fileUrl ?? "";
   }
 
   if (fileUrl.startsWith("/")) {
-    return `${getDjangoPublicBaseUrl()}${fileUrl}`;
+    return `${getDjangoPublicBaseUrl()}${getResolvedMediaPath(fileUrl)}`;
   }
 
   try {
     const parsedUrl = new URL(fileUrl);
-    if (parsedUrl.hostname === "web" || parsedUrl.hostname === "localhost") {
-      return `${getDjangoPublicBaseUrl()}${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+    if (parsedUrl.hostname === "web" || parsedUrl.hostname === "localhost" || parsedUrl.hostname === "127.0.0.1") {
+      return `${getDjangoPublicBaseUrl()}${getResolvedMediaPath(parsedUrl.pathname)}${parsedUrl.search}${parsedUrl.hash}`;
     }
     return parsedUrl.toString();
   } catch {
@@ -108,6 +139,12 @@ function normalizeDjangoFileUrl(fileUrl: string | undefined) {
 }
 
 export function toStudioArticleRecord(article: DjangoArticleRecord): ArticleRecord {
+  const normalizedCoverImage = article.cover_image
+    ? {
+        ...article.cover_image,
+        file_url: normalizeDjangoFileUrl(article.cover_image.file_url),
+      }
+    : null;
   const normalizedOgImage = article.seo?.og_image
     ? {
         ...article.seo.og_image,
@@ -123,6 +160,7 @@ export function toStudioArticleRecord(article: DjangoArticleRecord): ArticleReco
     slug: article.slug,
     status: article.status,
     category: article.category,
+    cover_image: normalizedCoverImage,
     tags: article.tags,
     content_json: article.content_json,
     content_html: article.content_html,

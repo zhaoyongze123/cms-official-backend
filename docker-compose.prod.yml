@@ -122,6 +122,7 @@ services:
       NEXT_EDITOR_DEV_ORIGIN: ${CMS_SITE_URL}
       DJANGO_INTERNAL_BASE_URL: http://web:8000
       NEXT_PUBLIC_DJANGO_BASE_URL: ${CMS_SITE_URL}
+      NEXT_PUBLIC_DJANGO_MEDIA_URL: /django/media/
     depends_on:
       web:
         condition: service_healthy

@@ -26,7 +26,7 @@ function Breadcrumbs({
       {selectedArticle ? (
         <>
           <ChevronRight size={14} className="shrink-0" />
-          <span className="text-charcoal font-bold truncate">文章正文</span>
+          <span className="text-charcoal font-bold truncate">{selectedArticle.title}</span>
         </>
       ) : null}
     </nav>
@@ -53,7 +53,7 @@ function ArticleDetail({
           <div className="w-12 h-12 rounded-2xl bg-hermes flex items-center justify-center text-white font-black">{article.author.charAt(0)}</div>
           <div>
             <div className="font-black text-charcoal">{article.author}</div>
-            <div className="text-xs text-muted font-bold uppercase tracking-widest mt-1">Cloud Architect</div>
+            <div className="text-xs text-muted font-bold tracking-widest mt-1">Yuncan Tech Team</div>
           </div>
         </div>
       </div>
@@ -94,7 +94,7 @@ function ArticleList({
           <h1 className="text-4xl md:text-5xl font-black text-charcoal mb-4 tracking-tight">{section.title}</h1>
           <div className="h-1 lg:h-2 w-20 lg:w-32 bg-hermes/30 rounded-full" />
         </div>
-        <p className="text-muted text-lg max-w-3xl leading-relaxed">
+        <p className="max-w-3xl text-base md:text-lg leading-8 text-muted">
           {section.description}
         </p>
       </div>
@@ -119,7 +119,7 @@ function ArticleList({
           articles.map((article, idx) => (
             <Link
               key={article.id}
-              href={`/articles/${article.slug}?from=${encodeURIComponent(section.slug)}`}
+              href={`/articles/${article.slug}`}
               className="block"
               aria-label={article.title}
             >
@@ -175,11 +175,7 @@ function ArticleList({
               <BookOpen size={40} />
             </div>
             <h3 className="text-xl font-bold text-charcoal mb-2">暂无可展示的已发布文章</h3>
-            <p className="text-muted">
-              {searchQuery
-                ? "当前搜索条件下还没有已发布文章。"
-                : "当前 CMS 公开接口还没有返回可用文章。"}
-            </p>
+            {searchQuery ? <p className="text-muted">当前搜索条件下还没有已发布文章。</p> : null}
           </div>
         )}
       </div>

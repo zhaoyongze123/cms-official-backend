@@ -120,6 +120,7 @@ def serialize_article(article: Article, seo_payload: dict[str, object] | None = 
         "slug": article.slug,
         "status": article.status,
         "category": serialize_category(article.category),
+        "cover_image": serialize_image(getattr(article, "cover_image", None)),
         "tags": [serialize_tag(tag) for tag in tags],
         "content_json": article.content_json or {},
         "content_html": article.content_html or "",
@@ -418,6 +419,9 @@ def apply_article_payload(article: Article, payload: dict[str, object], partial:
             payload.get("category_id"),
             payload.get("category_name"),
         )
+
+    if "cover_image_id" in payload:
+        article.cover_image = _coerce_image(payload.get("cover_image_id"), "cover_image_id")
 
     if "content_json" in payload or not partial:
         article.content_json = _coerce_content_json(payload.get("content_json"))

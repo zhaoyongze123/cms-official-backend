@@ -12,6 +12,12 @@ import BaseImage from "@tiptap/extension-image";
 import TextAlign from "@tiptap/extension-text-align";
 import Highlight from "@tiptap/extension-highlight";
 import CharacterCount from "@tiptap/extension-character-count";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
+import { createLowlight, common } from "lowlight";
 import {
   fetchMediaLibraryFiles,
   fetchMediaLibraryImages,
@@ -30,6 +36,10 @@ import {
   validateTipTapDocument,
   BLOCK_ID_PATTERN,
 } from "@cms/editor-protocol";
+import { AttachmentToolbar } from "./attachment-toolbar";
+import { ImageToolbar } from "./image-toolbar";
+import { TableToolbar } from "./table-toolbar";
+import { TableBubbleMenu } from "./table-bubble-menu";
 
 type TipTapEditorProps = {
   articleId?: number;
@@ -97,6 +107,7 @@ type GenericNode = {
     alt?: string;
     title?: string;
     href?: string;
+    align?: string;
     width?: number | string;
     height?: number | string;
     [key: string]: unknown;
@@ -114,12 +125,14 @@ const EMPTY_DOCUMENT: TipTapDocument = {
   content: [],
 };
 
+const lowlight = createLowlight(common);
+
 const BlockIdExtension = Extension.create({
   name: "blockId",
   addGlobalAttributes() {
     return [
       {
-        types: ["paragraph", "heading", "bulletList", "orderedList", "image"],
+        types: ["paragraph", "heading", "bulletList", "orderedList", "image", "table"],
         attributes: {
           blockId: {
             default: null,
@@ -139,6 +152,14 @@ const RichImage = BaseImage.extend({
   addAttributes() {
     return {
       ...this.parent?.(),
+      align: {
+        default: "center",
+        parseHTML: (element) => element.getAttribute("data-align") || "center",
+        renderHTML: (attributes) =>
+          typeof attributes.align === "string" && attributes.align
+            ? { "data-align": attributes.align }
+            : {},
+      },
       imageId: {
         default: null,
         parseHTML: (element) => {
@@ -168,6 +189,28 @@ const RichImage = BaseImage.extend({
 
     return ({ node, getPos, HTMLAttributes }) => {
       const imageElement = document.createElement("img");
+      let containerElement: HTMLElement | null = null;
+
+      const syncContainerAlign = (align: string) => {
+        if (!containerElement) {
+          return;
+        }
+        containerElement.setAttribute("data-align", align);
+        containerElement.style.marginTop = "18px";
+        containerElement.style.marginBottom = "18px";
+        if (align === "center") {
+          containerElement.style.marginLeft = "auto";
+          containerElement.style.marginRight = "auto";
+          return;
+        }
+        if (align === "right") {
+          containerElement.style.marginLeft = "auto";
+          containerElement.style.marginRight = "0";
+          return;
+        }
+        containerElement.style.marginLeft = "0";
+        containerElement.style.marginRight = "auto";
+      };
 
       const syncImageAttributes = (attributes: Record<string, unknown>) => {
         Object.entries(this.options.HTMLAttributes ?? {}).forEach(([key, value]) => {
@@ -179,6 +222,10 @@ const RichImage = BaseImage.extend({
         imageElement.src = typeof attributes.src === "string" ? attributes.src : "";
         imageElement.alt = typeof attributes.alt === "string" ? attributes.alt : "";
         imageElement.title = typeof attributes.title === "string" ? attributes.title : "";
+        const safeAlign = typeof attributes.align === "string" ? attributes.align : "center";
+        imageElement.setAttribute("data-align", safeAlign);
+        imageElement.dataset.align = safeAlign;
+        syncContainerAlign(safeAlign);
 
         Object.entries(attributes).forEach(([key, value]) => {
           if (value === null || value === undefined) {
@@ -190,6 +237,11 @@ const RichImage = BaseImage.extend({
             }
             if (key === "imageId") {
               imageElement.removeAttribute("data-image-id");
+              return;
+            }
+            if (key === "align") {
+              imageElement.removeAttribute("data-align");
+              delete imageElement.dataset.align;
               return;
             }
             imageElement.removeAttribute(key);
@@ -207,8 +259,13 @@ const RichImage = BaseImage.extend({
               imageElement.setAttribute("width", String(value));
               break;
             case "height":
-              imageElement.style.height = `${value}px`;
-              imageElement.setAttribute("height", String(value));
+              imageElement.style.height = "auto";
+              imageElement.removeAttribute("height");
+              break;
+            case "align":
+              imageElement.setAttribute("data-align", String(value));
+              imageElement.dataset.align = String(value);
+              syncContainerAlign(String(value));
               break;
             case "imageId":
               imageElement.setAttribute("data-image-id", String(value));
@@ -226,11 +283,11 @@ const RichImage = BaseImage.extend({
         editor: this.editor,
         node,
         getPos,
-        onResize: (width, height) => {
+        onResize: (width) => {
           imageElement.style.width = `${width}px`;
-          imageElement.style.height = `${height}px`;
+          imageElement.style.height = "auto";
         },
-        onCommit: (width, height) => {
+        onCommit: (width) => {
           const pos = getPos();
           if (pos === undefined) {
             return;
@@ -240,7 +297,7 @@ const RichImage = BaseImage.extend({
             .setNodeSelection(pos)
             .updateAttributes(this.name, {
               width,
-              height,
+              height: null,
             })
             .run();
         },
@@ -262,6 +319,8 @@ const RichImage = BaseImage.extend({
       });
 
       const dom = resizableNodeView.dom;
+      containerElement = dom;
+      syncContainerAlign(typeof HTMLAttributes.align === "string" ? HTMLAttributes.align : "center");
       dom.style.visibility = "hidden";
       dom.style.pointerEvents = "none";
       imageElement.onload = () => {
@@ -541,23 +600,17 @@ function normalizeImageDimension(value: unknown) {
 
 function buildImageAttributeString(attrs: GenericNode["attrs"]) {
   const width = normalizeImageDimension(attrs?.width);
-  const height = normalizeImageDimension(attrs?.height);
+  const align = typeof attrs?.align === "string" && attrs.align ? attrs.align : "center";
   const htmlAttributes = [];
 
   if (width !== null) {
     htmlAttributes.push(`width="${width}"`);
   }
-  if (height !== null) {
-    htmlAttributes.push(`height="${height}"`);
-  }
-  if (width !== null || height !== null) {
+  htmlAttributes.push(`data-align="${escapeHtml(align)}"`);
+  if (width !== null) {
     const styleTokens = [];
-    if (width !== null) {
-      styleTokens.push(`width:${width}px`);
-    }
-    if (height !== null) {
-      styleTokens.push(`height:${height}px`);
-    }
+    styleTokens.push(`width:${width}px`);
+    styleTokens.push("height:auto");
     htmlAttributes.push(`style="${styleTokens.join(";")};max-width:100%;"`);
   }
 
@@ -604,6 +657,24 @@ function renderNode(node: GenericNode | undefined): string {
     return `<pre><code>${escapeHtml((node.content ?? []).map((child) => child.text ?? "").join(""))}</code></pre>`;
   }
 
+  if (node.type === "table") {
+    const rows = (node.content ?? []).map((row) => renderNode(row)).join("");
+    return `<table><tbody>${rows}</tbody></table>`;
+  }
+
+  if (node.type === "tableRow") {
+    const cells = (node.content ?? []).map((cell) => renderNode(cell)).join("");
+    return `<tr>${cells}</tr>`;
+  }
+
+  if (node.type === "tableCell") {
+    return `<td>${(node.content ?? []).map((child) => renderNode(child)).join("")}</td>`;
+  }
+
+  if (node.type === "tableHeader") {
+    return `<th>${(node.content ?? []).map((child) => renderNode(child)).join("")}</th>`;
+  }
+
   if (node.type === "horizontalRule") {
     return "<hr />";
   }
@@ -612,7 +683,8 @@ function renderNode(node: GenericNode | undefined): string {
     const src = typeof node.attrs?.src === "string" ? escapeHtml(node.attrs.src) : "";
     const alt = typeof node.attrs?.alt === "string" ? escapeHtml(node.attrs.alt) : "";
     const dimensionAttributes = buildImageAttributeString(node.attrs);
-    return src ? `<figure><img src="${src}" alt="${alt}"${dimensionAttributes} /></figure>` : "";
+    const align = typeof node.attrs?.align === "string" ? escapeHtml(node.attrs.align) : "center";
+    return src ? `<figure data-align="${align}"><img src="${src}" alt="${alt}"${dimensionAttributes} /></figure>` : "";
   }
 
   return (node.content ?? []).map((child) => renderNode(child)).join("");
@@ -908,18 +980,34 @@ function ToolbarButton({
   icon,
   label,
   onClick,
+  onMouseDown,
+  triggerOnMouseDown = false,
 }: {
   active?: boolean;
   disabled?: boolean;
   icon?: string;
   label: string;
   onClick: () => void;
+  onMouseDown?: () => void;
+  triggerOnMouseDown?: boolean;
 }) {
   return (
     <button
       className={`tiptap-toolbar-button${active ? " is-active" : ""}`}
       disabled={disabled}
-      onClick={onClick}
+      onMouseDown={(event) => {
+        event.preventDefault();
+        onMouseDown?.();
+        if (triggerOnMouseDown) {
+          onClick();
+        }
+      }}
+      onClick={(event) => {
+        if (triggerOnMouseDown && event.detail !== 0) {
+          return;
+        }
+        onClick();
+      }}
       title={label}
       type="button"
     >
@@ -953,6 +1041,31 @@ function ToolbarSelect({
   );
 }
 
+export function keepCaretInsideCodeBlock(editor: TiptapRuntimeEditor | null | undefined) {
+  if (!editor) {
+    return;
+  }
+
+  const { $from } = editor.state.selection;
+  if ($from.parent.type.name === "codeBlock" || $from.depth < 1) {
+    return;
+  }
+
+  const containerDepth = $from.depth - 1;
+  const containerNode = $from.node(containerDepth);
+  const currentIndex = $from.index(containerDepth);
+  if (currentIndex < 1) {
+    return;
+  }
+
+  const previousNode = containerNode.child(currentIndex - 1);
+  if (previousNode.type.name !== "codeBlock") {
+    return;
+  }
+
+  editor.commands.focus($from.before() - 1);
+}
+
 export function TipTapEditor({
   articleId,
   value,
@@ -973,6 +1086,8 @@ export function TipTapEditor({
   const attachmentInsertButtonRef = useRef<HTMLButtonElement | null>(null);
   const editorContentRef = useRef<HTMLDivElement | null>(null);
   const activeHeadingRef = useRef<string | null>(null);
+  const pendingCodeBlockSelectionRef = useRef<number | null>(null);
+  const lastSyncedDocumentRef = useRef<string>(JSON.stringify(normalizeBlockIds(value)));
   const [uploadMessage, setUploadMessage] = useState("可直接粘贴图片、拖拽图片，或从媒体库选择 / 本地上传后插入正文。");
   const [showImageSourceMenu, setShowImageSourceMenu] = useState(false);
   const [showMediaLibraryPicker, setShowMediaLibraryPicker] = useState(false);
@@ -1063,6 +1178,7 @@ export function TipTapEditor({
         heading: {
           levels: [1, 2, 3],
         },
+        codeBlock: false,
       }),
       Placeholder.configure({
         placeholder: "从标题、小标题、要点列表开始组织正文，内容保存以 content_json 为真相源。",
@@ -1099,6 +1215,15 @@ export function TipTapEditor({
           minHeight: 120,
           alwaysPreserveAspectRatio: true,
         },
+      }),
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      CodeBlockLowlight.configure({
+        lowlight,
       }),
       TextAlign.configure({
         types: ["heading", "paragraph"],
@@ -1153,6 +1278,47 @@ export function TipTapEditor({
         void handleUploadImage(imageFile, "已接收拖拽图片，正在上传到 Django 媒体库...");
         return true;
       },
+      handleKeyDown(view, event) {
+        const { state } = view;
+        const selection = state.selection;
+        const parentNode = selection.$from.parent;
+        if (parentNode.type.name !== "codeBlock") {
+          return false;
+        }
+        if (event.key === "ArrowUp" && selection.$from.parentOffset === 0) {
+          event.preventDefault();
+          editor?.commands.focus(selection.from);
+          return true;
+        }
+        if (event.key === "ArrowDown" && selection.$from.parentOffset === parentNode.nodeSize - 2) {
+          event.preventDefault();
+          editor?.commands.focus(selection.to);
+          return true;
+        }
+        if (event.key === "Tab") {
+          event.preventDefault();
+          const indentText = event.shiftKey ? "" : "  ";
+          if (event.shiftKey && selection.empty) {
+            const beforeText = parentNode.textContent.slice(0, selection.$from.parentOffset);
+            if (beforeText.endsWith("  ")) {
+              view.dispatch(state.tr.delete(selection.from - 2, selection.from));
+              return true;
+            }
+            return false;
+          }
+          view.dispatch(state.tr.insertText(indentText, selection.from, selection.to));
+          return true;
+        }
+        if (event.key === "Enter") {
+          if (event.metaKey || event.ctrlKey) {
+            event.preventDefault();
+            editor?.chain().focus().exitCode().run();
+            return true;
+          }
+          return false;
+        }
+        return false;
+      },
       handleDOMEvents: {
         contextmenu(view, event) {
           if (readOnly) {
@@ -1197,7 +1363,9 @@ export function TipTapEditor({
       },
     },
     onUpdate({ editor: currentEditor }) {
-      onChange(normalizeBlockIds(currentEditor.getJSON() as TipTapDocument));
+      const normalizedDocument = normalizeBlockIds(currentEditor.getJSON() as TipTapDocument);
+      lastSyncedDocumentRef.current = JSON.stringify(normalizedDocument);
+      onChange(normalizedDocument);
     },
   });
 
@@ -1220,9 +1388,14 @@ export function TipTapEditor({
     }
 
     const nextValue = normalizeBlockIds(value);
-    if (JSON.stringify(editor.getJSON()) !== JSON.stringify(nextValue)) {
+    const serializedNextValue = JSON.stringify(nextValue);
+    if (lastSyncedDocumentRef.current === serializedNextValue) {
+      return;
+    }
+    if (JSON.stringify(editor.getJSON()) !== serializedNextValue) {
       editor.commands.setContent(nextValue);
     }
+    lastSyncedDocumentRef.current = serializedNextValue;
   }, [editor, value]);
 
   useEffect(() => {
@@ -1832,6 +2005,48 @@ export function TipTapEditor({
     editor.chain().focus().liftListItem("listItem").setParagraph().run();
   }
 
+  function applyImageAlign(align: "left" | "center" | "right") {
+    if (!editor || !editor.isActive("image")) {
+      return;
+    }
+    editor.chain().focus().updateAttributes("image", { align }).run();
+  }
+
+  function insertTable() {
+    if (!editor) {
+      return;
+    }
+    editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+  }
+
+  function addTableRowBefore() {
+    editor?.chain().focus().addRowBefore().run();
+  }
+
+  function addTableRowAfter() {
+    editor?.chain().focus().addRowAfter().run();
+  }
+
+  function addTableColumnBefore() {
+    editor?.chain().focus().addColumnBefore().run();
+  }
+
+  function addTableColumnAfter() {
+    editor?.chain().focus().addColumnAfter().run();
+  }
+
+  function removeTableRow() {
+    editor?.chain().focus().deleteRow().run();
+  }
+
+  function removeTableColumn() {
+    editor?.chain().focus().deleteColumn().run();
+  }
+
+  function removeCurrentTable() {
+    editor?.chain().focus().deleteTable().run();
+  }
+
   const currentCharacters = editor?.storage.characterCount.characters() ?? seoMetrics.characters;
 
   return (
@@ -1931,9 +2146,37 @@ export function TipTapEditor({
               active={editor?.isActive("codeBlock")}
               icon="<span class='toolbar-code toolbar-html-mark'>CODE</span>"
               label="代码块"
-              onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+              onMouseDown={() => {
+                pendingCodeBlockSelectionRef.current = editor?.state.selection.from ?? null;
+              }}
+              onClick={() => {
+                const wasCodeBlockActive = editor?.isActive("codeBlock") ?? false;
+                const codeCaretPosition = pendingCodeBlockSelectionRef.current ?? editor?.state.selection.from ?? null;
+                pendingCodeBlockSelectionRef.current = null;
+                editor?.chain().focus().toggleCodeBlock().run();
+                if (!wasCodeBlockActive && codeCaretPosition !== null) {
+                  [0, 60, 180].forEach((delay) => {
+                    window.setTimeout(() => {
+                      editor?.commands.focus(codeCaretPosition);
+                      keepCaretInsideCodeBlock(editor);
+                    }, delay);
+                  });
+                }
+              }}
             />
           </div>
+
+          <TableToolbar
+            editor={editor}
+            onInsertTable={insertTable}
+            onAddRowBefore={addTableRowBefore}
+            onAddRowAfter={addTableRowAfter}
+            onAddColumnBefore={addTableColumnBefore}
+            onAddColumnAfter={addTableColumnAfter}
+            onDeleteRow={removeTableRow}
+            onDeleteColumn={removeTableColumn}
+            onDeleteTable={removeCurrentTable}
+          />
 
           <div className="tiptap-toolbar-group tiptap-toolbar-group-divider">
             <ToolbarButton
@@ -1951,41 +2194,33 @@ export function TipTapEditor({
             <ToolbarButton
               icon="<span class='toolbar-align toolbar-align-left'></span>"
               label="左对齐"
-              onClick={() => editor?.chain().focus().setTextAlign("left").run()}
+              onClick={() => (editor?.isActive("image") ? applyImageAlign("left") : editor?.chain().focus().setTextAlign("left").run())}
             />
             <ToolbarButton
               icon="<span class='toolbar-align toolbar-align-center'></span>"
               label="居中"
-              onClick={() => editor?.chain().focus().setTextAlign("center").run()}
+              onClick={() => (editor?.isActive("image") ? applyImageAlign("center") : editor?.chain().focus().setTextAlign("center").run())}
             />
             <ToolbarButton
               icon="<span class='toolbar-align toolbar-align-right'></span>"
               label="右对齐"
-              onClick={() => editor?.chain().focus().setTextAlign("right").run()}
+              onClick={() => (editor?.isActive("image") ? applyImageAlign("right") : editor?.chain().focus().setTextAlign("right").run())}
             />
             <ToolbarButton icon="<span class='toolbar-link'>∞</span>" label="链接" onClick={applyLink} />
-            <button
-              ref={imageInsertButtonRef}
-              className="tiptap-toolbar-button"
-              onClick={() => setShowImageSourceMenu((currentValue) => !currentValue)}
-              title="图片"
-              type="button"
-            >
-              <span aria-hidden="true" className="tiptap-toolbar-icon">
-                <span className="toolbar-image">▣</span>
-              </span>
-            </button>
-            <button
-              ref={attachmentInsertButtonRef}
-              className="tiptap-toolbar-button"
-              onClick={() => setShowAttachmentSourceMenu((currentValue) => !currentValue)}
-              title="附件"
-              type="button"
-            >
-              <span aria-hidden="true" className="tiptap-toolbar-icon">
-                <span className="toolbar-code toolbar-html-mark">附件</span>
-              </span>
-            </button>
+            <ImageToolbar
+              buttonRef={imageInsertButtonRef}
+              showMenu={showImageSourceMenu}
+              onToggleMenu={() => setShowImageSourceMenu((currentValue) => !currentValue)}
+              onUpload={() => openUploadPicker()}
+              onSelectLibrary={() => openLibraryUploadPicker()}
+            />
+            <AttachmentToolbar
+              buttonRef={attachmentInsertButtonRef}
+              showMenu={showAttachmentSourceMenu}
+              onToggleMenu={() => setShowAttachmentSourceMenu((currentValue) => !currentValue)}
+              onUpload={openAttachmentUploadPicker}
+              onSelectLibrary={openAttachmentLibraryPicker}
+            />
             <ToolbarButton
               icon="<span class='toolbar-code toolbar-html-mark'>HTML</span>"
               label="HTML 源码"
@@ -1993,26 +2228,6 @@ export function TipTapEditor({
             />
           </div>
         </div>
-        {showImageSourceMenu ? (
-          <div className="tiptap-image-source-menu">
-            <button className="tiptap-context-action" onClick={() => openUploadPicker()} type="button">
-              本地上传
-            </button>
-            <button className="tiptap-context-action" onClick={() => openLibraryUploadPicker()} type="button">
-              从媒体库选择
-            </button>
-          </div>
-        ) : null}
-        {showAttachmentSourceMenu ? (
-          <div className="tiptap-image-source-menu tiptap-attachment-source-menu">
-            <button className="tiptap-context-action" onClick={() => openAttachmentUploadPicker()} type="button">
-              本地上传附件
-            </button>
-            <button className="tiptap-context-action" onClick={() => openAttachmentLibraryPicker()} type="button">
-              从附件库选择
-            </button>
-          </div>
-        ) : null}
         <div className="tiptap-upload-hint">{uploadMessage}</div>
       </div>
       {showMediaLibraryPicker ? (
@@ -2118,6 +2333,17 @@ export function TipTapEditor({
                 />
               </BubbleMenu>
 
+              <TableBubbleMenu
+                editor={editor}
+                onAddRowBefore={addTableRowBefore}
+                onAddRowAfter={addTableRowAfter}
+                onAddColumnBefore={addTableColumnBefore}
+                onAddColumnAfter={addTableColumnAfter}
+                onDeleteRow={removeTableRow}
+                onDeleteColumn={removeTableColumn}
+                onDeleteTable={removeCurrentTable}
+              />
+
               <FloatingMenu className="tiptap-floating-menu" editor={editor}>
                 <ToolbarButton label="+ H2" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} />
                 <ToolbarButton label="+ 列表" onClick={() => editor.chain().focus().toggleBulletList().run()} />
@@ -2197,6 +2423,17 @@ export function TipTapEditor({
               <div className="tiptap-image-context-section">
                 <span className="tiptap-image-context-title">图片操作</span>
                 <div className="tiptap-image-context-row">
+                  <button className="tiptap-context-action" onClick={() => applyImageAlign("left")} type="button">
+                    居左
+                  </button>
+                  <button className="tiptap-context-action" onClick={() => applyImageAlign("center")} type="button">
+                    居中
+                  </button>
+                  <button className="tiptap-context-action" onClick={() => applyImageAlign("right")} type="button">
+                    居右
+                  </button>
+                </div>
+                <div className="tiptap-image-context-row">
                   <button
                     className="tiptap-context-action"
                     onClick={() =>
@@ -2208,6 +2445,19 @@ export function TipTapEditor({
                     type="button"
                   >
                     替换图片
+                  </button>
+                  <button
+                    className="tiptap-context-action"
+                    onClick={() => {
+                      const currentNode = editor?.state.doc.nodeAt(imageContextState.pos ?? -1);
+                      const imageUrl = typeof currentNode?.attrs?.src === "string" ? currentNode.attrs.src : "";
+                      if (imageUrl) {
+                        window.open(imageUrl, "_blank", "noopener,noreferrer");
+                      }
+                    }}
+                    type="button"
+                  >
+                    放大预览
                   </button>
                   <button className="tiptap-context-action is-danger" onClick={removeCurrentImage} type="button">
                     删除图片

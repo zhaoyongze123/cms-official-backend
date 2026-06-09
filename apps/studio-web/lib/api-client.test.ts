@@ -45,6 +45,7 @@ describe("api client media helpers", () => {
 
   it("normalizes media library file urls when django base url was built with admin path", async () => {
     vi.stubEnv("NEXT_PUBLIC_DJANGO_BASE_URL", "https://www.yuncan.com/django/django-admin");
+    vi.stubEnv("NEXT_PUBLIC_DJANGO_MEDIA_URL", "/django/media/");
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify([
@@ -69,5 +70,34 @@ describe("api client media helpers", () => {
     const result = await fetchMediaLibraryImages();
 
     expect(result[0]?.file_url).toBe("https://www.yuncan.com/django/media/library/images/2023/05/image-4-1024x871.png");
+  });
+
+  it("rewrites legacy prod media paths back to dev media prefix", async () => {
+    vi.stubEnv("NEXT_PUBLIC_DJANGO_BASE_URL", "http://127.0.0.1:8001");
+    vi.stubEnv("NEXT_PUBLIC_DJANGO_MEDIA_URL", "/media/");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify([
+          {
+            image_id: 120,
+            title: "legacy-prod.png",
+            alt_text: "",
+            file_url: "/django/media/library/images/2026/06/legacy-prod.png",
+            uploaded_at: "2026-06-05T07:00:00Z",
+          },
+        ]),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchMediaLibraryImages();
+
+    expect(result[0]?.file_url).toBe("http://127.0.0.1:8001/media/library/images/2026/06/legacy-prod.png");
   });
 });

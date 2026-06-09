@@ -45,6 +45,13 @@ class ArticleApiTests(TestCase):
             alt_text="用于社交分享的封面图",
             file=SimpleUploadedFile("og-cover.png", b"fake-image-bytes", content_type="image/png"),
         )
+        self.cover_image = ImageItem.objects.create(
+            title="文章封面",
+            alt_text="文章头图",
+            file=SimpleUploadedFile("cover.png", b"cover-image-bytes", content_type="image/png"),
+        )
+        self.article.cover_image = self.cover_image
+        self.article.save()
         self.seo_metadata = SeoMetadata.objects.create(
             article=self.article,
             meta_title="公开 SEO 标题",
@@ -99,6 +106,7 @@ class ArticleApiTests(TestCase):
         self.assertEqual(article["category"]["category_id"], self.category.id)
         self.assertEqual(article["category"]["name"], self.category.name)
         self.assertEqual(article["category"]["slug"], self.category.slug)
+        self.assertEqual(article["cover_image"]["image_id"], self.cover_image.id)
         self.assertEqual(article["tags"][0]["tag_id"], self.tag.id)
         self.assertEqual(article["tags"][0]["name"], self.tag.name)
         self.assertEqual(article["tags"][0]["slug"], self.tag.slug)
@@ -134,6 +142,7 @@ class ArticleApiTests(TestCase):
         self.assertEqual(payload["content_html"], "<p>new</p>")
         self.assertEqual(payload["category"]["category_id"], self.category.id)
         self.assertEqual(payload["tags"][0]["tag_id"], self.tag.id)
+        self.assertIsNone(payload["cover_image"])
 
     def test_get_detail_returns_serialized_article(self):
         response = self.client.get(f"/api/articles/{self.article.id}/")
@@ -257,6 +266,7 @@ class ArticleApiTests(TestCase):
                 "robots": "noindex,follow",
                 "og_title": "更新后的 OG 标题",
                 "og_description": "更新后的 OG 描述",
+                "cover_image_id": alternate_image.id,
                 "og_image_id": alternate_image.id,
                 "faq_items": [
                     {
@@ -282,6 +292,7 @@ class ArticleApiTests(TestCase):
         self.assertEqual(payload["seo"]["robots"], "noindex,follow")
         self.assertEqual(payload["seo"]["og_title"], "更新后的 OG 标题")
         self.assertEqual(payload["seo"]["og_description"], "更新后的 OG 描述")
+        self.assertEqual(payload["cover_image"]["image_id"], alternate_image.id)
         self.assertEqual(payload["seo"]["og_image"]["image_id"], alternate_image.id)
         self.assertEqual(len(payload["faq_items"]), 2)
         self.assertEqual(payload["faq_items"][0]["question"], "FAQ 一是什么？")
@@ -290,6 +301,7 @@ class ArticleApiTests(TestCase):
         self.seo_metadata.refresh_from_db()
         self.assertEqual(self.seo_metadata.meta_title, "更新后的 SEO 标题")
         self.assertEqual(self.seo_metadata.meta_keywords, "seo,cms,faq")
+        self.assertEqual(self.article.cover_image_id, alternate_image.id)
         self.assertEqual(self.seo_metadata.og_image_id, alternate_image.id)
         self.assertEqual(self.article.faq_items.count(), 2)
 
@@ -330,6 +342,7 @@ class ArticleApiTests(TestCase):
             payload["seo_payload"]["canonical_url_resolved"],
             self.seo_metadata.canonical_url,
         )
+        self.assertEqual(payload["seo_payload"]["breadcrumbs"][1]["name"], self.category.name)
         self.assertEqual(payload["seo_payload"]["faq_items"][0]["question"], "什么是 SEO 文章？")
         self.assertEqual(payload["seo_payload"]["json_ld"]["breadcrumb"]["@type"], "BreadcrumbList")
         self.assertEqual(payload["seo_payload"]["json_ld"]["faq"]["@type"], "FAQPage")

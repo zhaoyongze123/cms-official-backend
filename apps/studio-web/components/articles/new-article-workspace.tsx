@@ -16,6 +16,7 @@ const EMPTY_NEW_ARTICLE: ArticleRecord = {
   slug: "",
   status: "draft",
   category: null,
+  cover_image: null,
   tags: [],
   content_json: {
     type: "doc",

@@ -88,4 +88,21 @@
   .article-content pre code {
     @apply bg-transparent p-0 text-white;
   }
+
+  .article-content table {
+    @apply my-8 w-full border-collapse overflow-hidden rounded-2xl border border-line bg-white text-base leading-7 text-charcoal;
+  }
+
+  .article-content th,
+  .article-content td {
+    @apply border border-line px-5 py-4 text-left align-top;
+  }
+
+  .article-content th {
+    @apply bg-mist font-bold text-ink;
+  }
+
+  .article-content tr:nth-child(even) td {
+    @apply bg-mist/40;
+  }
 }

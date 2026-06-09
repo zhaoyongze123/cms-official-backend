@@ -14,6 +14,7 @@ from cms_apps.articles.api.selectors import get_article_queryset, get_public_art
 from cms_apps.articles.api.services import apply_article_payload, serialize_article
 from cms_apps.articles.models import Article, ArticleSlugHistory, Category, Tag
 from cms_apps.seo.services.public import (
+    build_article_breadcrumb_items,
     build_article_breadcrumb_json_ld,
     build_article_canonical_url,
     build_article_faq_json_ld,
@@ -66,7 +67,9 @@ def article_list_view(request):
 @require_http_methods(["GET", "PATCH"])
 @csrf_exempt
 def article_detail_view(request, article_id):
-    article = get_object_or_404(get_article_queryset(), pk=article_id)
+    article = get_article_queryset().filter(pk=article_id).first()
+    if article is None:
+        return _not_found_response()
 
     if request.method == "GET":
         return JsonResponse(serialize_article(article))
@@ -96,6 +99,7 @@ def public_article_detail_by_slug_view(request, slug):
         seo_payload = {
             "canonical_url_resolved": build_article_canonical_url(request, article, seo_metadata),
             "faq_items": serialize_faq_items(article),
+            "breadcrumbs": build_article_breadcrumb_items(request, article),
             "json_ld": {
                 "breadcrumb": build_article_breadcrumb_json_ld(request, article),
                 "faq": faq_json_ld,

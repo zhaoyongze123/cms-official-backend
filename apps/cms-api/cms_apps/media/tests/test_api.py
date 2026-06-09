@@ -1,5 +1,5 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
 
 from apps.media_library.models import FileItem, ImageItem
@@ -118,3 +118,34 @@ class MediaUploadApiTests(TestCase):
         self.assertEqual(payload["title"], "部署手册")
         self.assertEqual(payload["file_name"], "manual.pdf")
         self.assertIn("/media/library/files/", payload["file_url"])
+
+    @override_settings(MEDIA_URL="/media/", PUBLIC_MEDIA_URL="/media/")
+    def test_image_list_uses_dev_media_prefix(self):
+        image = ImageItem.objects.create(
+            title="开发图片",
+            alt_text="开发环境图片",
+            file=SimpleUploadedFile("dev.png", b"fake-image-bytes", content_type="image/png"),
+        )
+
+        response = self.client.get("/api/media/images/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        matching = next(item for item in payload if item["image_id"] == image.id)
+        self.assertIn("/media/library/images/", matching["file_url"])
+        self.assertNotIn("/django/media/", matching["file_url"])
+
+    @override_settings(MEDIA_URL="/django/media/", PUBLIC_MEDIA_URL="/django/media/")
+    def test_image_list_uses_prod_media_prefix(self):
+        image = ImageItem.objects.create(
+            title="生产图片",
+            alt_text="生产环境图片",
+            file=SimpleUploadedFile("prod.png", b"fake-image-bytes", content_type="image/png"),
+        )
+
+        response = self.client.get("/api/media/images/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        matching = next(item for item in payload if item["image_id"] == image.id)
+        self.assertIn("/django/media/library/images/", matching["file_url"])

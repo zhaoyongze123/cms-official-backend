@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import {
+  DjangoValidationError,
   fetchCategorySuggestions,
   fetchMediaLibraryImages,
   fetchTagSuggestions,
@@ -41,6 +42,7 @@ type DraftState = {
   metaDescription: string;
   slug: string;
   category: DjangoArticleCategoryOption | null;
+  coverImage: MediaLibraryImageRecord | null;
   tags: DjangoArticleTag[];
   content_json: TipTapDocument;
   status: ArticleStatus;
@@ -66,6 +68,20 @@ type ReviewState = {
 };
 
 type GenerationTarget = "title" | "slug" | "description" | "tags";
+
+type SaveNoticeTone = "info" | "success" | "error";
+
+type SaveNotice = {
+  tone: SaveNoticeTone;
+  text: string;
+};
+
+type SuccessToast = {
+  open: boolean;
+  text: string;
+};
+
+type FieldErrors = Partial<Record<"title" | "slug" | "category" | "summary" | "content_json" | "canonical_url", string>>;
 
 function normalizeTagName(value: string) {
   return value.trim().replaceAll(/\s+/g, " ");
@@ -115,12 +131,51 @@ function formatStudioDateTime(value: string) {
   }).format(new Date(value));
 }
 
+function isDocumentEffectivelyEmpty(document: TipTapDocument) {
+  const content = Array.isArray(document?.content) ? document.content : [];
+  return !content.some((node) => {
+    if (!node || typeof node !== "object") {
+      return false;
+    }
+    if ((node as { type?: string }).type === "image") {
+      return true;
+    }
+    const text = JSON.stringify(node);
+    return /"text":"[^"]+"/.test(text);
+  });
+}
+
+function flattenValidationMessage(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => flattenValidationMessage(item)).filter(Boolean).join("；");
+  }
+  if (value && typeof value === "object") {
+    return Object.values(value as Record<string, unknown>)
+      .map((item) => flattenValidationMessage(item))
+      .filter(Boolean)
+      .join("；");
+  }
+  return "";
+}
+
 function createDraft(article: ArticleRecord): DraftState {
   return {
     title: article.title,
     metaDescription: article.summary,
     slug: article.slug,
     category: article.category,
+    coverImage: article.cover_image
+      ? {
+          image_id: article.cover_image.image_id,
+          title: article.cover_image.title,
+          alt_text: article.cover_image.alt_text,
+          file_url: article.cover_image.file_url,
+          uploaded_at: "",
+        }
+      : null,
     tags: dedupeTags(article.tags ?? []),
     content_json: createFallbackDocument(article),
     status: article.status,
@@ -425,6 +480,19 @@ function documentToHtml(document: TipTapDocument) {
     if (node.type === "codeBlock") {
       return `<pre><code>${children}</code></pre>`;
     }
+    if (node.type === "table") {
+      const rows = (node.content ?? []).map((row) => renderNode(row)).join("");
+      return `<table><tbody>${rows}</tbody></table>`;
+    }
+    if (node.type === "tableRow") {
+      return `<tr>${children}</tr>`;
+    }
+    if (node.type === "tableCell") {
+      return `<td>${children}</td>`;
+    }
+    if (node.type === "tableHeader") {
+      return `<th>${children}</th>`;
+    }
     if (node.type === "horizontalRule") {
       return "<hr />";
     }
@@ -476,6 +544,10 @@ export function ArticleEditorWorkspace({
   const [categoryInput, setCategoryInput] = useState(article.category?.name ?? "");
   const [categorySuggestions, setCategorySuggestions] = useState<DjangoArticleCategoryOption[]>([]);
   const [categorySuggestionOpen, setCategorySuggestionOpen] = useState(false);
+  const [showCoverImagePicker, setShowCoverImagePicker] = useState(false);
+  const [coverImageLibrary, setCoverImageLibrary] = useState<MediaLibraryImageRecord[]>([]);
+  const [coverImageLibraryStatus, setCoverImageLibraryStatus] = useState("");
+  const [isUploadingCoverImage, setIsUploadingCoverImage] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [tagSuggestions, setTagSuggestions] = useState<DjangoArticleTag[]>([]);
   const [tagSuggestionOpen, setTagSuggestionOpen] = useState(false);
@@ -490,7 +562,16 @@ export function ArticleEditorWorkspace({
   const tagInputRef = useRef<HTMLInputElement | null>(null);
   const categoryInputRef = useRef<HTMLInputElement | null>(null);
   const ogImageUploadInputRef = useRef<HTMLInputElement | null>(null);
-  const [saveMessage, setSaveMessage] = useState("当前内容尚未提交到 Django。");
+  const coverImageUploadInputRef = useRef<HTMLInputElement | null>(null);
+  const [saveNotice, setSaveNotice] = useState<SaveNotice>({
+    tone: "info",
+    text: "当前内容尚未提交到 Django。",
+  });
+  const [successToast, setSuccessToast] = useState<SuccessToast>({
+    open: false,
+    text: "",
+  });
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [saveTime, setSaveTime] = useState(article.updated_at);
   const [reviewState, setReviewState] = useState<ReviewState>({
     status: "idle",
@@ -508,6 +589,27 @@ export function ArticleEditorWorkspace({
   );
   const normalizedContentDocument = useMemo(() => normalizeBlockIds(draft.content_json), [draft.content_json]);
   const outlineItems = useMemo(() => collectOutlineItems(normalizedContentDocument), [normalizedContentDocument]);
+
+  useEffect(() => {
+    if (!successToast.open) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setSuccessToast((current) =>
+        current.open
+          ? {
+              ...current,
+              open: false,
+            }
+          : current,
+      );
+    }, 2600);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [successToast.open, successToast.text]);
 
   useEffect(() => {
     if (outlineItems.length === 0) {
@@ -535,8 +637,40 @@ export function ArticleEditorWorkspace({
     setTagInput("");
     setTagSuggestionOpen(false);
     setSaveTime(articleSnapshot.updated_at);
-    setSaveMessage("已加载 Django 最新文章内容。");
+    setFieldErrors({});
+    setSaveNotice({
+      tone: "info",
+      text: "已加载 Django 最新文章内容。",
+    });
   }, [articleSnapshot]);
+
+  useEffect(() => {
+    if (!showCoverImagePicker) {
+      return;
+    }
+
+    let cancelled = false;
+    setCoverImageLibraryStatus("正在加载封面图库...");
+    void fetchMediaLibraryImages()
+      .then((images) => {
+        if (cancelled) {
+          return;
+        }
+        setCoverImageLibrary(images);
+        setCoverImageLibraryStatus(images.length > 0 ? "" : "媒体库暂无图片。");
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+        const message = error instanceof Error ? error.message : "未知错误";
+        setCoverImageLibraryStatus(`封面图库加载失败：${message}`);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showCoverImagePicker]);
 
   useEffect(() => {
     if (!showOgImagePicker) {
@@ -786,11 +920,38 @@ export function ArticleEditorWorkspace({
     if (key === "content_json") {
       editorDocumentRef.current = value as TipTapDocument;
     }
+    if (Object.keys(fieldErrors).length > 0) {
+      setFieldErrors((current) => {
+        const next = { ...current };
+        if (key === "title") {
+          delete next.title;
+        }
+        if (key === "slug") {
+          delete next.slug;
+        }
+        if (key === "category") {
+          delete next.category;
+        }
+        if (key === "metaDescription") {
+          delete next.summary;
+        }
+        if (key === "content_json") {
+          delete next.content_json;
+        }
+        if (key === "canonicalUrl") {
+          delete next.canonical_url;
+        }
+        return next;
+      });
+    }
     setDraft((current) => ({
       ...current,
       [key]: value,
     }));
-    setSaveMessage("检测到未保存修改，请提交到 Django。");
+    setSaveNotice({
+      tone: "info",
+      text: "检测到未保存修改，请提交到 Django。",
+    });
   }
 
   function updateTags(nextTags: DjangoArticleTag[]) {
@@ -883,6 +1044,41 @@ export function ArticleEditorWorkspace({
     setShowOgImagePicker(false);
   }
 
+  function selectCoverImage(image: MediaLibraryImageRecord) {
+    updateField("coverImage", image);
+    setShowCoverImagePicker(false);
+  }
+
+  async function handleUploadCoverImage(file: File | null) {
+    if (!file) {
+      return;
+    }
+
+    const fallbackTitle = file.name.replace(/\.[^.]+$/, "");
+    setIsUploadingCoverImage(true);
+    setCoverImageLibraryStatus("正在上传封面图到 Django 媒体库...");
+
+    try {
+      const uploadedImage = await uploadEditorImage(
+        file,
+        draft.coverImage?.alt_text ?? "",
+        draft.coverImage?.title || fallbackTitle,
+      );
+      updateField("coverImage", uploadedImage);
+      setCoverImageLibrary((currentImages) => {
+        const nextImages = currentImages.filter((image) => image.image_id !== uploadedImage.image_id);
+        return [uploadedImage, ...nextImages];
+      });
+      setShowCoverImagePicker(false);
+      setCoverImageLibraryStatus(`封面图已上传并选中，image_id=${uploadedImage.image_id}。`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "未知错误";
+      setCoverImageLibraryStatus(`封面图上传失败：${message}`);
+    } finally {
+      setIsUploadingCoverImage(false);
+    }
+  }
+
   async function handleUploadOgImage(file: File | null) {
     if (!file) {
       return;
@@ -952,6 +1148,7 @@ export function ArticleEditorWorkspace({
       status,
       category_id: draft.category?.category_id ?? null,
       category_name: draft.category?.name ?? normalizeCategoryName(categoryInput),
+      cover_image_id: draft.coverImage?.image_id ?? null,
       tag_names: draft.tags.map((tag) => tag.name),
       content_json: latestDocument,
       content_html: documentToHtml(latestDocument),
@@ -974,6 +1171,7 @@ export function ArticleEditorWorkspace({
 
   function applyPersistedResult(result: ArticleRecord, successMessage: string) {
     setArticleSnapshot(result);
+    setFieldErrors({});
     setDraft((currentDraft) => ({
       ...currentDraft,
       title: result.title,
@@ -981,6 +1179,15 @@ export function ArticleEditorWorkspace({
       slug: result.slug,
       status: result.status,
       category: result.category,
+      coverImage: result.cover_image
+        ? {
+            image_id: result.cover_image.image_id,
+            title: result.cover_image.title,
+            alt_text: result.cover_image.alt_text,
+            file_url: result.cover_image.file_url,
+            uploaded_at: "",
+          }
+        : null,
       tags: dedupeTags(result.tags ?? []),
       content_json:
         Array.isArray(result.content_json?.content) && result.content_json.content.length > 0
@@ -1010,10 +1217,20 @@ export function ArticleEditorWorkspace({
     }));
     setCategoryInput(result.category?.name ?? "");
     setSaveTime(result.updated_at);
-    setSaveMessage(successMessage);
+    setSaveNotice({
+      tone: "success",
+      text: successMessage,
+    });
+    setSuccessToast({
+      open: true,
+      text: successMessage,
+    });
   }
 
   function handleSave() {
+    if (!validateDraftBeforePersist()) {
+      return;
+    }
     startTransition(async () => {
       setActiveAction("save");
       try {
@@ -1023,8 +1240,7 @@ export function ArticleEditorWorkspace({
           : await updateArticleDraft(article.article_id, payload);
         applyPersistedResult(result, "草稿已保存到 Django。");
       } catch (error) {
-        const message = error instanceof Error ? error.message : "未知错误";
-        setSaveMessage(`保存失败：${message}`);
+        applyBackendValidationError(error instanceof Error ? error : new Error("未知错误"));
       } finally {
         setActiveAction(null);
       }
@@ -1032,6 +1248,9 @@ export function ArticleEditorWorkspace({
   }
 
   function handlePublish() {
+    if (!validateDraftBeforePersist()) {
+      return;
+    }
     startTransition(async () => {
       setActiveAction("publish");
       try {
@@ -1046,8 +1265,7 @@ export function ArticleEditorWorkspace({
         }
         applyPersistedResult(result, "文章已发布到 Django。");
       } catch (error) {
-        const message = error instanceof Error ? error.message : "未知错误";
-        setSaveMessage(`发布失败：${message}`);
+        applyBackendValidationError(error instanceof Error ? error : new Error("未知错误"));
       } finally {
         setActiveAction(null);
       }
@@ -1069,9 +1287,90 @@ export function ArticleEditorWorkspace({
     };
   }
 
+  function validateDraftBeforePersist() {
+    const nextErrors: FieldErrors = {};
+    const latestDocument =
+      editorDocumentGetterRef.current?.() ??
+      editorDocumentRef.current ??
+      draft.content_json;
+
+    if (!draft.title.trim()) {
+      nextErrors.title = "标题不能为空。";
+    }
+    if (!draft.slug.trim()) {
+      nextErrors.slug = "Slug 不能为空。";
+    }
+    if (!draft.category?.name?.trim() && !normalizeCategoryName(categoryInput)) {
+      nextErrors.category = "请选择或输入所属分类。";
+    }
+    if (!draft.metaDescription.trim()) {
+      nextErrors.summary = "摘要不能为空。";
+    }
+    if (!draft.canonicalUrl.trim() && draft.status === "published") {
+      nextErrors.canonical_url = "发布前请确认标准地址，建议显式填写 Canonical。";
+    }
+    if (isDocumentEffectivelyEmpty(latestDocument)) {
+      nextErrors.content_json = "正文不能为空。";
+    }
+
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      setSaveNotice({
+        tone: "error",
+        text: "存在必填项未完成，请根据字段提示修正后再保存。",
+      });
+      return false;
+    }
+    return true;
+  }
+
+  function applyBackendValidationError(error: DjangoValidationError | Error) {
+    if (!(error instanceof DjangoValidationError)) {
+      setSaveNotice({
+        tone: "error",
+        text: error.message,
+      });
+      return;
+    }
+
+    const details = error.details;
+    const nextErrors: FieldErrors = {};
+    if (details && typeof details === "object" && !Array.isArray(details)) {
+      const detailMap = details as Record<string, unknown>;
+      if (detailMap.title) {
+        nextErrors.title = flattenValidationMessage(detailMap.title);
+      }
+      if (detailMap.slug) {
+        nextErrors.slug = flattenValidationMessage(detailMap.slug);
+      }
+      if (detailMap.summary || detailMap.meta_description) {
+        nextErrors.summary = flattenValidationMessage(detailMap.summary ?? detailMap.meta_description);
+      }
+      if (detailMap.category_id || detailMap.category_name) {
+        nextErrors.category = flattenValidationMessage(detailMap.category_id ?? detailMap.category_name);
+      }
+      if (detailMap.content_json || detailMap.body || detailMap.content_html) {
+        nextErrors.content_json = flattenValidationMessage(
+          detailMap.content_json ?? detailMap.body ?? detailMap.content_html,
+        );
+      }
+      if (detailMap.canonical_url) {
+        nextErrors.canonical_url = flattenValidationMessage(detailMap.canonical_url);
+      }
+    }
+    setFieldErrors(nextErrors);
+    setSaveNotice({
+      tone: "error",
+      text: error.message,
+    });
+  }
+
   async function handleGenerateField(target: GenerationTarget) {
     if (!hasPersistedArticle) {
-      setSaveMessage("请先保存草稿，再使用 AI 生成功能。");
+      setSaveNotice({
+        tone: "error",
+        text: "请先保存草稿，再使用 AI 生成功能。",
+      });
       return;
     }
 
@@ -1095,7 +1394,10 @@ export function ArticleEditorWorkspace({
         const nextTitle = result.titles[0]?.text?.trim();
         if (nextTitle) {
           setDraft((current) => ({ ...current, title: nextTitle }));
-          setSaveMessage("AI 已生成新的标题，请确认后保存到 Django。");
+          setSaveNotice({
+            tone: "info",
+            text: "AI 已生成新的标题，请确认后保存到 Django。",
+          });
         }
         return;
       }
@@ -1105,7 +1407,10 @@ export function ArticleEditorWorkspace({
         const nextSlug = result.slugs[0]?.text?.trim();
         if (nextSlug) {
           setDraft((current) => ({ ...current, slug: nextSlug }));
-          setSaveMessage("AI 已生成新的 Slug，请确认后保存到 Django。");
+          setSaveNotice({
+            tone: "info",
+            text: "AI 已生成新的 Slug，请确认后保存到 Django。",
+          });
         }
         return;
       }
@@ -1115,7 +1420,10 @@ export function ArticleEditorWorkspace({
         const nextDescription = result.descriptions[0]?.text?.trim();
         if (nextDescription) {
           setDraft((current) => ({ ...current, metaDescription: nextDescription }));
-          setSaveMessage("AI 已生成新的描述，请确认后保存到 Django。");
+          setSaveNotice({
+            tone: "info",
+            text: "AI 已生成新的描述，请确认后保存到 Django。",
+          });
         }
         return;
       }
@@ -1127,11 +1435,17 @@ export function ArticleEditorWorkspace({
         .map((item) => createInlineTag(item));
       if (nextTags.length > 0) {
         setDraft((current) => ({ ...current, tags: dedupeTags(nextTags) }));
-        setSaveMessage("AI 已生成新的标签，请确认后保存到 Django。");
+        setSaveNotice({
+          tone: "info",
+          text: "AI 已生成新的标签，请确认后保存到 Django。",
+        });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "未知错误";
-      setSaveMessage(`AI ${actionLabel} 生成失败：${message}`);
+      setSaveNotice({
+        tone: "error",
+        text: `AI ${actionLabel} 生成失败：${message}`,
+      });
     } finally {
       setActiveGenerationTarget(null);
     }
@@ -1143,6 +1457,12 @@ export function ArticleEditorWorkspace({
 
   return (
     <div className={`editor-workspace${embedded ? " embedded" : ""}`}>
+      {successToast.open ? (
+        <div aria-live="polite" className="word-success-toast" role="status">
+          <strong>保存成功</strong>
+          <span>{successToast.text}</span>
+        </div>
+      ) : null}
       <header className="word-titlebar">
         <div className="word-titlebar-left">
           <div className="word-app-mark">W</div>
@@ -1169,7 +1489,91 @@ export function ArticleEditorWorkspace({
             </div>
           </div>
           <div className="word-sidebar-section">
-            <div className="word-sidebar-title">SEO 与 FAQ</div>
+            <div className="word-sidebar-title">文章基础信息</div>
+            <div className="word-sidebar-form">
+              <div className="word-sidebar-field">
+                <span>封面图</span>
+                <div className="word-sidebar-media-picker">
+                  {draft.coverImage ? (
+                    <div className="word-sidebar-media-card">
+                      <button
+                        className="word-sidebar-media-preview-trigger"
+                        onClick={() => window.open(draft.coverImage?.file_url, "_blank", "noopener,noreferrer")}
+                        type="button"
+                      >
+                        <img alt={draft.coverImage.alt_text || draft.coverImage.title} src={draft.coverImage.file_url} />
+                      </button>
+                      <div>
+                        <strong>{draft.coverImage.title || `图片 ${draft.coverImage.image_id}`}</strong>
+                        <small>{draft.coverImage.alt_text || "未填写 alt"}</small>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="word-sidebar-media-empty">未选择封面图</div>
+                  )}
+                  <div className="word-sidebar-inline-actions">
+                    <button className="word-sidebar-mini-button" onClick={() => setShowCoverImagePicker(true)} type="button">
+                      从媒体库选择
+                    </button>
+                    <button
+                      className="word-sidebar-mini-button"
+                      disabled={isUploadingCoverImage}
+                      onClick={() => coverImageUploadInputRef.current?.click()}
+                      type="button"
+                    >
+                      {isUploadingCoverImage ? "上传中..." : "本地上传"}
+                    </button>
+                    {draft.coverImage ? (
+                      <button
+                        className="word-sidebar-mini-button is-muted"
+                        onClick={() => updateField("coverImage", null)}
+                        type="button"
+                      >
+                        清除
+                      </button>
+                    ) : null}
+                  </div>
+                  {showCoverImagePicker ? (
+                    <div className="word-sidebar-media-modal">
+                      <div className="word-sidebar-media-modal-head">
+                        <strong>选择封面图</strong>
+                        <button className="word-sidebar-mini-button is-muted" onClick={() => setShowCoverImagePicker(false)} type="button">
+                          关闭
+                        </button>
+                      </div>
+                      {coverImageLibraryStatus ? <div className="word-sidebar-media-status">{coverImageLibraryStatus}</div> : null}
+                      <div className="word-sidebar-media-grid">
+                        {coverImageLibrary.map((image) => (
+                          <button
+                            className="word-sidebar-media-option"
+                            key={image.image_id}
+                            onClick={() => selectCoverImage(image)}
+                            type="button"
+                          >
+                            <img alt={image.alt_text || image.title} src={image.file_url} />
+                            <strong>{image.title || `图片 ${image.image_id}`}</strong>
+                            <small>{image.alt_text || "未填写 alt"}</small>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  <input
+                    ref={coverImageUploadInputRef}
+                    className="tiptap-upload-input"
+                    onChange={(event) => {
+                      void handleUploadCoverImage(event.target.files?.[0] ?? null);
+                      event.currentTarget.value = "";
+                    }}
+                    type="file"
+                    accept="image/*"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="word-sidebar-section">
+            <div className="word-sidebar-title">分享附加信息（OG）与 FAQ</div>
             <div className="word-sidebar-form">
               <label className="word-sidebar-field">
                 <span>Meta Title</span>
@@ -1185,6 +1589,7 @@ export function ArticleEditorWorkspace({
                   placeholder="留空则自动回退公开 URL"
                   value={draft.canonicalUrl}
                 />
+                {fieldErrors.canonical_url ? <small className="field-error-text">{fieldErrors.canonical_url}</small> : null}
               </label>
               <label className="word-sidebar-field">
                 <span>Robots</span>
@@ -1221,7 +1626,13 @@ export function ArticleEditorWorkspace({
                 <div className="word-sidebar-media-picker">
                   {draft.ogImage ? (
                     <div className="word-sidebar-media-card">
-                      <img alt={draft.ogImage.alt_text || draft.ogImage.title} src={draft.ogImage.file_url} />
+                      <button
+                        className="word-sidebar-media-preview-trigger"
+                        onClick={() => window.open(draft.ogImage?.file_url, "_blank", "noopener,noreferrer")}
+                        type="button"
+                      >
+                        <img alt={draft.ogImage.alt_text || draft.ogImage.title} src={draft.ogImage.file_url} />
+                      </button>
                       <div>
                         <strong>{draft.ogImage.title || `图片 ${draft.ogImage.image_id}`}</strong>
                         <small>{draft.ogImage.alt_text || "未填写 alt"}</small>
@@ -1358,6 +1769,7 @@ export function ArticleEditorWorkspace({
                     AI
                   </button>
                 </div>
+                {fieldErrors.title ? <small className="field-error-text">{fieldErrors.title}</small> : null}
               </label>
 
               <label className="word-meta-field">
@@ -1386,6 +1798,7 @@ export function ArticleEditorWorkspace({
                     AI
                   </button>
                 </div>
+                {fieldErrors.slug ? <small className="field-error-text">{fieldErrors.slug}</small> : null}
               </label>
 
               <label className="word-meta-field word-meta-field-wide">
@@ -1415,6 +1828,7 @@ export function ArticleEditorWorkspace({
                     AI
                   </button>
                 </div>
+                {fieldErrors.summary ? <small className="field-error-text">{fieldErrors.summary}</small> : null}
               </label>
 
               <label className="word-meta-field">
@@ -1471,6 +1885,7 @@ export function ArticleEditorWorkspace({
                     </div>
                   ) : null}
                 </div>
+                {fieldErrors.category ? <small className="field-error-text">{fieldErrors.category}</small> : null}
               </label>
 
               <label className="word-meta-field">
@@ -1566,21 +1981,21 @@ export function ArticleEditorWorkspace({
                     htmlMode={htmlMode}
                     onActiveHeadingChange={setActiveOutlineBlockId}
                     navigationRequest={navigationRequest}
-                    htmlPreviewDocument={{
-                      title: draft.title,
-                      metaTitle: draft.seoMetaTitle || draft.title,
-                      metaDescription: draft.metaDescription,
-                      metaKeywords: draft.seoMetaKeywords,
-                      canonicalUrl: draft.canonicalUrl,
-                      robots: draft.robots,
-                      ogTitle: draft.ogTitle || draft.seoMetaTitle || draft.title,
-                      ogDescription: draft.ogDescription || draft.metaDescription,
-                      ogImageUrl: draft.ogImage?.file_url || "",
-                      faqItems: draft.faqItems.map((item) => ({
-                        question: item.question,
-                        answer: item.answer,
-                      })),
-                    }}
+                      htmlPreviewDocument={{
+                        title: draft.title,
+                        metaTitle: draft.seoMetaTitle || draft.title,
+                        metaDescription: draft.metaDescription,
+                        metaKeywords: draft.seoMetaKeywords,
+                        canonicalUrl: draft.canonicalUrl,
+                        robots: draft.robots,
+                        ogTitle: draft.ogTitle || draft.seoMetaTitle || draft.title,
+                        ogDescription: draft.ogDescription || draft.metaDescription,
+                        ogImageUrl: draft.ogImage?.file_url || "",
+                        faqItems: draft.faqItems.map((item) => ({
+                          question: item.question,
+                          answer: item.answer,
+                        })),
+                      }}
                     onChange={(document) => updateField("content_json", document)}
                     onEditorReady={(getDocument) => {
                       editorDocumentGetterRef.current = getDocument;
@@ -1588,6 +2003,7 @@ export function ArticleEditorWorkspace({
                     onToggleHtmlMode={() => setHtmlMode((currentValue) => !currentValue)}
                     value={draft.content_json ?? createFallbackDocument(article)}
                   />
+                  {fieldErrors.content_json ? <div className="editor-panel-error">{fieldErrors.content_json}</div> : null}
                 </div>
               </div>
             </div>
@@ -1597,13 +2013,25 @@ export function ArticleEditorWorkspace({
             <div className="word-statusbar-left">
               <span>{hasDraftChanges ? "存在未保存修改" : "已同步到 Django"}</span>
               <span>建议 {reviewSummary}</span>
-              <span>{saveMessage}</span>
+              <span className={`save-notice save-notice-${saveNotice.tone}`}>{saveNotice.text}</span>
             </div>
             <div className="word-statusbar-right">
               <span>{htmlMode ? "HTML 源码视图" : "富文本视图"}</span>
               <span>{wordCount} 字</span>
               <span>预计 {readTime} 分钟</span>
               <span>{formatStudioDateTime(saveTime)}</span>
+              <button
+                className="word-save-button"
+                onClick={() => {
+                  if (hasDraftChanges && !window.confirm("当前存在未保存修改，确认返回文章列表吗？")) {
+                    return;
+                  }
+                  window.location.assign("/studio/articles");
+                }}
+                type="button"
+              >
+                取消
+              </button>
               <button className="word-save-button" onClick={handleSave} type="button">
                 {isPending && activeAction === "save" ? "保存中..." : "保存"}
               </button>

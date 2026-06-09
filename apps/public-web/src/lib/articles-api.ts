@@ -155,12 +155,25 @@ export interface PublicSiteSettings {
   homepageSolutionArticles: PublicArticle[];
 }
 
+function buildDefaultArticleCanonicalUrl(slug: string): string {
+  return new URL(`/articles/${slug}`, publicSiteBaseUrl).toString();
+}
+
+function resolveArticleCanonicalUrl(article: ArticleApiItem): string {
+  const seo = article.seo || {};
+  const explicitCanonical = seo.canonical_url?.trim();
+  if (explicitCanonical) {
+    return explicitCanonical;
+  }
+  return buildDefaultArticleCanonicalUrl(article.slug);
+}
+
 export function mapArticleToPublicArticle(article: ArticleApiItem): PublicArticle {
   const textContent = stripHtml(article.content_html);
   const excerpt = article.summary || textContent.slice(0, 140) || '该文章暂未提供摘要。';
   const seo = article.seo || {};
   const seoPayload = article.seo_payload || {};
-  const articlePath = `/articles/${article.slug}`;
+  const canonicalUrl = resolveArticleCanonicalUrl(article);
   return {
     id: String(article.article_id),
     articleId: article.article_id,
@@ -170,7 +183,7 @@ export function mapArticleToPublicArticle(article: ArticleApiItem): PublicArticl
     category: article.category?.name || '未分类',
     categorySlug: article.category?.slug || "",
     date: formatDate(article.published_at),
-    author: 'CMS 发布系统',
+    author: '云璨技术团队',
     readTime: estimateReadTime(textContent || excerpt),
     tags: article.tags.map((tag) => tag.name),
     contentHtml: article.content_html,
@@ -178,20 +191,14 @@ export function mapArticleToPublicArticle(article: ArticleApiItem): PublicArticl
     seo: {
       metaTitle: seo.meta_title || article.title,
       metaDescription: seo.meta_description || excerpt,
-      canonicalUrl:
-        seoPayload.canonical_url_resolved ||
-        seo.canonical_url ||
-        new URL(articlePath, publicSiteBaseUrl).toString(),
+      canonicalUrl,
       robots: seo.robots || "index,follow",
       ogTitle: seo.og_title || seo.meta_title || article.title,
       ogDescription: seo.og_description || seo.meta_description || excerpt,
       ogImageUrl: seo.og_image_url ? new URL(seo.og_image_url, serverBaseUrl).toString() : "",
     },
     seoPayload: {
-      canonicalUrlResolved:
-        seoPayload.canonical_url_resolved ||
-        seo.canonical_url ||
-        new URL(articlePath, publicSiteBaseUrl).toString(),
+      canonicalUrlResolved: canonicalUrl,
       faqItems: (seoPayload.faq_items || []).map((item) => ({
         question: item.question,
         answer: item.answer,
@@ -411,7 +418,7 @@ export function getPublicArticleSectionConfig(section: PublicArticleSectionKey):
       key: "services",
       slug: "services",
       title: "上云服务",
-      description: "查看云璨公开发布的上云咨询、迁移托管与运维服务文章。",
+      description: "聚焦企业上云全流程服务，涵盖咨询规划、迁移实施、运维保障与持续优化，帮助业务稳定、安全、高效运行。",
       route: "/services",
       breadcrumbsLabel: "上云服务",
     },
@@ -419,7 +426,7 @@ export function getPublicArticleSectionConfig(section: PublicArticleSectionKey):
       key: "solutions",
       slug: "solutions",
       title: "解决方案",
-      description: "查看云璨公开发布的解决方案、架构实践与行业案例。",
+      description: "面向不同行业与业务场景，提供可落地的架构设计、系统集成与数字化建设方案，兼顾实用性与扩展性。",
       route: "/solutions",
       breadcrumbsLabel: "解决方案中心",
     },
@@ -427,7 +434,7 @@ export function getPublicArticleSectionConfig(section: PublicArticleSectionKey):
       key: "products",
       slug: "products",
       title: "产品中心",
-      description: "查看云璨公开发布的产品中心、工具与平台能力文章。",
+      description: "集中展示云璨提供的产品与平台能力，覆盖部署、管理、协同与智能化应用等多个方向。",
       route: "/products",
       breadcrumbsLabel: "产品中心",
     },
@@ -435,7 +442,7 @@ export function getPublicArticleSectionConfig(section: PublicArticleSectionKey):
       key: "cases",
       slug: "cases",
       title: "客户案例",
-      description: "查看云璨公开发布的客户案例与落地实践文章。",
+      description: "汇总真实项目落地案例，展示我们在方案设计、实施交付与长期运维中的实践经验与成果。",
       route: "/cases",
       breadcrumbsLabel: "客户案例",
     },
@@ -455,6 +462,16 @@ export function filterArticlesBySection(articles: PublicArticle[], section: Publ
   return articles.filter((article) => {
     return normalizeValue(article.categorySlug || "") === sectionSlug;
   });
+}
+
+export function resolveArticleSection(article: PublicArticle): PublicArticleSectionConfig {
+  const validSectionKeys: PublicArticleSectionKey[] = ["services", "solutions", "products", "cases"];
+  const normalizedCategorySlug = normalizeValue(article.categorySlug || "");
+  const matchedSection = validSectionKeys.find((sectionKey) => {
+    return normalizeValue(getPublicArticleSectionConfig(sectionKey).slug) === normalizedCategorySlug;
+  });
+
+  return getPublicArticleSectionConfig(matchedSection || "solutions");
 }
 
 export async function fetchArticleDetailBySlug(slug: string): Promise<PublicArticle> {

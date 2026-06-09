@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 
+from django.conf import settings
 from django.http import QueryDict
 from django.http import JsonResponse
 from django.http.multipartparser import MultiPartParser, MultiPartParserError
@@ -28,12 +29,23 @@ def _validation_error_response(message: str, details: dict[str, object] | None =
     )
 
 
+def _resolve_public_media_url(request, file_url: str) -> str:
+    normalized_file_url = file_url if file_url.startswith("/") else f"/{file_url}"
+    public_media_url = getattr(settings, "PUBLIC_MEDIA_URL", settings.MEDIA_URL).rstrip("/")
+    runtime_media_url = settings.MEDIA_URL.rstrip("/")
+
+    if runtime_media_url and normalized_file_url.startswith(f"{runtime_media_url}/"):
+        normalized_file_url = f"{public_media_url}{normalized_file_url[len(runtime_media_url):]}"
+
+    return request.build_absolute_uri(normalized_file_url)
+
+
 def _serialize_image(request, image: ImageItem):
     return {
         "image_id": image.id,
         "title": image.title,
         "alt_text": image.alt_text,
-        "file_url": request.build_absolute_uri(image.file.url),
+        "file_url": _resolve_public_media_url(request, image.file.url),
         "uploaded_at": image.uploaded_at.isoformat(),
     }
 
@@ -43,7 +55,7 @@ def _serialize_file(request, file_item: FileItem):
         "file_id": file_item.id,
         "title": file_item.title,
         "file_name": os.path.basename(file_item.file.name),
-        "file_url": request.build_absolute_uri(file_item.file.url),
+        "file_url": _resolve_public_media_url(request, file_item.file.url),
         "uploaded_at": file_item.uploaded_at.isoformat(),
     }
 

@@ -7,3 +7,4 @@ ALLOWED_HOSTS = ["*"]
 CSRF_TRUSTED_ORIGINS = ["http://localhost", "http://127.0.0.1", "http://localhost:80", "http://127.0.0.1:80"]
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+PUBLIC_MEDIA_URL = "/media/"

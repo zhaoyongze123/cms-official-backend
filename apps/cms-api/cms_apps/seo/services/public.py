@@ -17,33 +17,40 @@ def build_article_canonical_url(request, article, seo_metadata=None) -> str:
     return request.build_absolute_uri(f"/articles/{article.slug}/")
 
 
-def build_article_breadcrumb_json_ld(request, article) -> dict[str, Any]:
+def build_article_breadcrumb_items(request, article) -> list[dict[str, Any]]:
     site_url = build_public_base_url(request)
-    solutions_url = request.build_absolute_uri("/solutions")
     article_url = request.build_absolute_uri(f"/articles/{article.slug}/")
+    category = getattr(article, "category", None)
+    category_name = getattr(category, "name", "") or "解决方案"
+    category_slug = getattr(category, "slug", "") or "solutions"
+    category_url = request.build_absolute_uri(f"/{category_slug}/")
+    return [
+        {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "首页",
+            "item": site_url,
+        },
+        {
+            "@type": "ListItem",
+            "position": 2,
+            "name": category_name,
+            "item": category_url,
+        },
+        {
+            "@type": "ListItem",
+            "position": 3,
+            "name": article.title,
+            "item": article_url,
+        },
+    ]
+
+
+def build_article_breadcrumb_json_ld(request, article) -> dict[str, Any]:
     return {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
-        "itemListElement": [
-            {
-                "@type": "ListItem",
-                "position": 1,
-                "name": "首页",
-                "item": site_url,
-            },
-            {
-                "@type": "ListItem",
-                "position": 2,
-                "name": "解决方案",
-                "item": solutions_url,
-            },
-            {
-                "@type": "ListItem",
-                "position": 3,
-                "name": article.title,
-                "item": article_url,
-            },
-        ],
+        "itemListElement": build_article_breadcrumb_items(request, article),
     }
 
 

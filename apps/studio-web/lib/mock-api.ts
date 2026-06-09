@@ -12,6 +12,12 @@ export type ArticleRecord = {
     name: string;
     slug: string;
   } | null;
+  cover_image?: {
+    image_id: number;
+    title: string;
+    alt_text: string;
+    file_url: string;
+  } | null;
   tags: Array<{
     tag_id: number;
     name: string;
@@ -55,6 +61,12 @@ export type ArticleRecord = {
   };
   seo_payload?: {
     canonical_url_resolved?: string;
+    breadcrumbs?: Array<{
+      "@type": string;
+      position: number;
+      name: string;
+      item: string;
+    }>;
     faq_items?: Array<{
       question: string;
       answer: string;
@@ -242,6 +254,7 @@ export function createMockArticle(title: string) {
     slug: safeSlug,
     status: "draft" as const,
     category: null,
+    cover_image: null,
     tags: [],
     content_json: {
       type: "doc",

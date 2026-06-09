@@ -7,8 +7,7 @@ import {
   buildBreadcrumbJsonLd,
   buildFaqJsonLd,
   fetchArticleDetailBySlug,
-  getPublicArticleSectionConfig,
-  type PublicArticleSectionKey,
+  resolveArticleSection,
 } from "../../../src/lib/articles-api";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +16,6 @@ export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ from?: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
   const article = await fetchArticleDetailBySlug(slug);
@@ -53,22 +51,17 @@ export async function generateMetadata({
 
 export default async function ArticlePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ from?: string }>;
 }) {
   const { slug } = await params;
-  const resolvedSearchParams = searchParams ? await searchParams : {};
   const article = await fetchArticleDetailBySlug(slug);
 
   if (!article) {
     notFound();
   }
 
-  const fromSection = ((resolvedSearchParams.from || "solutions").trim() || "solutions") as PublicArticleSectionKey;
-  const validSectionKeys: PublicArticleSectionKey[] = ["services", "solutions", "products", "cases"];
-  const section = getPublicArticleSectionConfig(validSectionKeys.includes(fromSection) ? fromSection : "solutions");
+  const section = resolveArticleSection(article);
   const jsonLd = [buildArticleJsonLd(article), buildBreadcrumbJsonLd(article, section), buildFaqJsonLd(article)].filter(Boolean);
 
   return (

@@ -131,6 +131,7 @@ services:
       - .env
     environment:
       NEXT_EDITOR_DEV_ORIGIN: http://127.0.0.1:8001
+      NEXT_PUBLIC_DJANGO_MEDIA_URL: /media/
       WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"
       NODE_ENV: development

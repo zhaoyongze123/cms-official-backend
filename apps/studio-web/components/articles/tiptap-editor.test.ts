@@ -8,7 +8,7 @@ import {
   type EditorPatch,
   type TipTapDocument,
 } from "@cms/editor-protocol";
-import { TipTapEditor } from "./tiptap-editor";
+import { keepCaretInsideCodeBlock, TipTapEditor } from "./tiptap-editor";
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
@@ -23,6 +23,10 @@ afterEach(async () => {
   container?.remove();
   container = null;
 });
+
+async function flushEditor() {
+  await new Promise((resolve) => window.setTimeout(resolve, 0));
+}
 
 describe("tiptap editor protocol", () => {
   it("normalizes block ids and applies a replace_text patch", () => {
@@ -94,11 +98,112 @@ describe("tiptap editor protocol", () => {
           value: documentValue,
         }),
       );
-      await new Promise((resolve) => window.setTimeout(resolve, 0));
+      await flushEditor();
     });
 
     const proseMirror = container.querySelector(".ProseMirror");
     expect(proseMirror).not.toBeNull();
     expect(proseMirror?.getAttribute("contenteditable")).toBe("true");
+  });
+
+  it("renders table nodes in rich text mode", async () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    const onChange = vi.fn();
+    const documentValue: TipTapDocument = {
+      type: "doc",
+      content: [
+        {
+          type: "table",
+          attrs: { blockId: "blk_table_1" },
+          content: [
+            {
+              type: "tableRow",
+              content: [
+                {
+                  type: "tableHeader",
+                  content: [{ type: "text", text: "标题列" }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    await act(async () => {
+      root?.render(
+        createElement(TipTapEditor, {
+          onChange,
+          value: documentValue,
+        }),
+      );
+      await flushEditor();
+    });
+
+    expect(container.querySelector("table")).not.toBeNull();
+    expect(container.querySelector("th")?.textContent).toContain("标题列");
+  });
+
+  it("moves the caret back into the previous code block when selection slips into the trailing paragraph", () => {
+    const focus = vi.fn();
+    const mockEditor = {
+      state: {
+        selection: {
+          $from: {
+            parent: {
+              type: { name: "paragraph" },
+            },
+            depth: 1,
+            node: () => ({
+              child: () => ({
+                type: { name: "codeBlock" },
+              }),
+            }),
+            index: () => 1,
+            before: () => 25,
+          },
+        },
+      },
+      commands: {
+        focus,
+      },
+    };
+
+    keepCaretInsideCodeBlock(mockEditor as never);
+
+    expect(focus).toHaveBeenCalledWith(24);
+  });
+
+  it("does nothing when the previous sibling is not a code block", () => {
+    const focus = vi.fn();
+    const mockEditor = {
+      state: {
+        selection: {
+          $from: {
+            parent: {
+              type: { name: "paragraph" },
+            },
+            depth: 1,
+            node: () => ({
+              child: () => ({
+                type: { name: "paragraph" },
+              }),
+            }),
+            index: () => 1,
+            before: () => 25,
+          },
+        },
+      },
+      commands: {
+        focus,
+      },
+    };
+
+    keepCaretInsideCodeBlock(mockEditor as never);
+
+    expect(focus).not.toHaveBeenCalled();
   });
 });

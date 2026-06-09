@@ -46,6 +46,7 @@ RAG_CHUNK_SIZE = env("RAG_CHUNK_SIZE", default=500)
 RAG_CHUNK_OVERLAP = env("RAG_CHUNK_OVERLAP", default=80)
 NEXT_EDITOR_INTERNAL_URL = env("NEXT_EDITOR_INTERNAL_URL", default="http://editor-web:3000")
 NEXT_PUBLIC_EDITOR_BASE_URL = env("NEXT_PUBLIC_EDITOR_BASE_URL", default="")
+PUBLIC_MEDIA_URL = env("PUBLIC_MEDIA_URL", default="/media/")
 
 INSTALLED_APPS = [
     "jazzmin",

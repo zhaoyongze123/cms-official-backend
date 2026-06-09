@@ -73,7 +73,7 @@ function buildHomepageSolutionItems(solutionArticles: PublicArticle[]): Homepage
     title: article.title,
     tag: article.categorySlug || "solutions",
     desc: article.excerpt,
-    href: `/articles/${article.slug}?from=${encodeURIComponent(article.categorySlug || "solutions")}`,
+    href: `/articles/${article.slug}`,
   }));
 }
 
@@ -341,13 +341,6 @@ export default function PublicLandingPage({ featuredArticles, solutionArticles }
                 className="bg-hermes text-white px-8 py-4 rounded-full font-bold shadow-xl shadow-hermes/30"
               >
                 立即咨询架构专家
-              </button>
-              <button
-                type="button"
-                onClick={() => setConsultationOpen(true)}
-                className="bg-white text-charcoal border border-line px-8 py-4 rounded-full font-bold hover:bg-mist transition-colors"
-              >
-                探索服务矩阵
               </button>
             </div>
 

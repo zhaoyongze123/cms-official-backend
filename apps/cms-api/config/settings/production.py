@@ -22,5 +22,6 @@ X_FRAME_OPTIONS = "DENY"
 FORCE_SCRIPT_NAME = "/django"
 STATIC_URL = "/django/static/"
 MEDIA_URL = "/django/media/"
+PUBLIC_MEDIA_URL = "/django/media/"
 
 USE_X_FORWARDED_HOST = True
