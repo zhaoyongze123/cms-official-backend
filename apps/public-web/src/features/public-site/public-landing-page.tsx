@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { AnimatePresence, motion } from "motion/react";
 import { Activity, ArrowRight, Cloud, Code, Mail, MapPin, Phone, Server, Settings, Shield, X, Zap } from "lucide-react";
 import gsap from "gsap";
@@ -116,74 +117,83 @@ function ConsultationModal({ open, onClose }: { open: boolean; onClose: () => vo
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.98 }}
             transition={{ duration: 0.25 }}
-            className="mx-auto flex min-h-full max-w-5xl items-center justify-center"
+            className="mx-auto flex min-h-full max-w-4xl items-center justify-center"
           >
             <div
-              className="relative w-full overflow-hidden rounded-[2rem] bg-white shadow-2xl shadow-ink/30"
+              className="relative w-full overflow-hidden rounded-[2rem] bg-[#f4f7fb] shadow-2xl shadow-ink/30"
               onClick={(event) => event.stopPropagation()}
             >
               <button
                 type="button"
                 aria-label="关闭咨询弹层"
                 onClick={onClose}
-                className="absolute right-6 top-6 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-line bg-white/90 text-charcoal shadow-sm transition-colors hover:border-hermes hover:text-hermes"
+                className="absolute right-6 top-6 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-[#d7dde8] bg-[#f4f7fb]/92 text-charcoal transition-colors hover:border-hermes hover:text-hermes"
               >
                 <X size={18} />
               </button>
 
-              <div className="grid gap-10 p-8 md:grid-cols-[1.4fr_0.9fr] md:p-12">
-                <div>
-                  <div className="mb-10">
+              <div className="grid gap-10 px-7 pb-9 pt-12 md:grid-cols-[1.16fr_0.84fr] md:px-10 md:pb-10 md:pt-14">
+                <div className="border-b border-[#dce3ee] pb-8 md:border-b-0 md:border-r md:pb-0 md:pr-10">
+                  <div>
                     <span className="text-xs font-black uppercase tracking-[0.35em] text-hermes">Architecture Desk</span>
-                    <h3 className="mt-4 text-4xl font-black text-charcoal md:text-5xl">扫码咨询</h3>
+                    <h3 className="mt-4 text-3xl font-black text-charcoal md:text-[2.8rem]">扫码咨询</h3>
                   </div>
 
-                  <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-                    <div className="flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-hermes/15 via-white to-ink/10 text-4xl font-black text-hermes shadow-inner">
-                      Y
+                  <div className="mt-10 grid gap-6 sm:grid-cols-[7.5rem_1fr] sm:items-start">
+                    <div className="h-24 w-24 overflow-hidden rounded-full border border-[#dbe2ec] bg-[radial-gradient(circle_at_32%_28%,rgba(255,255,255,0.95),rgba(226,233,243,0.88))]">
+                      <Image
+                        alt="云璨顾问头像"
+                        className="h-full w-full object-cover"
+                        height={940}
+                        src="/consultant-avatar.jpg"
+                        width={940}
+                      />
                     </div>
-                    <div className="space-y-3">
-                      <div className="text-4xl font-black text-charcoal">云璨</div>
-                      <div className="text-xl text-charcoal/75">专属顾问</div>
-                      <div className="flex flex-wrap items-center gap-3 text-xl text-muted">
-                        <Phone className="text-hermes" size={22} />
-                        <span>021-50583875</span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3 text-base text-muted">
-                        <Mail className="text-hermes" size={18} />
-                        <span>service@yuncan.com</span>
+                    <div>
+                      <div className="text-3xl font-black text-charcoal">云璨</div>
+                      <div className="mt-2 text-lg text-charcoal/72">专属顾问</div>
+                      <div className="mt-6 space-y-3">
+                        <div className="flex flex-wrap items-center gap-3 text-lg text-muted">
+                          <Phone className="text-hermes" size={20} />
+                          <span>021-50583875</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 text-[0.95rem] text-muted">
+                          <Mail className="text-hermes" size={17} />
+                          <span>service@yuncan.com</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-center">
-                  <div className="rounded-[1.75rem] bg-white p-5 shadow-xl shadow-hermes/10 ring-1 ring-line">
-                    <div className="relative grid h-56 w-56 grid-cols-7 gap-1 rounded-2xl bg-white p-4">
-                      {Array.from({ length: 49 }).map((_, index) => {
-                        const active = [0, 1, 2, 4, 6, 7, 8, 10, 12, 14, 18, 19, 20, 21, 24, 26, 28, 30, 31, 33, 35, 36, 40, 42, 43, 44, 46, 48].includes(index);
-                        return <span key={index} className={`rounded-[2px] ${active ? "bg-charcoal" : "bg-charcoal/10"}`} />;
-                      })}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-4 border-white bg-hermes text-2xl font-black text-white shadow-lg">
-                          Y
-                        </div>
-                      </div>
+                  <div className="w-full max-w-[16rem]">
+                    <div className="text-[11px] font-black uppercase tracking-[0.2em] text-charcoal/45">扫码直连企微顾问</div>
+                    <div className="mt-4 border border-[#dce3ee] bg-white p-3 shadow-[0_14px_34px_rgba(148,163,184,0.14)]">
+                      <Image
+                        alt="云璨企微二维码"
+                        className="h-auto w-full object-contain"
+                        height={400}
+                        src="/contact-qr.png"
+                        width={400}
+                      />
                     </div>
+                    <p className="mt-3 text-xs leading-6 text-muted">
+                      扫码后可直接发送企业名称与需求背景，我们会继续协助确认合适的咨询和开通路径。
+                    </p>
                   </div>
                 </div>
               </div>
 
-              <div className="relative bg-gradient-to-r from-[#2358d8] via-[#3165e6] to-[#2d6eff] px-8 py-10 text-white md:px-12">
-                <div className="absolute left-20 top-0 h-6 w-6 -translate-y-1/2 rotate-45 bg-[#3165e6]" />
+              <div className="border-t border-[#dce3ee] bg-[linear-gradient(90deg,#2358d8_0%,#2f63e3_48%,#356fff_100%)] px-7 py-7 text-white md:px-10">
                 <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-                  <p className="max-w-2xl text-2xl font-medium leading-relaxed md:text-4xl">
+                  <p className="max-w-xl text-xl font-medium leading-relaxed md:text-[2rem]">
                     欢迎扫码，在线体验云璨企业级方案
                   </p>
                   <button
                     type="button"
                     onClick={onClose}
-                    className="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-bold tracking-[0.2em] text-white transition-colors hover:bg-white hover:text-[#2d6eff]"
+                    className="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-bold tracking-[0.16em] text-white transition-colors hover:bg-white hover:text-[#2d6eff]"
                   >
                     我知道了
                   </button>
