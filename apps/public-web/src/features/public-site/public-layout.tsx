@@ -7,7 +7,7 @@ import { motion, useScroll, useSpring } from "motion/react";
 import { Headset, Mail, Menu, Phone, X } from "lucide-react";
 
 interface PublicLayoutProps {
-  active: "landing" | "services" | "solutions" | "products" | "cases" | "about" | "article";
+  active: "landing" | "services" | "solutions" | "products" | "cases" | "about" | "article" | "join";
   children: React.ReactNode;
 }
 
@@ -55,7 +55,18 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
               </Link>
             ))}
           </div>
-          <div className="hidden md:block h-14 w-[15.2rem] shrink-0" aria-hidden="true" />
+          <div className="hidden md:flex w-[15.2rem] shrink-0 items-center justify-end">
+            <Link
+              className={`inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-black transition-all ${
+                active === "join"
+                  ? "bg-hermes text-white shadow-[0_16px_38px_rgba(244,114,37,0.28)]"
+                  : "bg-hermes text-white shadow-[0_16px_38px_rgba(244,114,37,0.24)] hover:-translate-y-0.5 hover:shadow-[0_20px_42px_rgba(244,114,37,0.3)]"
+              }`}
+              href="/join"
+            >
+              关联注册享折扣
+            </Link>
+          </div>
           <button
             type="button"
             aria-label={mobileMenuOpen ? "关闭导航菜单" : "打开导航菜单"}
@@ -86,6 +97,15 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
                 {item.label}
               </Link>
             ))}
+            <Link
+              href="/join"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`mt-2 block rounded-[1.1rem] px-4 py-3 text-sm font-black transition-colors ${
+                active === "join" ? "bg-hermes text-white" : "bg-hermes text-white hover:bg-hermes/90"
+              }`}
+            >
+              关联注册享折扣
+            </Link>
           </div>
         </motion.div>
       </nav>

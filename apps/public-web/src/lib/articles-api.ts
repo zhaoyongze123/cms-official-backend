@@ -3,6 +3,16 @@ const publicSiteBaseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_SITE_URL || "
 const configuredApiBaseUrl = process.env.NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL || "http://127.0.0.1:8001";
 const serverBaseUrl = configuredApiBaseUrl;
 
+export class PublicApiRequestError extends Error {
+  status: number;
+
+  constructor(status: number) {
+    super(`请求失败: ${status}`);
+    this.name = "PublicApiRequestError";
+    this.status = status;
+  }
+}
+
 function normalizeBaseUrl(value: string): string {
   return value.replace(/\/+$/, "");
 }
@@ -231,7 +241,7 @@ async function requestJson<T>(path: string): Promise<T> {
     }
   }
   if (!response.ok) {
-    throw new Error(`请求失败: ${response.status}`);
+    throw new PublicApiRequestError(response.status);
   }
   return response.json() as Promise<T>;
 }
@@ -474,7 +484,14 @@ export function resolveArticleSection(article: PublicArticle): PublicArticleSect
   return getPublicArticleSectionConfig(matchedSection || "solutions");
 }
 
-export async function fetchArticleDetailBySlug(slug: string): Promise<PublicArticle> {
-  const payload = await requestJson<ArticleApiItem>(`/api/public/articles/${slug}/`);
-  return mapArticleToPublicArticle(payload);
+export async function fetchArticleDetailBySlug(slug: string): Promise<PublicArticle | null> {
+  try {
+    const payload = await requestJson<ArticleApiItem>(`/api/public/articles/${slug}/`);
+    return mapArticleToPublicArticle(payload);
+  } catch (error) {
+    if (error instanceof PublicApiRequestError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
 }

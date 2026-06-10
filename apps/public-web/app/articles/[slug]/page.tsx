@@ -22,7 +22,7 @@ export async function generateMetadata({
 
   if (!article) {
     return {
-      title: "文章不存在 | 云璨科技"
+      title: "文章不存在 | 云璨科技",
     };
   }
 

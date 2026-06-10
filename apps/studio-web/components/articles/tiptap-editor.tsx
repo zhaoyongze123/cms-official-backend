@@ -2006,9 +2006,19 @@ export function TipTapEditor({
   }
 
   function applyImageAlign(align: "left" | "center" | "right") {
-    if (!editor || !editor.isActive("image")) {
+    if (!editor) {
       return;
     }
+
+    if (imageContextState.pos !== null) {
+      editor.chain().focus().setNodeSelection(imageContextState.pos).updateAttributes("image", { align }).run();
+      return;
+    }
+
+    if (!editor.isActive("image")) {
+      return;
+    }
+
     editor.chain().focus().updateAttributes("image", { align }).run();
   }
 

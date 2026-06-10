@@ -354,7 +354,7 @@ function collectOutlineItems(document: TipTapDocument) {
     .filter((item): item is { id: string; level: number; text: string } => Boolean(item));
 }
 
-function documentToHtml(document: TipTapDocument) {
+export function documentToHtml(document: TipTapDocument) {
   type SerializableNode = {
     type?: string;
     text?: string;
@@ -403,6 +403,10 @@ function documentToHtml(document: TipTapDocument) {
     }
 
     return htmlAttributes.length > 0 ? ` ${htmlAttributes.join(" ")}` : "";
+  }
+
+  function normalizeImageAlign(value: unknown) {
+    return value === "left" || value === "right" ? value : "center";
   }
 
   function escapeHtml(value: string) {
@@ -499,8 +503,9 @@ function documentToHtml(document: TipTapDocument) {
     if (node.type === "image") {
       const src = typeof node.attrs?.src === "string" ? escapeHtml(node.attrs.src) : "";
       const alt = typeof node.attrs?.alt === "string" ? escapeHtml(node.attrs.alt) : "";
+      const align = normalizeImageAlign(node.attrs?.align);
       const dimensionAttributes = buildImageAttributeString(node.attrs);
-      return src ? `<figure><img src="${src}" alt="${alt}"${dimensionAttributes} /></figure>` : "";
+      return src ? `<figure data-align="${align}"><img src="${src}" alt="${alt}"${dimensionAttributes} /></figure>` : "";
     }
 
     return children;
@@ -701,16 +706,6 @@ export function ArticleEditorWorkspace({
   }, [hasPersistedArticle, showOgImagePicker]);
 
   useEffect(() => {
-    if (!hasPersistedArticle) {
-      setReviewState({
-        status: "idle",
-        message: "文章创建后才可触发 AI 审核。",
-        runId: "",
-        suggestions: [],
-      });
-      return;
-    }
-
     let cancelled = false;
     void fetchCategorySuggestions(normalizeCategoryName(categoryInput))
       .then((items) => {
