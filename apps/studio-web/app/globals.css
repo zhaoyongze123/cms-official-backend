@@ -1912,8 +1912,11 @@ main {
 }
 
 .tiptap-html-source-panel {
+  display: flex;
+  flex-direction: column;
   width: var(--editor-paper-width);
   min-height: var(--editor-paper-height);
+  max-height: calc(100vh - 180px);
   margin: 0 auto;
   border: 1px solid #20242f;
   background: #1e1e1e;
@@ -1968,7 +1971,8 @@ main {
 
 .tiptap-html-source {
   display: grid;
-  min-height: 920px;
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 18px 0;
   background: #1e1e1e;
   color: #d4d4d4;
@@ -2101,10 +2105,23 @@ main {
   border-bottom: 1px solid rgba(214, 220, 232, 0.9);
 }
 
+.tiptap-image-context-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .tiptap-image-context-title {
   font-size: 0.84rem;
   font-weight: 700;
   color: var(--editor-text-soft);
+}
+
+.tiptap-image-context-status {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #0f4cc9;
 }
 
 .tiptap-image-context-row {
@@ -2120,6 +2137,48 @@ main {
   border-radius: 0;
   background: #fff;
   color: var(--editor-text);
+}
+
+.tiptap-image-context-field {
+  display: grid;
+  gap: 6px;
+}
+
+.tiptap-image-context-field-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--editor-text);
+}
+
+.tiptap-image-context-meta {
+  display: grid;
+  gap: 10px;
+}
+
+.tiptap-image-context-meta-card {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(198, 198, 198, 0.95);
+  background: #fbfbfb;
+}
+
+.tiptap-image-context-meta-card strong {
+  font-size: 0.88rem;
+  color: var(--editor-text);
+}
+
+.tiptap-image-context-meta-card small {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--editor-text-soft);
+  word-break: break-all;
+}
+
+.tiptap-image-context-meta-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #6b7280;
 }
 
 .tiptap-image-context-inline-actions {
@@ -2147,11 +2206,45 @@ main {
   display: inline-flex;
   justify-content: center;
   align-items: center;
+  gap: 8px;
   padding: 0 12px;
   border: 1px solid #c6c6c6;
   border-radius: 0;
   background: #f8f8f8;
   font-weight: 600;
+}
+
+.tiptap-context-action-align.is-active {
+  color: #0f4cc9;
+  background: #eef4ff;
+  border-color: #9cb8ef;
+}
+
+.tiptap-context-action-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+.tiptap-context-action-icon-left {
+  background-image: linear-gradient(to bottom, #8a8f99 0 0), linear-gradient(to bottom, #8a8f99 0 0), linear-gradient(to bottom, #8a8f99 0 0);
+  background-size: 10px 2px, 7px 2px, 5px 2px;
+  background-position: left 1px top 2px, left 1px center, left 1px bottom 2px;
+}
+
+.tiptap-context-action-icon-center {
+  background-image: linear-gradient(to bottom, #8a8f99 0 0), linear-gradient(to bottom, #8a8f99 0 0), linear-gradient(to bottom, #8a8f99 0 0);
+  background-size: 10px 2px, 10px 2px, 10px 2px;
+  background-position: center top 2px, center center, center bottom 2px;
+}
+
+.tiptap-context-action-icon-right {
+  background-image: linear-gradient(to bottom, #8a8f99 0 0), linear-gradient(to bottom, #8a8f99 0 0), linear-gradient(to bottom, #8a8f99 0 0);
+  background-size: 10px 2px, 7px 2px, 5px 2px;
+  background-position: right 1px top 2px, right 1px center, right 1px bottom 2px;
 }
 
 .tiptap-context-action.is-danger {
@@ -2466,6 +2559,7 @@ main {
   .tiptap-html-source-panel {
     width: calc(100vw - 32px);
     min-height: 480px;
+    max-height: calc(100vh - 140px);
   }
 
   .tiptap-html-line {

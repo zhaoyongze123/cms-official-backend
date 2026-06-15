@@ -92,6 +92,8 @@ type HtmlPreviewLine = {
   html: string;
 };
 
+type ImageAlign = "left" | "center" | "right";
+
 type TextLeaf = {
   type?: string;
   text?: string;
@@ -1112,6 +1114,10 @@ export function TipTapEditor({
     imageId: number | null;
     title: string;
     alt: string;
+    src: string;
+    width: number | null;
+    height: number | null;
+    align: ImageAlign;
     replaceSourceOpen: boolean;
     saving: boolean;
     generatingAlt: boolean;
@@ -1123,6 +1129,10 @@ export function TipTapEditor({
     imageId: null,
     title: "",
     alt: "",
+    src: "",
+    width: null,
+    height: null,
+    align: "center",
     replaceSourceOpen: false,
     saving: false,
     generatingAlt: false,
@@ -1149,7 +1159,7 @@ export function TipTapEditor({
     () => buildPageHtmlPreview(previewHtml, htmlPreviewDocument),
     [htmlPreviewDocument, previewHtml],
   );
-  const formattedHtmlPreview = useMemo(() => formatHtmlPreview(pageHtmlPreview), [pageHtmlPreview]);
+  const formattedHtmlPreview = useMemo(() => formatHtmlPreview(previewHtml), [previewHtml]);
   const visibleHtmlPreview = useMemo(() => {
     const hiddenPairs = new Set<string>();
     return formattedHtmlPreview.filter((line) => {
@@ -1351,6 +1361,21 @@ export function TipTapEditor({
             imageId: typeof node.attrs.imageId === "number" ? node.attrs.imageId : null,
             title: typeof node.attrs.title === "string" ? node.attrs.title : "",
             alt: typeof node.attrs.alt === "string" ? node.attrs.alt : "",
+            src: typeof node.attrs.src === "string" ? node.attrs.src : "",
+            width:
+              typeof node.attrs.width === "number"
+                ? node.attrs.width
+                : typeof node.attrs.width === "string"
+                  ? Number.parseInt(node.attrs.width, 10) || null
+                  : null,
+            height:
+              typeof node.attrs.height === "number"
+                ? node.attrs.height
+                : typeof node.attrs.height === "string"
+                  ? Number.parseInt(node.attrs.height, 10) || null
+                  : null,
+            align:
+              node.attrs.align === "left" || node.attrs.align === "right" ? node.attrs.align : "center",
             replaceSourceOpen: false,
             saving: false,
             generatingAlt: false,
@@ -1668,6 +1693,7 @@ export function TipTapEditor({
           imageId: matchedImage.image_id,
           title: currentState.title || matchedImage.title,
           alt: currentState.alt || matchedImage.alt_text || matchedImage.title,
+          src: matchedImage.file_url,
         };
       });
     } catch {
@@ -1825,6 +1851,7 @@ export function TipTapEditor({
         imageId: imageRecord.image_id,
         title: imageRecord.title,
         alt: imageRecord.alt_text || imageRecord.title,
+        src: imageRecord.file_url,
         replaceSourceOpen: false,
         saving: false,
       }));
@@ -1889,6 +1916,7 @@ export function TipTapEditor({
           open: false,
           title: image.title,
           alt: image.alt_text || image.title,
+          src: image.file_url,
           replaceSourceOpen: false,
           saving: false,
         }));
@@ -2012,6 +2040,10 @@ export function TipTapEditor({
 
     if (imageContextState.pos !== null) {
       editor.chain().focus().setNodeSelection(imageContextState.pos).updateAttributes("image", { align }).run();
+      setImageContextState((currentState) => ({
+        ...currentState,
+        align,
+      }));
       return;
     }
 
@@ -2020,6 +2052,19 @@ export function TipTapEditor({
     }
 
     editor.chain().focus().updateAttributes("image", { align }).run();
+  }
+
+  function getImageDisplaySizeLabel() {
+    if (imageContextState.width === null && imageContextState.height === null) {
+      return "原始/自适应显示";
+    }
+    if (imageContextState.width !== null && imageContextState.height !== null) {
+      return `${imageContextState.width}px × ${imageContextState.height}px`;
+    }
+    if (imageContextState.width !== null) {
+      return `宽度 ${imageContextState.width}px`;
+    }
+    return `高度 ${imageContextState.height}px`;
   }
 
   function insertTable() {
@@ -2367,12 +2412,12 @@ export function TipTapEditor({
               <div className="tiptap-html-source-panel">
                 <div className="tiptap-html-toolbar">
                   <div className="tiptap-html-toolbar-left">
-                    <span className="tiptap-html-panel-title">index.html</span>
-                    <span className="tiptap-html-panel-meta">只读预览</span>
+                    <span className="tiptap-html-panel-title">body.html</span>
+                    <span className="tiptap-html-panel-meta">正文 HTML 预览</span>
                   </div>
                   <div className="tiptap-html-toolbar-right">
                     <button className="tiptap-html-copy-button" onClick={() => void handleCopyHtmlPreview()} type="button">
-                      {copyStatus === "done" ? "已复制" : copyStatus === "error" ? "复制失败" : "复制 HTML"}
+                      {copyStatus === "done" ? "已复制" : copyStatus === "error" ? "复制失败" : "复制正文 HTML"}
                     </button>
                   </div>
                 </div>
@@ -2431,17 +2476,47 @@ export function TipTapEditor({
               }}
             >
               <div className="tiptap-image-context-section">
-                <span className="tiptap-image-context-title">图片操作</span>
+                <div className="tiptap-image-context-heading">
+                  <span className="tiptap-image-context-title">图片操作</span>
+                  <span className="tiptap-image-context-status">当前对齐：{imageContextState.align === "left" ? "居左" : imageContextState.align === "right" ? "居右" : "居中"}</span>
+                </div>
                 <div className="tiptap-image-context-row">
-                  <button className="tiptap-context-action" onClick={() => applyImageAlign("left")} type="button">
-                    居左
+                  <button
+                    className={`tiptap-context-action tiptap-context-action-align${imageContextState.align === "left" ? " is-active" : ""}`}
+                    onClick={() => applyImageAlign("left")}
+                    type="button"
+                  >
+                    <span aria-hidden="true" className="tiptap-context-action-icon tiptap-context-action-icon-left" />
+                    <span>居左</span>
                   </button>
-                  <button className="tiptap-context-action" onClick={() => applyImageAlign("center")} type="button">
-                    居中
+                  <button
+                    className={`tiptap-context-action tiptap-context-action-align${imageContextState.align === "center" ? " is-active" : ""}`}
+                    onClick={() => applyImageAlign("center")}
+                    type="button"
+                  >
+                    <span aria-hidden="true" className="tiptap-context-action-icon tiptap-context-action-icon-center" />
+                    <span>居中</span>
                   </button>
-                  <button className="tiptap-context-action" onClick={() => applyImageAlign("right")} type="button">
-                    居右
+                  <button
+                    className={`tiptap-context-action tiptap-context-action-align${imageContextState.align === "right" ? " is-active" : ""}`}
+                    onClick={() => applyImageAlign("right")}
+                    type="button"
+                  >
+                    <span aria-hidden="true" className="tiptap-context-action-icon tiptap-context-action-icon-right" />
+                    <span>居右</span>
                   </button>
+                </div>
+                <div className="tiptap-image-context-meta">
+                  <div className="tiptap-image-context-meta-card">
+                    <span className="tiptap-image-context-meta-label">当前显示尺寸</span>
+                    <strong>{getImageDisplaySizeLabel()}</strong>
+                    <small>{imageContextState.width !== null || imageContextState.height !== null ? "已应用缩放，前台按该尺寸展示" : "当前未记录固定宽高，前台按默认自适应展示"}</small>
+                  </div>
+                  <div className="tiptap-image-context-meta-card">
+                    <span className="tiptap-image-context-meta-label">媒体库绑定</span>
+                    <strong>{imageContextState.imageId !== null ? `image_id=${imageContextState.imageId}` : "未绑定媒体库图片"}</strong>
+                    <small>{imageContextState.src ? imageContextState.src : "当前仅使用正文节点内图片信息"}</small>
+                  </div>
                 </div>
                 <div className="tiptap-image-context-row">
                   <button
@@ -2492,38 +2567,44 @@ export function TipTapEditor({
                   </div>
                 ) : null}
               </div>
-              <input
-                className="tiptap-image-context-input"
-                onChange={(event) =>
-                  setImageContextState((currentState) => ({
-                    ...currentState,
-                    title: event.target.value,
-                  }))
-                }
-                placeholder="输入图片名称，和媒体库保持一致"
-                value={imageContextState.title}
-              />
-              <input
-                autoFocus
-                className="tiptap-image-context-input"
-                onChange={(event) =>
-                  setImageContextState((currentState) => ({
-                    ...currentState,
-                    alt: event.target.value,
-                  }))
-                }
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    void saveImageMetadata();
+              <label className="tiptap-image-context-field">
+                <span className="tiptap-image-context-field-label">媒体库图片名</span>
+                <input
+                  className="tiptap-image-context-input"
+                  onChange={(event) =>
+                    setImageContextState((currentState) => ({
+                      ...currentState,
+                      title: event.target.value,
+                    }))
                   }
-                  if (event.key === "Escape") {
-                    setImageContextState((currentState) => ({ ...currentState, open: false }));
+                  placeholder="输入图片名称，和媒体库保持一致"
+                  value={imageContextState.title}
+                />
+              </label>
+              <label className="tiptap-image-context-field">
+                <span className="tiptap-image-context-field-label">Alt 描述</span>
+                <input
+                  autoFocus
+                  className="tiptap-image-context-input"
+                  onChange={(event) =>
+                    setImageContextState((currentState) => ({
+                      ...currentState,
+                      alt: event.target.value,
+                    }))
                   }
-                }}
-                placeholder="输入图片描述，利于 SEO 与无障碍"
-                value={imageContextState.alt}
-              />
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void saveImageMetadata();
+                    }
+                    if (event.key === "Escape") {
+                      setImageContextState((currentState) => ({ ...currentState, open: false }));
+                    }
+                  }}
+                  placeholder="输入图片描述，利于 SEO 与无障碍"
+                  value={imageContextState.alt}
+                />
+              </label>
               <div className="tiptap-image-context-inline-actions">
                 <button
                   className="tiptap-context-action tiptap-context-action-ai"
