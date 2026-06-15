@@ -14,16 +14,20 @@ const benefits = [
     description: "享受官网以外的专属优惠",
   },
   {
-    title: "注册全程辅助",
-    description: "注册与实名认证有人协助",
+    title: "专属钉群直连",
+    description: "专属沟通渠道,问题反馈更直接高效",
   },
   {
-    title: "合规票据齐全",
-    description: "合同发票报备链路完整",
+    title: "架构师免费选型",
+    description: "技术方案有专业架构师团队保驾护航",
   },
   {
-    title: "全周期跟进",
-    description: "到期提醒续费与升级支持",
+    title: "首单折上折",
+    description: "渠道价基础上,首次采购再叠加专属优惠",
+  },
+  {
+    title: "100+场景方案库",
+    description: "涵盖政企、互联网、传统行业等多场景方案",
   },
 ];
 
@@ -52,13 +56,11 @@ const contactItems = [
   {
     title: "电话联系",
     value: "021-50583875",
-    href: "tel:02150583875",
     icon: Phone,
   },
   {
     title: "邮件联系",
     value: "service@yuncan.com",
-    href: "mailto:service@yuncan.com",
     icon: Mail,
   },
 ];
@@ -216,15 +218,12 @@ export default function PublicJoinPage() {
                   const Icon = item.icon;
 
                   return (
-                    <motion.a
+                    <motion.div
                       key={item.title}
-                      href={item.href}
                       initial={{ opacity: 0, y: 12 }}
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true, amount: 0.5 }}
                       transition={{ duration: 0.35, delay: index * 0.05 }}
-                      whileHover={{ y: -3, scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
                       className={`flex min-h-[8.2rem] flex-col items-center justify-center rounded-[1.35rem] px-6 text-white shadow-[0_18px_40px_rgba(15,23,42,0.08)] ${
                         index === 0
                           ? "bg-[linear-gradient(180deg,#f39754_0%,#ea7f3e_100%)]"
@@ -236,7 +235,7 @@ export default function PublicJoinPage() {
                         <span>{item.title}</span>
                       </div>
                       <div className="mt-3 text-lg font-medium text-white/88">{item.value}</div>
-                    </motion.a>
+                    </motion.div>
                   );
                 })}
               </div>
