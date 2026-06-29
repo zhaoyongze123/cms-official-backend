@@ -10,10 +10,6 @@ import PublicLayout from "./public-layout";
 
 const benefits = [
   {
-    title: "代理渠道折扣",
-    description: "享受官网以外的专属优惠",
-  },
-  {
     title: "专属钉群直连",
     description: "专属沟通渠道,问题反馈更直接高效",
   },
@@ -73,6 +69,20 @@ const faqItems = [
   {
     question: "需要准备哪些材料？",
     answer: "仅需先提供营业执照标准企业全称即可，我们协助完成后续流程。",
+  },
+  {
+    question: "关联注册之后具体能享受哪些权益？",
+    answer: (
+      <>
+        关联注册后可享受专属钉钉群 1 对 1 响应、工单优先通道、免费架构师方案设计、采购折上折、100+ 行业方案库等权益，全程持续技术护航。详细说明请查看：
+        <Link
+          className="font-bold text-hermes underline decoration-hermes/40 underline-offset-4 transition-colors hover:text-[#e36b1d]"
+          href="https://www.yuncan.com/articles/yuncan-cloud-advantages"
+        >
+          阿里云关联注册优势详解
+        </Link>
+      </>
+    ),
   },
 ];
 
@@ -270,7 +280,7 @@ export default function PublicJoinPage() {
       <section className="px-6 py-10">
         <div className="mx-auto max-w-7xl border-t border-line pt-10">
           <div className="overflow-hidden rounded-[1.8rem] border border-line bg-[#fcfdff]">
-            <div className="grid gap-8 px-6 py-8 md:grid-cols-[0.92fr_1.08fr] md:px-10">
+            <div className="grid gap-8 px-6 py-8 md:grid-cols-[0.82fr_1.18fr] md:px-10">
               <div>
                 <div className="text-sm font-black uppercase tracking-[0.2em] text-hermes">Authorized Partner</div>
                 <SectionTitle>阿里云合作伙伴授权</SectionTitle>
@@ -281,14 +291,25 @@ export default function PublicJoinPage() {
                   查看更多
                 </Link>
               </div>
-              <div className="flex items-center justify-center rounded-[1.4rem] bg-white p-4">
-                <Image
-                  alt="阿里云合作伙伴授权"
-                  className="h-auto w-full max-w-[34rem] object-contain"
-                  height={420}
-                  src="/about/aliyun-certificate.png"
-                  width={680}
-                />
+              <div className="grid items-center justify-center gap-4 rounded-[1.4rem] bg-white p-4 md:grid-cols-[max-content_max-content] md:p-5">
+                <div className="flex h-[430px] w-fit items-center justify-center rounded-[1.2rem] bg-[linear-gradient(180deg,#f5f9ff_0%,#edf4ff_100%)] p-2">
+                  <Image
+                    alt="阿里云优选级资质"
+                    className="h-[430px] w-auto rounded-[1rem] object-contain object-center shadow-[0_10px_30px_rgba(103,146,212,0.16)]"
+                    height={1612}
+                    src="/about/aliyun-preferred-badge.jpg"
+                    width={1398}
+                  />
+                </div>
+                <div className="flex h-[430px] w-fit items-center justify-center rounded-[1.2rem] bg-[#fbfdff] p-2">
+                  <Image
+                    alt="阿里云合作伙伴授权"
+                    className="h-[430px] w-auto rounded-[1rem] object-contain object-top shadow-[0_10px_30px_rgba(15,23,42,0.08)]"
+                    height={420}
+                    src="/about/aliyun-certificate.png"
+                    width={680}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -312,7 +333,7 @@ export default function PublicJoinPage() {
                   <span className="pt-1 text-[1.8rem] font-black text-hermes">Q</span>
                   <div>
                     <div className="text-[1.6rem] font-black tracking-tight text-charcoal">{item.question}</div>
-                    <p className="mt-3 max-w-5xl text-base leading-8 text-muted">{item.answer}</p>
+                    <div className="mt-3 max-w-5xl text-base leading-8 text-muted">{item.answer}</div>
                   </div>
                 </div>
               </motion.div>
