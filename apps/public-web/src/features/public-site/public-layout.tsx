@@ -167,8 +167,8 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
       </div>
 
       <footer className="bg-charcoal text-white pt-24 pb-12 px-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start gap-12 pb-16 border-b border-white/10">
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-12 lg:gap-20">
+        <div className="max-w-7xl mx-auto flex flex-col gap-12 pb-16 border-b border-white/10 xl:flex-row xl:items-start xl:justify-between">
+          <div className="grid flex-1 grid-cols-2 gap-12 md:grid-cols-4 lg:gap-20">
             <div>
               <h5 className="font-bold mb-6 text-sm">友情链接</h5>
               <ul className="space-y-4 text-sm text-white/40">
@@ -187,28 +187,6 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
                 <li className="hover:text-hermes transition-colors">MDaemon</li>
                 <li className="hover:text-hermes transition-colors">MailStore</li>
                 <li className="hover:text-hermes transition-colors">可道云</li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="font-bold mb-6 text-sm">联系我们</h5>
-              <ul className="space-y-4 text-sm text-white/40">
-                <li>地址：</li>
-                <li>电话：021-50583875</li>
-                <li>邮箱：service@yuncan.com</li>
-                <li>
-                  <div className="space-y-3">
-                    <span className="block">企微二维码</span>
-                    <div className="w-24 rounded-2xl border border-white/10 bg-white p-2">
-                      <Image
-                        alt="企微二维码"
-                        className="h-20 w-20 rounded-xl object-cover"
-                        height={80}
-                        src={contactQrPath}
-                        width={80}
-                      />
-                    </div>
-                  </div>
-                </li>
               </ul>
             </div>
             <div>
@@ -241,6 +219,29 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
                 </li>
               </ul>
             </div>
+          </div>
+
+          <div className="w-full xl:w-[15rem] xl:shrink-0 xl:pl-10 xl:border-l xl:border-white/10">
+            <h5 className="font-bold mb-6 text-sm">联系我们</h5>
+            <ul className="space-y-4 text-sm text-white/40">
+              <li>地址：</li>
+              <li>电话：021-50583875</li>
+              <li>邮箱：service@yuncan.com</li>
+              <li>
+                <div className="space-y-3">
+                  <span className="block">企微二维码</span>
+                  <div className="w-24 rounded-2xl border border-white/10 bg-white p-2">
+                    <Image
+                      alt="企微二维码"
+                      className="h-20 w-20 rounded-xl object-cover"
+                      height={80}
+                      src={contactQrPath}
+                      width={80}
+                    />
+                  </div>
+                </div>
+              </li>
+            </ul>
           </div>
         </div>
 

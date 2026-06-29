@@ -8,7 +8,7 @@ import {
   type EditorPatch,
   type TipTapDocument,
 } from "@cms/editor-protocol";
-import { keepCaretInsideCodeBlock, TipTapEditor } from "./tiptap-editor";
+import { clampImageContextMenuPosition, keepCaretInsideCodeBlock, TipTapEditor } from "./tiptap-editor";
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
@@ -205,5 +205,25 @@ describe("tiptap editor protocol", () => {
     keepCaretInsideCodeBlock(mockEditor as never);
 
     expect(focus).not.toHaveBeenCalled();
+  });
+
+  it("keeps the image context menu inside the viewport", () => {
+    expect(
+      clampImageContextMenuPosition(
+        { x: 1180, y: 690 },
+        { width: 1280, height: 720 },
+        { width: 360, height: 420 },
+      ),
+    ).toEqual({ x: 908, y: 288 });
+  });
+
+  it("pins the image context menu to the viewport margin when the menu is taller than the viewport", () => {
+    expect(
+      clampImageContextMenuPosition(
+        { x: 40, y: 640 },
+        { width: 375, height: 667 },
+        { width: 351, height: 760 },
+      ),
+    ).toEqual({ x: 12, y: 12 });
   });
 });

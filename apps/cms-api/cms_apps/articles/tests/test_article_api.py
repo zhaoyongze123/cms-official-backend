@@ -66,6 +66,11 @@ class ArticleApiTests(TestCase):
         self.site_setting, _ = SiteSetting.objects.get_or_create(id=1)
         self.site_setting.third_party_head_scripts = "<script>window.headTracker = true;</script>"
         self.site_setting.third_party_body_end_scripts = "<script>window.bodyTracker = true;</script>"
+        self.case_logo_wall_image = SimpleUploadedFile(
+            "case-logo-wall.png",
+            b"case-logo-wall-bytes",
+            content_type="image/png",
+        )
         self.site_setting.save()
         FaqItem.objects.create(
             article=self.article,
@@ -363,6 +368,7 @@ class ArticleApiTests(TestCase):
         self.assertEqual(payload["third_party_scripts"]["body_end"], "<script>window.bodyTracker = true;</script>")
         self.assertEqual(payload["homepage_featured_articles"], [None, None, None])
         self.assertEqual(payload["homepage_solution_articles"], [None, None, None, None])
+        self.assertIsNone(payload["homepage_case_logo_wall_image_url"])
 
     def test_public_site_settings_returns_featured_articles(self):
         self.site_setting.homepage_featured_article_primary = self.article
@@ -397,3 +403,16 @@ class ArticleApiTests(TestCase):
         self.assertEqual(payload["homepage_solution_articles"][0]["article_id"], self.article.id)
         self.assertEqual(payload["homepage_solution_articles"][0]["title"], self.article.title)
         self.assertEqual(payload["homepage_solution_articles"][0]["category"]["slug"], self.category.slug)
+
+    def test_public_site_settings_returns_case_logo_wall_image(self):
+        self.site_setting.homepage_case_logo_wall_image = self.case_logo_wall_image
+        self.site_setting.save()
+
+        response = self.client.get("/api/public/site-settings/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(
+            payload["homepage_case_logo_wall_image_url"],
+            self.site_setting.homepage_case_logo_wall_image.url,
+        )

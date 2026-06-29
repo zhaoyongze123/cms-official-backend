@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { BubbleMenu, FloatingMenu } from "@tiptap/react/menus";
 import { Editor as TiptapRuntimeEditor, Extension, mergeAttributes, ResizableNodeView } from "@tiptap/core";
@@ -120,6 +120,21 @@ type GenericNode = {
   }>;
   content?: GenericNode[];
   text?: string;
+};
+
+type ImageContextMenuPosition = {
+  x: number;
+  y: number;
+};
+
+type ImageContextViewport = {
+  width: number;
+  height: number;
+};
+
+type ImageContextMenuSize = {
+  width: number;
+  height: number;
 };
 
 const EMPTY_DOCUMENT: TipTapDocument = {
@@ -476,6 +491,23 @@ function scrollClosestScrollableAncestorIntoView(targetElement: HTMLElement, fal
       behavior: "smooth",
     });
   }
+}
+
+export function clampImageContextMenuPosition(
+  position: ImageContextMenuPosition,
+  viewport: ImageContextViewport,
+  menuSize: ImageContextMenuSize,
+  margin = 12,
+): ImageContextMenuPosition {
+  const minX = margin;
+  const minY = margin;
+  const maxX = Math.max(viewport.width - menuSize.width - margin, margin);
+  const maxY = Math.max(viewport.height - menuSize.height - margin, margin);
+
+  return {
+    x: Math.min(Math.max(position.x, minX), maxX),
+    y: Math.min(Math.max(position.y, minY), maxY),
+  };
 }
 
 function normalizeBlockIds(document: TipTapDocument): TipTapDocument {
@@ -1087,6 +1119,7 @@ export function TipTapEditor({
   const imageInsertButtonRef = useRef<HTMLButtonElement | null>(null);
   const attachmentInsertButtonRef = useRef<HTMLButtonElement | null>(null);
   const editorContentRef = useRef<HTMLDivElement | null>(null);
+  const imageContextMenuRef = useRef<HTMLDivElement | null>(null);
   const activeHeadingRef = useRef<string | null>(null);
   const pendingCodeBlockSelectionRef = useRef<number | null>(null);
   const lastSyncedDocumentRef = useRef<string>(JSON.stringify(normalizeBlockIds(value)));
@@ -1537,6 +1570,34 @@ export function TipTapEditor({
     setCopyStatus("idle");
   }, [previewHtml]);
 
+  useLayoutEffect(() => {
+    if (!imageContextState.open) {
+      return;
+    }
+
+    const menuElement = imageContextMenuRef.current;
+    if (!menuElement) {
+      return;
+    }
+
+    const menuRect = menuElement.getBoundingClientRect();
+    const nextPosition = clampImageContextMenuPosition(
+      { x: imageContextState.x, y: imageContextState.y },
+      { width: window.innerWidth, height: window.innerHeight },
+      { width: menuRect.width, height: menuRect.height },
+    );
+
+    if (nextPosition.x === imageContextState.x && nextPosition.y === imageContextState.y) {
+      return;
+    }
+
+    setImageContextState((currentState) => ({
+      ...currentState,
+      x: nextPosition.x,
+      y: nextPosition.y,
+    }));
+  }, [imageContextState.open, imageContextState.x, imageContextState.y]);
+
   useEffect(() => {
     if (!imageContextState.open) {
       return;
@@ -1546,10 +1607,21 @@ export function TipTapEditor({
       setImageContextState((currentState) => ({ ...currentState, open: false }));
     }
 
-    window.addEventListener("click", closeImageAltMenu);
+    function handleWindowPointerDown(event: PointerEvent) {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+      if (imageContextMenuRef.current?.contains(target)) {
+        return;
+      }
+      closeImageAltMenu();
+    }
+
+    window.addEventListener("pointerdown", handleWindowPointerDown);
     window.addEventListener("resize", closeImageAltMenu);
     return () => {
-      window.removeEventListener("click", closeImageAltMenu);
+      window.removeEventListener("pointerdown", handleWindowPointerDown);
       window.removeEventListener("resize", closeImageAltMenu);
     };
   }, [imageContextState.open]);
@@ -2469,7 +2541,7 @@ export function TipTapEditor({
           {imageContextState.open ? (
             <div
               className="tiptap-image-context-menu"
-              onClick={(event) => event.stopPropagation()}
+              ref={imageContextMenuRef}
               style={{
                 left: `${imageContextState.x}px`,
                 top: `${imageContextState.y}px`,

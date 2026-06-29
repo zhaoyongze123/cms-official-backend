@@ -53,5 +53,11 @@ export default async function HomePage() {
     ? publicSiteSettings.homepageSolutionArticles
     : [];
 
-  return <PublicLandingPage featuredArticles={featuredArticles} solutionArticles={homepageSolutionArticles} />;
+  return (
+    <PublicLandingPage
+      featuredArticles={featuredArticles}
+      solutionArticles={homepageSolutionArticles}
+      caseLogoWallImageUrl={publicSiteSettings.homepageCaseLogoWallImageUrl}
+    />
+  );
 }

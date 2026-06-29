@@ -45,5 +45,10 @@ def public_site_setting_view(request):
             _serialize_featured_article(setting.homepage_solution_article_3_id),
             _serialize_featured_article(setting.homepage_solution_article_4_id),
         ],
+        "homepage_case_logo_wall_image_url": (
+            setting.homepage_case_logo_wall_image.url
+            if setting.homepage_case_logo_wall_image
+            else None
+        ),
     }
     return JsonResponse(payload)

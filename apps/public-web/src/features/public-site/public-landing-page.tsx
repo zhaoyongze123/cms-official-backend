@@ -210,9 +210,10 @@ function ConsultationModal({ open, onClose }: { open: boolean; onClose: () => vo
 interface PublicLandingPageProps {
   featuredArticles: PublicArticle[];
   solutionArticles: PublicArticle[];
+  caseLogoWallImageUrl?: string;
 }
 
-export default function PublicLandingPage({ featuredArticles, solutionArticles }: PublicLandingPageProps) {
+export default function PublicLandingPage({ featuredArticles, solutionArticles, caseLogoWallImageUrl }: PublicLandingPageProps) {
   const titleContainerRef = useRef<HTMLDivElement>(null);
   const [consultationOpen, setConsultationOpen] = useState(false);
   const homepageSolutionItems = buildHomepageSolutionItems(solutionArticles);
@@ -374,7 +375,7 @@ export default function PublicLandingPage({ featuredArticles, solutionArticles }
         </div>
       </section>
 
-      <section id="服务体系" className="py-32 px-6 bg-mist">
+      <section id="service-matrix" className="scroll-mt-32 py-32 px-6 bg-mist">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-20">
             <div className="max-w-2xl">
@@ -403,13 +404,19 @@ export default function PublicLandingPage({ featuredArticles, solutionArticles }
                 <h3 className="text-xl font-bold text-white mb-4">定制化服务</h3>
                 <p className="text-white/80 text-sm leading-relaxed">除标准化产品外，云璨还支持针对特殊行业、高并发场景的1对1深度定制开发。</p>
               </div>
-              <button className="mt-8 bg-white text-hermes font-black py-4 rounded-xl shadow-lg hover:bg-mist transition-colors">预约专家诊断</button>
+              <button
+                type="button"
+                onClick={() => setConsultationOpen(true)}
+                className="mt-8 bg-white text-hermes font-black py-4 rounded-xl shadow-lg hover:bg-mist transition-colors"
+              >
+                预约专家诊断
+              </button>
             </motion.div>
           </div>
         </div>
       </section>
 
-      <section id="解决方案" className="py-32 px-6">
+      <section id="enterprise-solutions" className="scroll-mt-32 py-32 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-[1fr_2fr] gap-20">
             <div>
@@ -436,6 +443,35 @@ export default function PublicLandingPage({ featuredArticles, solutionArticles }
           </div>
         </div>
       </section>
+
+      {caseLogoWallImageUrl ? (
+        <section id="customer-logo-wall" className="scroll-mt-32 px-6 pb-8">
+          <div className="mx-auto max-w-7xl overflow-hidden rounded-[2rem] border border-line bg-white shadow-[0_22px_60px_rgba(15,23,42,0.08)]">
+            <div className="border-b border-line px-8 py-7 md:px-12">
+              <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <span className="section-label">Trusted by Customers</span>
+                  <h2 className="mt-3 text-3xl font-black text-charcoal md:text-4xl">客户案例 LOGO 墙</h2>
+                </div>
+                <p className="max-w-2xl text-sm leading-7 text-muted md:text-right">
+                  展示已服务客户与合作品牌，帮助访客快速建立对交付能力与行业覆盖面的直观认知。
+                </p>
+              </div>
+            </div>
+            <div className="bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-5 py-5 md:px-8 md:py-8">
+              <div className="overflow-hidden rounded-[1.5rem] border border-line bg-white p-3 md:p-4">
+                <Image
+                  alt="云璨客户案例 LOGO 墙"
+                  className="h-auto w-full object-contain"
+                  height={900}
+                  src={caseLogoWallImageUrl}
+                  width={2400}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <ConsultationModal open={consultationOpen} onClose={() => setConsultationOpen(false)} />
     </PublicLayout>

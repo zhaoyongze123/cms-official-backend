@@ -188,5 +188,6 @@
 1. 前端只对接 Django 公开接口。
 2. FastAPI `/internal/*` 仅允许 Django 服务端调用。
 3. `SiteSetting` 中的敏感配置不得直接暴露到前端。
-4. 任何新增公开 API，都应先更新或核对 `contracts/openapi.django.yaml`。
-5. 文档中的“已实现接口”必须以真实路由注册和可调用结果为准，而不是以页面设计或目标规划为准。
+4. 首页客户案例 LOGO 墙图片统一走 `SiteSetting.homepage_case_logo_wall_image`，公开站点通过 `/api/public/site-settings/` 返回 `homepage_case_logo_wall_image_url` 读取。
+5. 任何新增公开 API，都应先更新或核对 `contracts/openapi.django.yaml`。
+6. 文档中的“已实现接口”必须以真实路由注册和可调用结果为准，而不是以页面设计或目标规划为准。

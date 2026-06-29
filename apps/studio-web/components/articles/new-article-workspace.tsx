@@ -3,6 +3,7 @@
 import { ArticleEditorWorkspace } from "./article-editor-workspace";
 import { createArticle, publishArticle } from "../../lib/api-client";
 import type { ArticleRecord } from "../../lib/mock-api";
+import { studioBrowserPath } from "../../lib/routes";
 
 type NewArticleWorkspaceProps = {
   embedded?: boolean;
@@ -53,14 +54,18 @@ const EMPTY_NEW_ARTICLE: ArticleRecord = {
 };
 
 export function NewArticleWorkspace({ embedded = false }: NewArticleWorkspaceProps) {
+  function buildPostCreatePath(articleId: number) {
+    return embedded
+      ? studioBrowserPath(`/django-admin/articles/${articleId}/`)
+      : `/studio/articles/${articleId}`;
+  }
+
   async function handleSaveDraft(payload: Partial<ArticleRecord>) {
     const created = await createArticle({
       ...payload,
       status: "draft",
     });
-    const nextPath = embedded
-      ? `/django-admin/articles/${created.article_id}`
-      : `/studio/articles/${created.article_id}`;
+    const nextPath = buildPostCreatePath(created.article_id);
     window.location.assign(nextPath);
     return created;
   }
@@ -71,9 +76,7 @@ export function NewArticleWorkspace({ embedded = false }: NewArticleWorkspacePro
       status: "draft",
     });
     const published = await publishArticle(created.article_id);
-    const nextPath = embedded
-      ? `/django-admin/articles/${published.article.article_id}`
-      : `/studio/articles/${published.article.article_id}`;
+    const nextPath = buildPostCreatePath(published.article.article_id);
     window.location.assign(nextPath);
     return published.article;
   }

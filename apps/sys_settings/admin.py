@@ -166,6 +166,7 @@ class SiteSettingAdmin(admin.ModelAdmin):
                 "homepage_solution_article_2",
                 "homepage_solution_article_3",
                 "homepage_solution_article_4",
+                "homepage_case_logo_wall_image",
             )
         }),
         ("AI 模型与 Prompt", {

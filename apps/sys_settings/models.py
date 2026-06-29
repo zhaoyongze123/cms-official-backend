@@ -144,6 +144,13 @@ class SiteSetting(models.Model):
         limit_choices_to={"status": "published"},
         help_text="用于首页解决方案区第四条，前台会读取文章分类、标题和摘要。",
     )
+    homepage_case_logo_wall_image = models.ImageField(
+        "首页客户案例 LOGO 墙图片",
+        upload_to="settings/homepage/",
+        blank=True,
+        null=True,
+        help_text="用于官网首页底部展示客户案例 LOGO 墙，建议上传横向大图。",
+    )
 
     ai_review_model = models.CharField(
         "AI 审核与扩展生成默认模型",

@@ -4,6 +4,7 @@ from django.conf import settings
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import format_html
 
 from cms_apps.articles.models import Article, ArticleRevision, Category, Tag
 from cms_apps.faq.models import FaqItem
@@ -75,6 +76,7 @@ class FrontendContentSettingForm(forms.ModelForm):
             "homepage_solution_article_2",
             "homepage_solution_article_3",
             "homepage_solution_article_4",
+            "homepage_case_logo_wall_image",
         )
 
 
@@ -247,7 +249,19 @@ class FrontendContentSettingAdmin(admin.ModelAdmin):
                 "classes": ("wide", "admin-section"),
             },
         ),
+        (
+            "首页客户案例 LOGO 墙",
+            {
+                "description": "设置官网首页底部的客户案例 LOGO 墙展示图。前台仅在配置图片后显示该区块。",
+                "fields": (
+                    "homepage_case_logo_wall_image",
+                    "homepage_case_logo_wall_image_preview",
+                ),
+                "classes": ("wide", "admin-section"),
+            },
+        ),
     )
+    readonly_fields = ("homepage_case_logo_wall_image_preview",)
 
     def has_add_permission(self, request):
         return False
@@ -259,6 +273,15 @@ class FrontendContentSettingAdmin(admin.ModelAdmin):
         obj, _ = self.model.objects.get_or_create(id=1)
         url = reverse("admin:simple_cms_frontendcontentsetting_change", args=[obj.id])
         return HttpResponseRedirect(url)
+
+    @admin.display(description="当前 LOGO 墙预览")
+    def homepage_case_logo_wall_image_preview(self, obj):
+        if not obj.homepage_case_logo_wall_image:
+            return "未上传图片"
+        return format_html(
+            '<img src="{}" alt="首页客户案例 LOGO 墙预览" style="max-width: 100%; width: 720px; border: 1px solid #d6dde8; border-radius: 12px;" />',
+            obj.homepage_case_logo_wall_image.url,
+        )
 
 
 @admin.register(KnowledgeSource)

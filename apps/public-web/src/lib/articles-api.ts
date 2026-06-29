@@ -1,7 +1,7 @@
 const isServer = typeof window === "undefined";
 const publicSiteBaseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_SITE_URL || "http://127.0.0.1:3003");
-const configuredApiBaseUrl = process.env.NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL || "http://127.0.0.1:8001";
-const serverBaseUrl = configuredApiBaseUrl;
+const publicApiBaseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL || "http://127.0.0.1:8001");
+const serverBaseUrl = normalizeBaseUrl(process.env.DJANGO_INTERNAL_BASE_URL || publicApiBaseUrl);
 
 export class PublicApiRequestError extends Error {
   status: number;
@@ -163,6 +163,7 @@ export interface PublicSiteSettings {
   };
   homepageFeaturedArticles: PublicArticle[];
   homepageSolutionArticles: PublicArticle[];
+  homepageCaseLogoWallImageUrl: string;
 }
 
 function buildDefaultArticleCanonicalUrl(slug: string): string {
@@ -205,7 +206,7 @@ export function mapArticleToPublicArticle(article: ArticleApiItem): PublicArticl
       robots: seo.robots || "index,follow",
       ogTitle: seo.og_title || seo.meta_title || article.title,
       ogDescription: seo.og_description || seo.meta_description || excerpt,
-      ogImageUrl: seo.og_image_url ? new URL(seo.og_image_url, serverBaseUrl).toString() : "",
+      ogImageUrl: seo.og_image_url ? new URL(seo.og_image_url, publicApiBaseUrl).toString() : "",
     },
     seoPayload: {
       canonicalUrlResolved: canonicalUrl,
@@ -285,6 +286,7 @@ export async function getPublicSiteSettings(): Promise<PublicSiteSettings> {
       };
       homepage_featured_articles?: ArticleApiItem[];
       homepage_solution_articles?: ArticleApiItem[];
+      homepage_case_logo_wall_image_url?: string | null;
     }>("/api/public/site-settings/");
 
     return {
@@ -300,6 +302,9 @@ export async function getPublicSiteSettings(): Promise<PublicSiteSettings> {
       homepageSolutionArticles: (payload.homepage_solution_articles || [])
         .filter((item): item is ArticleApiItem => Boolean(item))
         .map(mapArticleToPublicArticle),
+      homepageCaseLogoWallImageUrl: payload.homepage_case_logo_wall_image_url
+        ? new URL(payload.homepage_case_logo_wall_image_url, publicApiBaseUrl).toString()
+        : "",
     };
   } catch (error) {
     logPublicApiError("公开站点设置", error);
@@ -312,6 +317,7 @@ export async function getPublicSiteSettings(): Promise<PublicSiteSettings> {
       },
       homepageFeaturedArticles: [],
       homepageSolutionArticles: [],
+      homepageCaseLogoWallImageUrl: "",
     };
   }
 }

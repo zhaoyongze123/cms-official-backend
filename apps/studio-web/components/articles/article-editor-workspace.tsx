@@ -82,6 +82,19 @@ type SuccessToast = {
 };
 
 type FieldErrors = Partial<Record<"title" | "slug" | "category" | "summary" | "content_json" | "canonical_url", string>>;
+type PersistAction = "save" | "publish";
+
+type ValidationConfirmState = {
+  action: PersistAction;
+  issues: string[];
+};
+
+type DraftRequiredFieldValidationInput = {
+  title: string;
+  slug: string;
+  categoryName: string;
+  metaDescription: string;
+};
 
 function normalizeTagName(value: string) {
   return value.trim().replaceAll(/\s+/g, " ");
@@ -129,20 +142,6 @@ function formatStudioDateTime(value: string) {
     second: "2-digit",
     hour12: false,
   }).format(new Date(value));
-}
-
-function isDocumentEffectivelyEmpty(document: TipTapDocument) {
-  const content = Array.isArray(document?.content) ? document.content : [];
-  return !content.some((node) => {
-    if (!node || typeof node !== "object") {
-      return false;
-    }
-    if ((node as { type?: string }).type === "image") {
-      return true;
-    }
-    const text = JSON.stringify(node);
-    return /"text":"[^"]+"/.test(text);
-  });
 }
 
 function flattenValidationMessage(value: unknown): string {
@@ -514,6 +513,27 @@ export function documentToHtml(document: TipTapDocument) {
   return document.content.map((node) => renderNode(node as SerializableNode)).join("");
 }
 
+export function validateDraftRequiredFields(input: DraftRequiredFieldValidationInput): FieldErrors {
+  const nextErrors: FieldErrors = {};
+  if (!input.title.trim()) {
+    nextErrors.title = "标题不能为空。";
+  }
+  if (!input.slug.trim()) {
+    nextErrors.slug = "Slug 不能为空。";
+  }
+  if (!input.categoryName.trim()) {
+    nextErrors.category = "请选择或输入所属分类。";
+  }
+  if (!input.metaDescription.trim()) {
+    nextErrors.summary = "摘要不能为空。";
+  }
+  return nextErrors;
+}
+
+export function buildDraftValidationIssues(errors: FieldErrors): string[] {
+  return [errors.title, errors.slug, errors.category, errors.summary].filter((value): value is string => Boolean(value));
+}
+
 function toEditorPatch(patch: AiPatchRecord): EditorPatch | null {
   if (patch.patch_schema_version !== "v1") {
     return null;
@@ -577,6 +597,7 @@ export function ArticleEditorWorkspace({
     text: "",
   });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [validationConfirm, setValidationConfirm] = useState<ValidationConfirmState | null>(null);
   const [saveTime, setSaveTime] = useState(article.updated_at);
   const [reviewState, setReviewState] = useState<ReviewState>({
     status: "idle",
@@ -1222,18 +1243,27 @@ export function ArticleEditorWorkspace({
     });
   }
 
-  function handleSave() {
-    if (!validateDraftBeforePersist()) {
-      return;
-    }
+  function executePersistAction(action: PersistAction) {
     startTransition(async () => {
-      setActiveAction("save");
+      setActiveAction(action);
       try {
         const payload = buildPersistPayload("draft");
-        const result = onSaveDraft
-          ? await onSaveDraft(payload)
-          : await updateArticleDraft(article.article_id, payload);
-        applyPersistedResult(result, "草稿已保存到 Django。");
+        if (action === "save") {
+          const result = onSaveDraft
+            ? await onSaveDraft(payload)
+            : await updateArticleDraft(article.article_id, payload);
+          applyPersistedResult(result, "草稿已保存到 Django。");
+        } else {
+          let result: ArticleRecord;
+          if (onPublish) {
+            result = await onPublish(payload);
+          } else {
+            const savedDraft = await updateArticleDraft(article.article_id, payload);
+            const published = await publishArticle(savedDraft.article_id);
+            result = published.article;
+          }
+          applyPersistedResult(result, "文章已发布到 Django。");
+        }
       } catch (error) {
         applyBackendValidationError(error instanceof Error ? error : new Error("未知错误"));
       } finally {
@@ -1242,29 +1272,30 @@ export function ArticleEditorWorkspace({
     });
   }
 
-  function handlePublish() {
-    if (!validateDraftBeforePersist()) {
+  function requestPersistAction(action: PersistAction, force = false) {
+    const nextErrors = validateDraftBeforePersist();
+    const issues = buildDraftValidationIssues(nextErrors);
+    if (!force && issues.length > 0) {
+      setValidationConfirm({
+        action,
+        issues,
+      });
+      setSaveNotice({
+        tone: "error",
+        text: "检测到字段未完善，可返回修改或强制继续保存。",
+      });
       return;
     }
-    startTransition(async () => {
-      setActiveAction("publish");
-      try {
-        const payload = buildPersistPayload("draft");
-        let result: ArticleRecord;
-        if (onPublish) {
-          result = await onPublish(payload);
-        } else {
-          const savedDraft = await updateArticleDraft(article.article_id, payload);
-          const published = await publishArticle(savedDraft.article_id);
-          result = published.article;
-        }
-        applyPersistedResult(result, "文章已发布到 Django。");
-      } catch (error) {
-        applyBackendValidationError(error instanceof Error ? error : new Error("未知错误"));
-      } finally {
-        setActiveAction(null);
-      }
-    });
+    setValidationConfirm(null);
+    executePersistAction(action);
+  }
+
+  function handleSave() {
+    requestPersistAction("save");
+  }
+
+  function handlePublish() {
+    requestPersistAction("publish");
   }
 
   function buildGenerationPayload() {
@@ -1283,37 +1314,14 @@ export function ArticleEditorWorkspace({
   }
 
   function validateDraftBeforePersist() {
-    const nextErrors: FieldErrors = {};
-    const latestDocument =
-      editorDocumentGetterRef.current?.() ??
-      editorDocumentRef.current ??
-      draft.content_json;
-
-    if (!draft.title.trim()) {
-      nextErrors.title = "标题不能为空。";
-    }
-    if (!draft.slug.trim()) {
-      nextErrors.slug = "Slug 不能为空。";
-    }
-    if (!draft.category?.name?.trim() && !normalizeCategoryName(categoryInput)) {
-      nextErrors.category = "请选择或输入所属分类。";
-    }
-    if (!draft.metaDescription.trim()) {
-      nextErrors.summary = "摘要不能为空。";
-    }
-    if (isDocumentEffectivelyEmpty(latestDocument)) {
-      nextErrors.content_json = "正文不能为空。";
-    }
-
+    const nextErrors = validateDraftRequiredFields({
+      title: draft.title,
+      slug: draft.slug,
+      categoryName: draft.category?.name?.trim() || normalizeCategoryName(categoryInput),
+      metaDescription: draft.metaDescription,
+    });
     setFieldErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) {
-      setSaveNotice({
-        tone: "error",
-        text: "存在必填项未完成，请根据字段提示修正后再保存。",
-      });
-      return false;
-    }
-    return true;
+    return nextErrors;
   }
 
   function applyBackendValidationError(error: DjangoValidationError | Error) {
@@ -1327,6 +1335,7 @@ export function ArticleEditorWorkspace({
 
     const details = error.details;
     const nextErrors: FieldErrors = {};
+    setValidationConfirm(null);
     if (details && typeof details === "object" && !Array.isArray(details)) {
       const detailMap = details as Record<string, unknown>;
       if (detailMap.title) {
@@ -1735,6 +1744,40 @@ export function ArticleEditorWorkspace({
             </div>
           </div>
         </aside>
+
+        {validationConfirm ? (
+          <div className="word-validation-confirm-backdrop" role="presentation">
+            <div aria-labelledby="word-validation-confirm-title" aria-modal="true" className="word-validation-confirm-modal" role="dialog">
+              <div className="word-validation-confirm-head">
+                <strong id="word-validation-confirm-title">字段尚未完善</strong>
+                <button className="word-sidebar-mini-button is-muted" onClick={() => setValidationConfirm(null)} type="button">
+                  关闭
+                </button>
+              </div>
+              <p className="word-validation-confirm-copy">
+                当前仍有字段未填写。你可以返回继续修改，也可以忽略提醒，直接
+                {validationConfirm.action === "publish" ? "发布" : "保存"}。
+              </p>
+              <ul className="word-validation-confirm-list">
+                {validationConfirm.issues.map((issue) => (
+                  <li key={issue}>{issue}</li>
+                ))}
+              </ul>
+              <div className="word-validation-confirm-actions">
+                <button className="word-save-button" onClick={() => setValidationConfirm(null)} type="button">
+                  返回修改
+                </button>
+                <button
+                  className="word-save-button word-publish-button"
+                  onClick={() => requestPersistAction(validationConfirm.action, true)}
+                  type="button"
+                >
+                  强制{validationConfirm.action === "publish" ? "发布" : "保存"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <section className="word-main">
           <div className="word-ribbon-host">
