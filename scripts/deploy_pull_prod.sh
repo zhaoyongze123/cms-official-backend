@@ -6,6 +6,7 @@ APP_BRANCH="${APP_BRANCH:-main}"
 APP_REPO="${APP_REPO:-}"
 SKIP_GIT_SYNC="${SKIP_GIT_SYNC:-1}"
 ENV_FILE="${ENV_FILE:-.env.prod}"
+PUBLIC_WEB_ENV_FILE="${PUBLIC_WEB_ENV_FILE:-.env.public-web.prod}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-yuncan-cms}"
 REGISTRY="${REGISTRY:-ghcr.io}"
@@ -52,6 +53,11 @@ if [[ ! -f "${ENV_FILE}" ]]; then
   exit 1
 fi
 
+if [[ ! -f "${PUBLIC_WEB_ENV_FILE}" ]]; then
+  echo "[deploy-pull] 缺少 public-web 环境文件: ${PUBLIC_WEB_ENV_FILE}" >&2
+  exit 1
+fi
+
 if [[ ! -f "${COMPOSE_FILE}" ]]; then
   echo "[deploy-pull] 缺少编排文件: ${COMPOSE_FILE}" >&2
   exit 1
@@ -59,6 +65,19 @@ fi
 
 COMPOSE_CMD=(docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}")
 export COMPOSE_PROJECT_NAME
+
+audit_public_web_env() {
+  echo "[deploy-pull] 审计 public-web 独立环境文件 ${PUBLIC_WEB_ENV_FILE}"
+  grep -E '^(NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL|NEXT_PUBLIC_SITE_URL)=' "${PUBLIC_WEB_ENV_FILE}" || {
+    echo "[deploy-pull] ${PUBLIC_WEB_ENV_FILE} 缺少 public-web 必需变量" >&2
+    exit 1
+  }
+  if grep -E '^(DJANGO_INTERNAL_BASE_URL|SECRET_KEY|POSTGRES_|REDIS_URL|INTERNAL_API_TOKEN|AI_SERVICE_URL)=' "${PUBLIC_WEB_ENV_FILE}" >/dev/null; then
+    echo "[deploy-pull] ${PUBLIC_WEB_ENV_FILE} 不应包含后端/内部变量" >&2
+    grep -E '^(DJANGO_INTERNAL_BASE_URL|SECRET_KEY|POSTGRES_|REDIS_URL|INTERNAL_API_TOKEN|AI_SERVICE_URL)=' "${PUBLIC_WEB_ENV_FILE}" >&2 || true
+    exit 1
+  fi
+}
 
 docker_login_if_needed() {
   if [[ -n "${ACR_REGISTRY}" && -n "${ACR_USERNAME}" && -n "${ACR_PASSWORD}" ]]; then
@@ -142,6 +161,8 @@ smoke_public_web() {
 smoke_editor_web() {
   curl -fsSI --max-time 10 "${EDITOR_WEB_SMOKE_URL}" >/dev/null
 }
+
+audit_public_web_env
 
 docker_login_if_needed
 

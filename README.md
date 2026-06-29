@@ -281,7 +281,7 @@ python3 -m json.tool contracts/tiptap-document.schema.json > /dev/null
 
 ### 服务器主动拉取部署
 
-服务器侧准备好 `.env.prod`、`docker-compose.prod.yml` 后，可直接执行：
+服务器侧准备好 `.env.prod`、`.env.public-web.prod`、`docker-compose.prod.yml` 后，可直接执行：
 
 ```bash
 cd /你的部署目录
@@ -292,6 +292,7 @@ bash scripts/deploy_pull_prod.sh
 
 - 跳过 GitHub 仓库同步
 - 直接使用服务器当前目录里的部署脚本和编排文件
+- 先审计 `.env.public-web.prod`，确保 `public-web` 没有混入后端内部变量
 - 从镜像仓库拉取最新镜像并重建容器
 
 这样可以避免生产服务器发布时依赖 GitHub 网络连通性。

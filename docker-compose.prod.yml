@@ -5,8 +5,6 @@ x-backend-image: &backend-image
 
 x-frontend-common: &frontend-common
   restart: unless-stopped
-  env_file:
-    - .env.prod
 
 x-frontend-env: &frontend-env
   NODE_ENV: production
@@ -115,6 +113,8 @@ services:
   editor-web:
     <<: *frontend-common
     image: ${STUDIO_IMAGE:-ghcr.io/zhaoyongze123/cms-studio-web:latest}
+    env_file:
+      - .env.prod
     environment:
       <<: *frontend-env
       HOSTNAME: 0.0.0.0
@@ -138,12 +138,13 @@ services:
   public-web:
     <<: *frontend-common
     image: ${PUBLIC_IMAGE:-ghcr.io/zhaoyongze123/cms-public-web:latest}
+    env_file:
+      - .env.public-web.prod
     environment:
       <<: *frontend-env
       HOSTNAME: 0.0.0.0
       PORT: "3000"
-      NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL: ${CMS_SITE_URL}
-      NEXT_PUBLIC_SITE_URL: ${CMS_SITE_URL}
+      DJANGO_INTERNAL_BASE_URL: ""
     depends_on:
       web:
         condition: service_healthy

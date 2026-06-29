@@ -10,6 +10,7 @@ NGINX_RELOAD_CMD="${NGINX_RELOAD_CMD:-/etc/init.d/nginx reload}"
 PUBLIC_WEB_SMOKE_URL="${PUBLIC_WEB_SMOKE_URL:-http://127.0.0.1:13003}"
 PUBLIC_WEB_EXPECTED_TEXT="${PUBLIC_WEB_EXPECTED_TEXT:-让云贴近业务}"
 EDITOR_WEB_SMOKE_URL="${EDITOR_WEB_SMOKE_URL:-http://127.0.0.1:13000/django-admin/next-editor/login}"
+PUBLIC_WEB_ENV_FILE="${PUBLIC_WEB_ENV_FILE:-.env.public-web.prod}"
 REQUIRED_ENV_VARS=(
   SECRET_KEY
   ALLOWED_HOSTS
@@ -59,6 +60,11 @@ if [[ ! -f .env.prod ]]; then
   exit 1
 fi
 
+if [[ ! -f "${PUBLIC_WEB_ENV_FILE}" ]]; then
+  echo "[deploy] 缺少 ${PUBLIC_WEB_ENV_FILE}，无法继续" >&2
+  exit 1
+fi
+
 export COMPOSE_DOCKER_CLI_BUILD=0
 export DOCKER_BUILDKIT=0
 COMPOSE_CMD=(docker compose --env-file .env.prod -f docker-compose.prod.yml)
@@ -94,6 +100,21 @@ validate_required_env() {
 }
 
 validate_required_env
+
+audit_public_web_env() {
+  echo "[deploy] 审计 public-web 独立环境文件 ${PUBLIC_WEB_ENV_FILE}"
+  grep -E '^(NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL|NEXT_PUBLIC_SITE_URL)=' "${PUBLIC_WEB_ENV_FILE}" || {
+    echo "[deploy] ${PUBLIC_WEB_ENV_FILE} 缺少 public-web 必需变量" >&2
+    exit 1
+  }
+  if grep -E '^(DJANGO_INTERNAL_BASE_URL|SECRET_KEY|POSTGRES_|REDIS_URL|INTERNAL_API_TOKEN|AI_SERVICE_URL)=' "${PUBLIC_WEB_ENV_FILE}" >/dev/null; then
+    echo "[deploy] ${PUBLIC_WEB_ENV_FILE} 不应包含后端/内部变量" >&2
+    grep -E '^(DJANGO_INTERNAL_BASE_URL|SECRET_KEY|POSTGRES_|REDIS_URL|INTERNAL_API_TOKEN|AI_SERVICE_URL)=' "${PUBLIC_WEB_ENV_FILE}" >&2 || true
+    exit 1
+  fi
+}
+
+audit_public_web_env
 
 if [[ -n "${NGINX_SITE_PATH}" && "${DEPLOY_PATH}" == "${NGINX_SITE_PATH}" ]]; then
   echo "[deploy] DEPLOY_PATH 不能等于 NGINX_SITE_PATH，否则会把 nginx 配置文件路径当成代码目录" >&2
