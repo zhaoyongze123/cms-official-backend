@@ -1,4 +1,5 @@
 const isServer = typeof window === "undefined";
+const isDevelopment = process.env.NODE_ENV !== "production";
 const publicSiteBaseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_SITE_URL || "http://127.0.0.1:3003");
 const publicApiBaseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL || "http://127.0.0.1:8001");
 const serverBaseUrl = normalizeBaseUrl(process.env.DJANGO_INTERNAL_BASE_URL || publicApiBaseUrl);
@@ -248,8 +249,19 @@ async function requestJson<T>(path: string): Promise<T> {
 }
 
 function logPublicApiError(scope: string, error: unknown) {
+  if (isDevelopment && isNetworkFetchError(error)) {
+    return;
+  }
   const message = error instanceof Error ? error.message : String(error);
   console.error(`[public-web] ${scope} 公开接口请求失败：${message}`);
+}
+
+function isNetworkFetchError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const message = error.message.toLowerCase();
+  return message.includes("fetch failed") || message.includes("econnrefused") || message.includes("connect");
 }
 
 export function getSiteSeoContext(): SiteSeoContext {

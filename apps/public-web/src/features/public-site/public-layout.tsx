@@ -234,9 +234,13 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
               <li>邮箱：service@yuncan.com</li>
               <li>
                 <div className="group/wecom relative inline-flex">
-                  <span className="cursor-pointer transition-colors duration-200 group-hover/wecom:text-white/70">
-                    企业微信
-                  </span>
+                  <Image
+                    alt="企业微信 Logo"
+                    className="h-auto w-28 cursor-pointer opacity-95 transition-opacity duration-200 group-hover/wecom:opacity-75"
+                    height={37}
+                    src="/wecom-logo-white.png"
+                    width={178}
+                  />
                   <div className="pointer-events-none absolute top-full left-0 mt-3 -translate-y-2 opacity-0 transition-all duration-200 group-hover/wecom:translate-y-0 group-hover/wecom:opacity-100">
                     <div className="w-28 rounded-2xl border border-white/10 bg-white p-2 shadow-[0_16px_36px_rgba(15,23,42,0.24)]">
                       <Image
