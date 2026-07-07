@@ -29,6 +29,45 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
     { href: "/about", label: "关于我们", active: active === "about" },
   ];
 
+  const wecomHoverCard = (
+    <div className="relative overflow-hidden rounded-[2.25rem] border border-[#e7ecf4] bg-[#f3f6fb] shadow-[0_24px_80px_rgba(15,23,42,0.14)]">
+      <div className="relative space-y-5 bg-[#eef2f8] p-5">
+        <div className="flex items-start gap-3 rounded-[1.6rem] border border-[#eef1f6] bg-white px-4 py-3 shadow-[0_12px_28px_rgba(148,163,184,0.12)]">
+          <div className="flex h-12 w-12 items-center justify-center rounded-[1.2rem] bg-[#edf0f5] text-charcoal shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
+            <Phone size={18} />
+          </div>
+          <div>
+            <div className="text-[0.82rem] font-bold tracking-[0.08em] text-charcoal">电话咨询</div>
+            <div className="mt-1 text-[1.35rem] font-black leading-tight tracking-tight text-charcoal">021-50583875</div>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-3 rounded-[1.6rem] border border-[#eef1f6] bg-white px-4 py-3 shadow-[0_12px_28px_rgba(148,163,184,0.12)]">
+          <div className="flex h-12 w-12 items-center justify-center rounded-[1.2rem] bg-[#edf0f5] text-charcoal shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
+            <Mail size={18} />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[0.82rem] font-bold tracking-[0.08em] text-charcoal">邮件咨询</div>
+            <div className="mt-1 break-all text-[0.98rem] font-black leading-6 tracking-tight text-charcoal">service@yuncan.com</div>
+          </div>
+        </div>
+
+        <div className="rounded-[2rem] border border-[#e7ecf4] bg-[#eef2f8] px-5 py-5 shadow-[0_14px_36px_rgba(148,163,184,0.16)]">
+          <div className="mb-3 text-center text-[0.82rem] font-bold tracking-[0.08em] text-charcoal">企业微信咨询</div>
+          <div className="flex justify-center overflow-hidden rounded-[1.7rem] bg-white p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+            <Image
+              alt="企业微信二维码"
+              className="block h-44 w-44 rounded-[1.2rem] object-cover"
+              height={176}
+              src={contactQrPath}
+              width={176}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="relative min-h-screen selection:bg-hermes/30 bg-paper overflow-x-hidden">
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-line px-6 py-4 shadow-sm">
@@ -116,41 +155,7 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
         <div className="relative flex items-center">
           <div className="group/contact pointer-events-auto relative flex h-36 w-20 flex-col items-center justify-center gap-3 overflow-visible rounded-l-[1.5rem]">
             <div className="pointer-events-none absolute right-full top-1/2 mr-4 w-[21rem] -translate-y-1/2 translate-x-6 opacity-0 transition-all duration-300 group-hover/contact:translate-x-0 group-hover/contact:opacity-100">
-              <div className="relative overflow-hidden rounded-[2.25rem] border border-[#e7ecf4] bg-[#f3f6fb] shadow-[0_24px_80px_rgba(15,23,42,0.14)]">
-                <div className="relative space-y-5 bg-[#eef2f8] p-5">
-                  <div className="flex items-start gap-3 rounded-[1.6rem] border border-[#eef1f6] bg-white px-4 py-3 shadow-[0_12px_28px_rgba(148,163,184,0.12)]">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-[1.2rem] bg-[#edf0f5] text-charcoal shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
-                      <Phone size={18} />
-                    </div>
-                    <div>
-                      <div className="text-[0.82rem] font-bold tracking-[0.08em] text-charcoal">电话咨询</div>
-                      <div className="mt-1 text-[1.35rem] font-black leading-tight tracking-tight text-charcoal">021-50583875</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 rounded-[1.6rem] border border-[#eef1f6] bg-white px-4 py-3 shadow-[0_12px_28px_rgba(148,163,184,0.12)]">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-[1.2rem] bg-[#edf0f5] text-charcoal shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
-                      <Mail size={18} />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[0.82rem] font-bold tracking-[0.08em] text-charcoal">邮件咨询</div>
-                      <div className="mt-1 break-all text-[0.98rem] font-black leading-6 tracking-tight text-charcoal">service@yuncan.com</div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-[2rem] border border-[#e7ecf4] bg-[#eef2f8] px-5 py-5 shadow-[0_14px_36px_rgba(148,163,184,0.16)]">
-                    <div className="flex justify-center overflow-hidden rounded-[1.7rem] bg-white p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-                      <Image
-                        alt="企微二维码"
-                        className="block h-44 w-44 rounded-[1.2rem] object-cover"
-                        height={176}
-                        src={contactQrPath}
-                        width={176}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {wecomHoverCard}
             </div>
 
             <div className="relative flex h-36 w-20 flex-col items-center justify-center gap-3 overflow-hidden rounded-l-[1.5rem] border border-[#e4e8ef] bg-[#f2f4f8] px-3 text-ink shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
@@ -228,16 +233,20 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
               <li>电话：021-50583875</li>
               <li>邮箱：service@yuncan.com</li>
               <li>
-                <div className="space-y-3">
-                  <span className="block">企微二维码</span>
-                  <div className="w-24 rounded-2xl border border-white/10 bg-white p-2">
-                    <Image
-                      alt="企微二维码"
-                      className="h-20 w-20 rounded-xl object-cover"
-                      height={80}
-                      src={contactQrPath}
-                      width={80}
-                    />
+                <div className="group/wecom relative inline-flex">
+                  <span className="cursor-pointer transition-colors duration-200 group-hover/wecom:text-white/70">
+                    企业微信
+                  </span>
+                  <div className="pointer-events-none absolute top-full left-0 mt-3 -translate-y-2 opacity-0 transition-all duration-200 group-hover/wecom:translate-y-0 group-hover/wecom:opacity-100">
+                    <div className="w-28 rounded-2xl border border-white/10 bg-white p-2 shadow-[0_16px_36px_rgba(15,23,42,0.24)]">
+                      <Image
+                        alt="企业微信二维码"
+                        className="h-24 w-24 rounded-xl object-cover"
+                        height={96}
+                        src={contactQrPath}
+                        width={96}
+                      />
+                    </div>
                   </div>
                 </div>
               </li>

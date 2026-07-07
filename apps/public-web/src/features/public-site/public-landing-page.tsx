@@ -448,14 +448,11 @@ export default function PublicLandingPage({ featuredArticles, solutionArticles, 
         <section id="customer-logo-wall" className="scroll-mt-32 px-6 pb-8">
           <div className="mx-auto max-w-7xl overflow-hidden rounded-[2rem] border border-line bg-white shadow-[0_22px_60px_rgba(15,23,42,0.08)]">
             <div className="border-b border-line px-8 py-7 md:px-12">
-              <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div className="flex flex-col gap-3">
                 <div>
                   <span className="section-label">Trusted by Customers</span>
-                  <h2 className="mt-3 text-3xl font-black text-charcoal md:text-4xl">客户案例 LOGO 墙</h2>
+                  <h2 className="mt-3 text-3xl font-black text-charcoal md:text-4xl">部分客户案例</h2>
                 </div>
-                <p className="max-w-2xl text-sm leading-7 text-muted md:text-right">
-                  展示已服务客户与合作品牌，帮助访客快速建立对交付能力与行业覆盖面的直观认知。
-                </p>
               </div>
             </div>
             <div className="bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-5 py-5 md:px-8 md:py-8">
