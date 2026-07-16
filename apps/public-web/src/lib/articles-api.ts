@@ -3,6 +3,7 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 const publicSiteBaseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_SITE_URL || "http://127.0.0.1:3003");
 const publicApiBaseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL || "http://127.0.0.1:8001");
 const serverBaseUrl = normalizeBaseUrl(process.env.DJANGO_INTERNAL_BASE_URL || publicApiBaseUrl);
+const PUBLIC_API_REVALIDATE_SECONDS = 300;
 
 export class PublicApiRequestError extends Error {
   status: number;
@@ -231,7 +232,11 @@ async function requestJson<T>(path: string): Promise<T> {
       Accept: 'application/json'
     },
     redirect: 'manual',
-    cache: 'no-store',
+    // 公开内容允许短时缓存，避免每次 SSR 都重新拉取大 JSON。
+    next: {
+      revalidate: PUBLIC_API_REVALIDATE_SECONDS,
+      tags: ['public-api'],
+    },
   });
   if (response.status === 301) {
     const location = response.headers.get('Location');
