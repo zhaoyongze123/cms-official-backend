@@ -67,7 +67,9 @@ export async function configureWechatShare(content: WechatShareContent): Promise
   await loadWechatSdk();
   if (!window.wx) throw new Error("微信 JS-SDK 未就绪");
   const config = await fetchWechatConfig(pageUrl);
+  const debug = new URLSearchParams(window.location.search).get("wechat_debug") === "1";
   window.wx.config({
+    debug,
     ...config,
     jsApiList: [
       "updateAppMessageShareData",
