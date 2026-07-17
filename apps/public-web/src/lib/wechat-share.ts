@@ -76,6 +76,9 @@ export async function configureWechatShare(content: WechatShareContent): Promise
       "onMenuShareTimeline",
     ],
   });
+  window.wx.error((error) => {
+    console.warn("[wechat-share] wx.config 失败", error);
+  });
   window.wx.ready(() => {
     const timelineContent = { title: content.title, link: content.link, imgUrl: content.imgUrl };
     // 新版接口覆盖新微信客户端，旧版接口兼容部分 iOS/公众号环境。

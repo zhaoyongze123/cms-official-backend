@@ -76,6 +76,16 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+function firstContentImageUrl(html: string): string {
+  const match = html.match(/<img[^>]+src=["']([^"']+)["']/i);
+  if (!match?.[1]) return "";
+  try {
+    return new URL(match[1], publicApiBaseUrl).toString();
+  } catch {
+    return "";
+  }
+}
+
 function formatDate(value: string | null): string {
   if (!value) {
     return '未发布';
@@ -187,6 +197,9 @@ export function mapArticleToPublicArticle(article: ArticleApiItem): PublicArticl
   const seo = article.seo || {};
   const seoPayload = article.seo_payload || {};
   const canonicalUrl = resolveArticleCanonicalUrl(article);
+  const shareImageUrl = seo.og_image_url
+    ? new URL(seo.og_image_url, publicApiBaseUrl).toString()
+    : firstContentImageUrl(article.content_html);
   return {
     id: String(article.article_id),
     articleId: article.article_id,
@@ -208,7 +221,7 @@ export function mapArticleToPublicArticle(article: ArticleApiItem): PublicArticl
       robots: seo.robots || "index,follow",
       ogTitle: seo.og_title || seo.meta_title || article.title,
       ogDescription: seo.og_description || seo.meta_description || excerpt,
-      ogImageUrl: seo.og_image_url ? new URL(seo.og_image_url, publicApiBaseUrl).toString() : "",
+      ogImageUrl: shareImageUrl,
     },
     seoPayload: {
       canonicalUrlResolved: canonicalUrl,
