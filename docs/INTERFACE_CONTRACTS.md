@@ -46,6 +46,7 @@ Next.js 只能调用 Django API。
 | `PATCH` | `/api/ai/settings/generation/` | 更新四项生成模型、API Key 与 Prompt 配置 |
 | `GET` | `/api/public/articles/` | 公开已发布文章列表 |
 | `GET` | `/api/public/articles/{slug}/` | 公开已发布文章详情 |
+| `GET` | `/api/public/wechat/js-config/` | 获取微信公众号网页 JS-SDK 签名配置 |
 | `POST` | `/api/articles/{id}/ai-review/` | 触发 AI 审核 |
 | `GET` | `/api/articles/{id}/ai-review-runs/` | 审核运行历史 |
 | `GET` | `/api/ai-review-runs/{run_id}/suggestions/` | 获取建议 |
