@@ -73,6 +73,38 @@ paths:
           description: slug 已变更，返回新 slug 跳转位置
         "404":
           description: 公开文章不存在
+  /api/public/wechat/js-config/:
+    get:
+      summary: 获取微信公众号网页 JS-SDK 签名配置
+      parameters:
+        - name: url
+          in: query
+          required: true
+          description: 当前 H5 页面完整 URL，不包含 hash
+          schema:
+            type: string
+            format: uri
+      responses:
+        "200":
+          description: 微信 JS-SDK 配置
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [appId, timestamp, nonceStr, signature]
+                properties:
+                  appId:
+                    type: string
+                  timestamp:
+                    type: integer
+                  nonceStr:
+                    type: string
+                  signature:
+                    type: string
+        "400":
+          description: 页面 URL 不合法或不在安全域名内
+        "503":
+          description: 微信配置未完成或微信接口暂不可用
   /api/articles/{id}/ai-review/:
     post:
       summary: 触发 AI 审核
