@@ -17,7 +17,7 @@ interface WechatJsConfig {
 declare global {
   interface Window {
     wx?: {
-      config(config: { appId: string; timestamp: number; nonceStr: string; signature: string; jsApiList: string[] }): void;
+      config(config: { debug?: boolean; appId: string; timestamp: number; nonceStr: string; signature: string; jsApiList: string[] }): void;
       ready(callback: () => void): void;
       error(callback: (error: unknown) => void): void;
       updateAppMessageShareData(data: WechatShareContent & { success?: () => void }): void;
