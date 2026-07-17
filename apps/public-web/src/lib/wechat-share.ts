@@ -22,6 +22,8 @@ declare global {
       error(callback: (error: unknown) => void): void;
       updateAppMessageShareData(data: WechatShareContent & { success?: () => void }): void;
       updateTimelineShareData(data: Omit<WechatShareContent, "desc"> & { success?: () => void }): void;
+      onMenuShareAppMessage(data: WechatShareContent & { type?: string; dataUrl?: string; success?: () => void; cancel?: () => void; fail?: (error: unknown) => void }): void;
+      onMenuShareTimeline(data: Omit<WechatShareContent, "desc"> & { success?: () => void; cancel?: () => void; fail?: (error: unknown) => void }): void;
     };
   }
 }
@@ -65,9 +67,21 @@ export async function configureWechatShare(content: WechatShareContent): Promise
   await loadWechatSdk();
   if (!window.wx) throw new Error("微信 JS-SDK 未就绪");
   const config = await fetchWechatConfig(pageUrl);
-  window.wx.config({ ...config, jsApiList: ["updateAppMessageShareData", "updateTimelineShareData"] });
+  window.wx.config({
+    ...config,
+    jsApiList: [
+      "updateAppMessageShareData",
+      "updateTimelineShareData",
+      "onMenuShareAppMessage",
+      "onMenuShareTimeline",
+    ],
+  });
   window.wx.ready(() => {
+    const timelineContent = { title: content.title, link: content.link, imgUrl: content.imgUrl };
+    // 新版接口覆盖新微信客户端，旧版接口兼容部分 iOS/公众号环境。
     window.wx?.updateAppMessageShareData(content);
-    window.wx?.updateTimelineShareData({ title: content.title, link: content.link, imgUrl: content.imgUrl });
+    window.wx?.updateTimelineShareData(timelineContent);
+    window.wx?.onMenuShareAppMessage({ ...content, type: "link", dataUrl: "" });
+    window.wx?.onMenuShareTimeline(timelineContent);
   });
 }
