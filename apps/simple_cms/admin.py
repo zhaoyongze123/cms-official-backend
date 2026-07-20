@@ -100,7 +100,7 @@ class CategoryAdmin(admin.ModelAdmin):
 class ArticleAdmin(admin.ModelAdmin):
     add_form_template = "admin/simple_cms/article_editor_workspace.html"
     change_form_template = "admin/simple_cms/article_editor_workspace.html"
-    list_display = ("title", "category", "status", "publish_date", "created_at", "updated_at")
+    list_display = ("title", "category", "status", "created_at", "updated_at")
     list_filter = ("status", "category", "created_at")
     search_fields = ("title", "slug", "body", "content_html")
     autocomplete_fields = ("category", "cover_image")

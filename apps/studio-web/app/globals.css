@@ -629,10 +629,12 @@ main {
 .word-workspace {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
+  min-width: 0;
   min-height: calc(100vh - 44px);
 }
 
 .word-sidebar {
+  min-width: 0;
   border-right: 1px solid #c8c8c8;
   background: #f3f3f3;
   padding: 10px 10px 12px;
@@ -646,6 +648,7 @@ main {
 }
 
 .word-sidebar-section {
+  min-width: 0;
   border: 1px solid #c7c7c7;
   background: #ffffff;
 }
@@ -724,6 +727,7 @@ main {
 
 .word-sidebar-form {
   display: grid;
+  min-width: 0;
   gap: 10px;
   padding: 10px;
 }
@@ -812,6 +816,7 @@ main {
 .word-sidebar-media-card {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);
+  min-width: 0;
   gap: 8px;
   padding: 8px;
   border: 1px solid #d8d8d8;
@@ -829,6 +834,8 @@ main {
 .word-sidebar-media-card strong,
 .word-sidebar-media-option strong,
 .word-sidebar-faq-card strong {
+  display: block;
+  overflow-wrap: anywhere;
   font-size: 12px;
 }
 
@@ -836,6 +843,7 @@ main {
 .word-sidebar-media-option small {
   display: block;
   margin-top: 4px;
+  overflow-wrap: anywhere;
   color: var(--editor-text-soft);
   font-size: 11px;
 }
@@ -934,11 +942,13 @@ main {
 .word-main {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
+  min-width: 0;
   min-height: 0;
   background: #e5e5e5;
 }
 
 .word-ribbon-host {
+  min-width: 0;
   padding: 8px 10px 0;
   border-bottom: 1px solid #c7c7c7;
   background: #f3f3f3;
@@ -1128,6 +1138,7 @@ main {
 }
 
 .word-canvas-shell {
+  min-width: 0;
   display: grid;
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;
@@ -1166,6 +1177,7 @@ main {
 .editor-content-shell {
   display: grid;
   gap: 0;
+  min-width: 0;
   min-height: 0;
   padding: 18px 24px 20px;
 }
@@ -1173,11 +1185,13 @@ main {
 .editor-body-panel {
   display: grid;
   gap: 0;
+  min-width: 0;
   min-height: 0;
 }
 
 .word-document-panel,
 .editor-article-preview {
+  min-width: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -1253,6 +1267,7 @@ main {
 
 .tiptap-editor-shell {
   display: grid;
+  min-width: 0;
   gap: 0;
   border: 1px solid #c7c7c7;
   background: #f3f3f3;
@@ -1285,6 +1300,7 @@ main {
 }
 
 .tiptap-header-addon {
+  overflow-x: auto;
   border-bottom: 1px solid #c7c7c7;
   background: #f8f8f8;
 }
@@ -1621,12 +1637,14 @@ main {
 
 .tiptap-editor-layout {
   display: grid;
+  min-width: 0;
   grid-template-columns: minmax(0, 1fr);
   gap: 18px;
 }
 
 .tiptap-editor-main {
   position: relative;
+  min-width: 0;
 }
 
 .tiptap-editor-content {
@@ -1640,6 +1658,7 @@ main {
   background: #dcdcdc;
   box-shadow: none;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 18px 0 32px;
 }
 

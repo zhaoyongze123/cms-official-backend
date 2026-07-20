@@ -96,6 +96,10 @@ type DraftRequiredFieldValidationInput = {
   metaDescription: string;
 };
 
+export function getPersistStatus(action: PersistAction, currentStatus: ArticleStatus): ArticleStatus {
+  return action === "save" ? currentStatus : "draft";
+}
+
 function normalizeTagName(value: string) {
   return value.trim().replaceAll(/\s+/g, " ");
 }
@@ -1247,7 +1251,7 @@ export function ArticleEditorWorkspace({
     startTransition(async () => {
       setActiveAction(action);
       try {
-        const payload = buildPersistPayload("draft");
+        const payload = buildPersistPayload(getPersistStatus(action, draft.status));
         if (action === "save") {
           const result = onSaveDraft
             ? await onSaveDraft(payload)
