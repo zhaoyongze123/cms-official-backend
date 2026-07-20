@@ -461,7 +461,7 @@ main {
 .editor-workspace.embedded .word-workspace {
   min-height: 0;
   height: 100%;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .editor-workspace.embedded .word-sidebar {
@@ -473,7 +473,7 @@ main {
 .editor-workspace.embedded .word-main {
   min-height: 0;
   height: 100%;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .editor-workspace.embedded .word-ribbon-host {
@@ -499,14 +499,14 @@ main {
 .editor-workspace.embedded .editor-article-preview {
   min-height: 0;
   height: 100%;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .editor-workspace.embedded .tiptap-editor-shell {
   min-height: 0;
   height: 100%;
   grid-template-rows: auto minmax(0, 1fr);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .editor-workspace.embedded .tiptap-editor-layout {
