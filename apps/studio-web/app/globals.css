@@ -19,7 +19,7 @@
   --editor-warning-bg: #fff9ec;
   --editor-warning-border: #f6df9f;
   --editor-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-  --editor-paper-width: 1328px;
+  --editor-paper-max-width: 1328px;
   --editor-paper-height: 1123px;
   --editor-paper-padding-x: 88px;
   --editor-paper-padding-top: 82px;
@@ -461,7 +461,7 @@ main {
 .editor-workspace.embedded .word-workspace {
   min-height: 0;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .editor-workspace.embedded .word-sidebar {
@@ -474,6 +474,7 @@ main {
   min-height: 0;
   height: 100%;
   overflow: visible;
+  overflow-x: hidden;
 }
 
 .editor-workspace.embedded .word-ribbon-host {
@@ -483,6 +484,7 @@ main {
 .editor-workspace.embedded .word-canvas-shell {
   min-height: 0;
   height: 100%;
+  overflow-x: hidden;
 }
 
 .editor-workspace.embedded .editor-content-shell {
@@ -628,7 +630,7 @@ main {
 
 .word-workspace {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 220px 32px minmax(0, 1fr);
   min-width: 0;
   min-height: calc(100vh - 44px);
 }
@@ -645,6 +647,61 @@ main {
   top: 0;
   height: 100vh;
   overflow: auto;
+}
+
+.word-sidebar-toggle-rail {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  border-right: 1px solid #c8c8c8;
+  background: #e9e9e9;
+}
+
+.word-sidebar-toggle {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 28px;
+  min-height: 58px;
+  margin-top: 18px;
+  padding: 5px 2px;
+  border: 1px solid #aeb9ca;
+  border-radius: 0;
+  background: #ffffff;
+  color: #185abd;
+  cursor: pointer;
+}
+
+.word-sidebar-toggle:hover {
+  background: #eef4ff;
+}
+
+.word-sidebar-toggle > span:first-child {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.word-sidebar-toggle-label {
+  font-size: 10px;
+  line-height: 1.2;
+  writing-mode: vertical-rl;
+}
+
+.word-workspace.sidebar-collapsed {
+  grid-template-columns: 0 32px minmax(0, 1fr);
+}
+
+.word-workspace.sidebar-collapsed .word-sidebar {
+  visibility: hidden;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  pointer-events: none;
 }
 
 .word-sidebar-section {
@@ -1148,7 +1205,8 @@ main {
   display: grid;
   grid-template-columns: repeat(18, minmax(0, 1fr));
   align-items: end;
-  width: var(--editor-paper-width);
+  width: min(var(--editor-paper-max-width), 100%);
+  max-width: 100%;
   margin: 0 auto;
   padding: 0 var(--editor-paper-padding-x);
   border-bottom: 1px solid #c7c7c7;
@@ -1179,6 +1237,7 @@ main {
   gap: 0;
   min-width: 0;
   min-height: 0;
+  overflow-x: hidden;
   padding: 18px 24px 20px;
 }
 
@@ -1300,7 +1359,7 @@ main {
 }
 
 .tiptap-header-addon {
-  overflow-x: auto;
+  overflow-x: hidden;
   border-bottom: 1px solid #c7c7c7;
   background: #f8f8f8;
 }
@@ -1645,6 +1704,7 @@ main {
 .tiptap-editor-main {
   position: relative;
   min-width: 0;
+  overflow-x: hidden;
 }
 
 .tiptap-editor-content {
@@ -1657,7 +1717,10 @@ main {
   border-radius: 0;
   background: #dcdcdc;
   box-shadow: none;
-  overflow: auto;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
   overscroll-behavior: contain;
   padding: 18px 0 32px;
 }
@@ -1674,7 +1737,8 @@ main {
   position: absolute;
   top: 16px;
   left: 50%;
-  width: var(--editor-paper-width);
+  width: min(var(--editor-paper-max-width), 100%);
+  max-width: 100%;
   height: 40px;
   transform: translateX(-50%);
   border-top: 2px solid rgba(24, 90, 189, 0.95);
@@ -1699,7 +1763,8 @@ main {
 }
 
 .tiptap-paper-shell {
-  width: var(--editor-paper-width);
+  width: min(var(--editor-paper-max-width), 100%);
+  max-width: 100%;
   margin: 0 auto;
   flex: 0 0 auto;
   align-self: center;
@@ -1979,7 +2044,8 @@ main {
 .tiptap-html-source-panel {
   display: flex;
   flex-direction: column;
-  width: var(--editor-paper-width);
+  width: min(var(--editor-paper-max-width), 100%);
+  max-width: 100%;
   min-height: var(--editor-paper-height);
   max-height: calc(100vh - 180px);
   margin: 0 auto;
@@ -2044,7 +2110,8 @@ main {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 13px;
   line-height: 1.65;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .tiptap-html-line {
@@ -2527,7 +2594,11 @@ main {
 
 @media (max-width: 1100px) {
   .word-workspace {
-    grid-template-columns: 180px minmax(0, 1fr);
+    grid-template-columns: 180px 32px minmax(0, 1fr);
+  }
+
+  .word-workspace.sidebar-collapsed {
+    grid-template-columns: 0 32px minmax(0, 1fr);
   }
 }
 
@@ -2546,11 +2617,40 @@ main {
     grid-template-columns: 1fr;
   }
 
+  .word-workspace.sidebar-collapsed {
+    grid-template-columns: 1fr;
+  }
+
   .word-sidebar {
     border-right: 0;
     border-bottom: 1px solid #c8c8c8;
     position: static;
     height: auto;
+  }
+
+  .word-sidebar-toggle-rail {
+    min-height: 36px;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 4px 10px;
+    border-right: 0;
+    border-bottom: 1px solid #c8c8c8;
+  }
+
+  .word-sidebar-toggle {
+    flex-direction: row;
+    width: auto;
+    min-height: 28px;
+    margin-top: 0;
+    padding: 3px 8px;
+  }
+
+  .word-sidebar-toggle-label {
+    writing-mode: horizontal-tb;
+  }
+
+  .word-workspace.sidebar-collapsed .word-sidebar-toggle-rail {
+    min-height: 36px;
   }
 
   .word-fields-grid {

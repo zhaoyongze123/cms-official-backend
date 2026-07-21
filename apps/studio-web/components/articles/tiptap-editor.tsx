@@ -137,6 +137,11 @@ type ImageContextMenuSize = {
   height: number;
 };
 
+type EditorSelectionRange = {
+  from: number;
+  to: number;
+};
+
 const EMPTY_DOCUMENT: TipTapDocument = {
   type: "doc",
   content: [],
@@ -1053,18 +1058,20 @@ function ToolbarButton({
 function ToolbarSelect({
   label,
   onChange,
+  onMouseDown,
   options,
   value,
 }: {
   label: string;
   onChange: (value: string) => void;
+  onMouseDown?: () => void;
   options: Array<{ label: string; value: string }>;
   value: string;
 }) {
   return (
     <label className="tiptap-toolbar-select">
       <span className="sr-only">{label}</span>
-      <select onChange={(event) => onChange(event.target.value)} value={value}>
+      <select onChange={(event) => onChange(event.target.value)} onMouseDown={onMouseDown} value={value}>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
@@ -1100,6 +1107,30 @@ export function keepCaretInsideCodeBlock(editor: TiptapRuntimeEditor | null | un
   editor.commands.focus($from.before() - 1);
 }
 
+export function toggleCodeBlockAtCaret(editor: TiptapRuntimeEditor | null | undefined, position: number | null) {
+  const codeBlockChain = editor?.chain().focus();
+  if (!codeBlockChain) {
+    return false;
+  }
+
+  if (position !== null) {
+    codeBlockChain.setTextSelection({ from: position, to: position });
+  }
+
+  return codeBlockChain.toggleCodeBlock().run();
+}
+
+export function restoreEditorSelection(
+  editor: TiptapRuntimeEditor | null | undefined,
+  selection: EditorSelectionRange | null | undefined,
+) {
+  if (!editor || !selection) {
+    return false;
+  }
+
+  return editor.chain().focus().setTextSelection(selection).run();
+}
+
 export function TipTapEditor({
   articleId,
   value,
@@ -1122,6 +1153,8 @@ export function TipTapEditor({
   const imageContextMenuRef = useRef<HTMLDivElement | null>(null);
   const activeHeadingRef = useRef<string | null>(null);
   const pendingCodeBlockSelectionRef = useRef<number | null>(null);
+  const pendingToolbarSelectionRef = useRef<EditorSelectionRange | null>(null);
+  const pendingInsertionSelectionRef = useRef<EditorSelectionRange | null>(null);
   const lastSyncedDocumentRef = useRef<string>(JSON.stringify(normalizeBlockIds(value)));
   const [uploadMessage, setUploadMessage] = useState("可直接粘贴图片、拖拽图片，或从媒体库选择 / 本地上传后插入正文。");
   const [showImageSourceMenu, setShowImageSourceMenu] = useState(false);
@@ -1781,8 +1814,11 @@ export function TipTapEditor({
     const existingHref = editor.getAttributes("link").href ?? "";
     const href = window.prompt("输入链接地址", existingHref)?.trim();
     if (href === undefined) {
+      pendingInsertionSelectionRef.current = null;
       return;
     }
+    restoreEditorSelection(editor, pendingInsertionSelectionRef.current);
+    pendingInsertionSelectionRef.current = null;
     if (!href) {
       editor.chain().focus().unsetLink().run();
       return;
@@ -1796,6 +1832,8 @@ export function TipTapEditor({
       return;
     }
 
+    restoreEditorSelection(editor, pendingInsertionSelectionRef.current);
+    pendingInsertionSelectionRef.current = null;
     editor
       .chain()
       .focus()
@@ -1824,6 +1862,12 @@ export function TipTapEditor({
   }
 
   function openUploadPicker(mode: "insert" | "replace" = "insert", pos: number | null = null) {
+    if (editor && mode === "insert") {
+      pendingInsertionSelectionRef.current = {
+        from: editor.state.selection.from,
+        to: editor.state.selection.to,
+      };
+    }
     setPendingImageTarget({ mode, pos });
     setShowImageSourceMenu(false);
     setImageContextState((currentState) => ({
@@ -1835,6 +1879,12 @@ export function TipTapEditor({
   }
 
   function openLibraryUploadPicker(mode: "insert" | "replace" = "insert", pos: number | null = null) {
+    if (editor && mode === "insert") {
+      pendingInsertionSelectionRef.current = {
+        from: editor.state.selection.from,
+        to: editor.state.selection.to,
+      };
+    }
     setPendingImageTarget({ mode, pos });
     setShowMediaLibraryPicker(true);
     setShowImageSourceMenu(false);
@@ -1846,11 +1896,23 @@ export function TipTapEditor({
   }
 
   function openAttachmentUploadPicker() {
+    if (editor) {
+      pendingInsertionSelectionRef.current = {
+        from: editor.state.selection.from,
+        to: editor.state.selection.to,
+      };
+    }
     setShowAttachmentSourceMenu(false);
     attachmentUploadInputRef.current?.click();
   }
 
   function openAttachmentLibraryPicker() {
+    if (editor) {
+      pendingInsertionSelectionRef.current = {
+        from: editor.state.selection.from,
+        to: editor.state.selection.to,
+      };
+    }
     setShowAttachmentSourceMenu(false);
     setShowAttachmentLibraryPicker(true);
   }
@@ -1867,8 +1929,11 @@ export function TipTapEditor({
       alt: image.alt_text || image.title,
     };
     if (pendingImageTarget.mode === "replace" && pendingImageTarget.pos !== null) {
+      pendingInsertionSelectionRef.current = null;
       editor.chain().focus().setNodeSelection(pendingImageTarget.pos).updateAttributes("image", imageAttrs).run();
     } else {
+      restoreEditorSelection(editor, pendingInsertionSelectionRef.current);
+      pendingInsertionSelectionRef.current = null;
       editor.chain().focus().setImage(imageAttrs).run();
     }
     setPendingImageTarget({ mode: "insert", pos: null });
@@ -1911,8 +1976,11 @@ export function TipTapEditor({
         alt: imageRecord.alt_text || imageRecord.title,
       };
       if (pendingImageTarget.mode === "replace" && pendingImageTarget.pos !== null) {
+        pendingInsertionSelectionRef.current = null;
         editor.chain().focus().setNodeSelection(pendingImageTarget.pos).updateAttributes("image", imageAttrs).run();
       } else {
+        restoreEditorSelection(editor, pendingInsertionSelectionRef.current);
+        pendingInsertionSelectionRef.current = null;
         editor.chain().focus().setImage(imageAttrs).run();
       }
       setPendingImageTarget({ mode: "insert", pos: null });
@@ -2078,6 +2146,9 @@ export function TipTapEditor({
       return;
     }
 
+    restoreEditorSelection(editor, pendingToolbarSelectionRef.current);
+    pendingToolbarSelectionRef.current = null;
+
     if (value === "paragraph") {
       editor.chain().focus().setParagraph().run();
       return;
@@ -2093,6 +2164,9 @@ export function TipTapEditor({
     if (!editor) {
       return;
     }
+
+    restoreEditorSelection(editor, pendingToolbarSelectionRef.current);
+    pendingToolbarSelectionRef.current = null;
 
     if (value === "bullet") {
       editor.chain().focus().toggleBulletList().run();
@@ -2177,7 +2251,15 @@ export function TipTapEditor({
   const currentCharacters = editor?.storage.characterCount.characters() ?? seoMetrics.characters;
 
   return (
-    <div className="tiptap-editor-shell">
+    <div
+      className="tiptap-editor-shell"
+      onMouseDown={(event) => {
+        const target = event.target;
+        if (target instanceof HTMLElement && target.closest("button")) {
+          event.preventDefault();
+        }
+      }}
+    >
       <div className="tiptap-sticky-header">
         {headerAddon ? <div className="tiptap-header-addon">{headerAddon}</div> : null}
         <div className="tiptap-editor-topbar">
@@ -2186,6 +2268,14 @@ export function TipTapEditor({
               <ToolbarSelect
                 label="段落样式"
                 onChange={applyBlockType}
+                onMouseDown={() => {
+                  if (editor) {
+                    pendingToolbarSelectionRef.current = {
+                      from: editor.state.selection.from,
+                      to: editor.state.selection.to,
+                    };
+                  }
+                }}
                 options={[
                   { label: "正文", value: "paragraph" },
                   { label: "标题 1", value: "h1" },
@@ -2197,6 +2287,14 @@ export function TipTapEditor({
               <ToolbarSelect
                 label="段落布局"
                 onChange={applyLineLayout}
+                onMouseDown={() => {
+                  if (editor) {
+                    pendingToolbarSelectionRef.current = {
+                      from: editor.state.selection.from,
+                      to: editor.state.selection.to,
+                    };
+                  }
+                }}
                 options={[
                   { label: "普通段落", value: "paragraph" },
                   { label: "项目符号", value: "bullet" },
@@ -2280,7 +2378,7 @@ export function TipTapEditor({
                 const wasCodeBlockActive = editor?.isActive("codeBlock") ?? false;
                 const codeCaretPosition = pendingCodeBlockSelectionRef.current ?? editor?.state.selection.from ?? null;
                 pendingCodeBlockSelectionRef.current = null;
-                editor?.chain().focus().toggleCodeBlock().run();
+                toggleCodeBlockAtCaret(editor, codeCaretPosition);
                 if (!wasCodeBlockActive && codeCaretPosition !== null) {
                   [0, 60, 180].forEach((delay) => {
                     window.setTimeout(() => {
@@ -2333,7 +2431,19 @@ export function TipTapEditor({
               label="右对齐"
               onClick={() => (editor?.isActive("image") ? applyImageAlign("right") : editor?.chain().focus().setTextAlign("right").run())}
             />
-            <ToolbarButton icon="<span class='toolbar-link'>∞</span>" label="链接" onClick={applyLink} />
+            <ToolbarButton
+              icon="<span class='toolbar-link'>∞</span>"
+              label="链接"
+              onClick={applyLink}
+              onMouseDown={() => {
+                if (editor) {
+                  pendingInsertionSelectionRef.current = {
+                    from: editor.state.selection.from,
+                    to: editor.state.selection.to,
+                  };
+                }
+              }}
+            />
             <ImageToolbar
               buttonRef={imageInsertButtonRef}
               showMenu={showImageSourceMenu}

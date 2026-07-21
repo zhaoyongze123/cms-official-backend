@@ -568,6 +568,7 @@ export function ArticleEditorWorkspace({
   const [activeAction, setActiveAction] = useState<"save" | "publish" | null>(null);
   const [activeGenerationTarget, setActiveGenerationTarget] = useState<GenerationTarget | null>(null);
   const [htmlMode, setHtmlMode] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [articleSnapshot, setArticleSnapshot] = useState(article);
   const [draft, setDraft] = useState<DraftState>(() => createDraft(article));
   const [categoryInput, setCategoryInput] = useState(article.category?.name ?? "");
@@ -1478,8 +1479,8 @@ export function ArticleEditorWorkspace({
         </div>
       </header>
 
-      <div className="word-workspace">
-        <aside className="word-sidebar">
+      <div className={`word-workspace${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
+        <aside className="word-sidebar" id="article-editor-sidebar">
           <div className="word-sidebar-section">
             <div className="word-sidebar-title">文档信息</div>
             <div className="word-info-grid">
@@ -1748,6 +1749,20 @@ export function ArticleEditorWorkspace({
             </div>
           </div>
         </aside>
+
+        <div className="word-sidebar-toggle-rail">
+          <button
+            aria-controls="article-editor-sidebar"
+            aria-expanded={!sidebarCollapsed}
+            aria-label={sidebarCollapsed ? "展开侧边栏" : "收起侧边栏"}
+            className="word-sidebar-toggle"
+            onClick={() => setSidebarCollapsed((currentValue) => !currentValue)}
+            type="button"
+          >
+            <span aria-hidden="true">{sidebarCollapsed ? ">" : "<"}</span>
+            <span className="word-sidebar-toggle-label">{sidebarCollapsed ? "展开" : "收起"}</span>
+          </button>
+        </div>
 
         {validationConfirm ? (
           <div className="word-validation-confirm-backdrop" role="presentation">

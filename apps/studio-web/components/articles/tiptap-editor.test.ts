@@ -8,7 +8,13 @@ import {
   type EditorPatch,
   type TipTapDocument,
 } from "@cms/editor-protocol";
-import { clampImageContextMenuPosition, keepCaretInsideCodeBlock, TipTapEditor } from "./tiptap-editor";
+import {
+  clampImageContextMenuPosition,
+  keepCaretInsideCodeBlock,
+  restoreEditorSelection,
+  TipTapEditor,
+  toggleCodeBlockAtCaret,
+} from "./tiptap-editor";
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
@@ -205,6 +211,56 @@ describe("tiptap editor protocol", () => {
     keepCaretInsideCodeBlock(mockEditor as never);
 
     expect(focus).not.toHaveBeenCalled();
+  });
+
+  it("collapses the selection before toggling a code block", () => {
+    const calls: string[] = [];
+    const chain = {
+      focus() {
+        calls.push("focus");
+        return chain;
+      },
+      setTextSelection(selection: { from: number; to: number }) {
+        calls.push(`selection:${selection.from}-${selection.to}`);
+        return chain;
+      },
+      toggleCodeBlock() {
+        calls.push("toggleCodeBlock");
+        return chain;
+      },
+      run() {
+        calls.push("run");
+        return true;
+      },
+    };
+
+    const mockEditor = {
+      chain: () => chain,
+    };
+
+    expect(toggleCodeBlockAtCaret(mockEditor as never, 18)).toBe(true);
+    expect(calls).toEqual(["focus", "selection:18-18", "toggleCodeBlock", "run"]);
+  });
+
+  it("restores the saved selection before applying a dropdown format", () => {
+    const calls: string[] = [];
+    const chain = {
+      focus() {
+        calls.push("focus");
+        return chain;
+      },
+      setTextSelection(selection: { from: number; to: number }) {
+        calls.push(`selection:${selection.from}-${selection.to}`);
+        return chain;
+      },
+      run() {
+        calls.push("run");
+        return true;
+      },
+    };
+
+    expect(restoreEditorSelection({ chain: () => chain } as never, { from: 12, to: 24 })).toBe(true);
+    expect(calls).toEqual(["focus", "selection:12-24", "run"]);
   });
 
   it("keeps the image context menu inside the viewport", () => {
