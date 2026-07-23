@@ -180,6 +180,11 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
                 <li className="hover:text-hermes transition-colors">MDaemon中文站</li>
                 <li className="hover:text-hermes transition-colors">SecurityGateway中文站</li>
                 <li className="hover:text-hermes transition-colors">MailStore中文站</li>
+                <li className="hover:text-hermes transition-colors">
+                  <a href="https://www.zimbra.com.cn" target="_blank" rel="noreferrer">
+                    Zimbra中文站
+                  </a>
+                </li>
                 <li className="hover:text-hermes transition-colors">可道云</li>
                 <li className="hover:text-hermes transition-colors">53AI</li>
               </ul>
