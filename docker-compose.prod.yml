@@ -54,6 +54,7 @@ services:
       DJANGO_SETTINGS_MODULE: config.settings.production
       PYTHONPATH: /app/apps/cms-api:/app
       NEXT_EDITOR_INTERNAL_URL: http://editor-web:3000
+      PUBLIC_WEB_REVALIDATE_URL: http://public-web:3000/api/revalidate
     depends_on:
       db:
         condition: service_healthy
@@ -144,7 +145,8 @@ services:
       <<: *frontend-env
       HOSTNAME: 0.0.0.0
       PORT: "3000"
-      DJANGO_INTERNAL_BASE_URL: ""
+      DJANGO_INTERNAL_BASE_URL: http://web:8000
+      PUBLIC_WEB_REVALIDATE_TOKEN: ${PUBLIC_WEB_REVALIDATE_TOKEN}
     depends_on:
       web:
         condition: service_healthy

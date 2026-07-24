@@ -333,6 +333,15 @@ class ArticleApiTests(TestCase):
         self.assertEqual(payload[0]["article_id"], self.article.id)
         self.assertEqual(payload[0]["status"], "published")
 
+    def test_public_list_summary_mode_omits_article_content(self):
+        response = self.client.get("/api/public/articles/?summary=1")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload[0]["content_json"], {})
+        self.assertEqual(payload[0]["content_html"], "")
+        self.assertEqual(payload[0]["content_hash"], "")
+
     def test_public_detail_by_slug_returns_published_article(self):
         response = self.client.get(f"/api/public/articles/{self.article.slug}/")
 
@@ -383,6 +392,7 @@ class ArticleApiTests(TestCase):
         self.assertEqual(len(payload["homepage_featured_articles"]), 3)
         self.assertEqual(payload["homepage_featured_articles"][0]["article_id"], self.article.id)
         self.assertEqual(payload["homepage_featured_articles"][0]["title"], self.article.title)
+        self.assertEqual(payload["homepage_featured_articles"][0]["content_html"], "")
         self.assertEqual(
             payload["homepage_featured_articles"][0]["seo"]["og_image_url"],
             self.og_image.file.url,

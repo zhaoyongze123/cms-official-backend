@@ -13,6 +13,7 @@ from django.views.decorators.http import require_http_methods
 from cms_apps.articles.api.selectors import get_article_queryset, get_public_article_queryset
 from cms_apps.articles.api.services import apply_article_payload, serialize_article
 from cms_apps.articles.models import Article, ArticleSlugHistory, Category, Tag
+from cms_apps.common.services.public_cache import invalidate_public_web_cache
 from cms_apps.seo.services.public import (
     build_article_breadcrumb_items,
     build_article_breadcrumb_json_ld,
@@ -61,6 +62,8 @@ def article_list_view(request):
         return _validation_error_response(error)
 
     article = get_article_queryset().get(pk=article.pk)
+    if article.status == "published":
+        invalidate_public_web_cache()
     return JsonResponse(serialize_article(article), status=201)
 
 
@@ -74,6 +77,7 @@ def article_detail_view(request, article_id):
     if request.method == "GET":
         return JsonResponse(serialize_article(article))
 
+    previous_status = article.status
     try:
         payload = _parse_json_body(request)
         apply_article_payload(article, payload, partial=True)
@@ -81,13 +85,19 @@ def article_detail_view(request, article_id):
         return _validation_error_response(error)
 
     article = get_article_queryset().get(pk=article.pk)
+    if previous_status == "published" or article.status == "published":
+        invalidate_public_web_cache()
     return JsonResponse(serialize_article(article))
 
 
 @require_http_methods(["GET"])
 def public_article_list_view(request):
     articles = get_public_article_queryset()
-    return JsonResponse([serialize_article(article) for article in articles], safe=False)
+    include_content = request.GET.get("summary") != "1"
+    return JsonResponse(
+        [serialize_article(article, include_content=include_content) for article in articles],
+        safe=False,
+    )
 
 
 @require_http_methods(["GET"])

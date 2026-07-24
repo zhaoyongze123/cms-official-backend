@@ -57,6 +57,8 @@ Next.js 只能调用 Django API。
 | `GET` | `/api/articles/{id}/analytics/` | 单篇监控 |
 | `GET` | `/api/dashboard/seo-summary/` | SEO 总览 |
 
+公开文章列表支持 `?summary=1` 轻量模式。该模式保留文章列表、分类、标签和 SEO 摘要字段，`content_json`、`content_html`、`content_hash` 和正文 FAQ 字段返回空值；文章详情接口仍返回完整正文。
+
 Analytics 当前已落定的返回结构：
 
 | 接口 | 关键字段 |

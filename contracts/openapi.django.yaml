@@ -54,6 +54,14 @@ paths:
   /api/public/articles/:
     get:
       summary: 获取公开已发布文章列表
+      parameters:
+        - name: summary
+          in: query
+          required: false
+          description: 传入 1 时返回轻量列表数据，正文相关字段为空；详情接口仍返回完整正文。
+          schema:
+            type: string
+            enum: ["1"]
       responses:
         "200":
           description: 公开文章列表

@@ -1,8 +1,11 @@
+import { cache } from "react";
+
 const isServer = typeof window === "undefined";
 const isDevelopment = process.env.NODE_ENV !== "production";
 const publicSiteBaseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_SITE_URL || "http://127.0.0.1:3003");
 const publicApiBaseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL || "http://127.0.0.1:8001");
 const serverBaseUrl = normalizeBaseUrl(process.env.DJANGO_INTERNAL_BASE_URL || publicApiBaseUrl);
+const publicApiUrl = new URL(`${publicApiBaseUrl}/`);
 
 export class PublicApiRequestError extends Error {
   status: number;
@@ -239,13 +242,22 @@ export function mapArticleToPublicArticle(article: ArticleApiItem): PublicArticl
 
 async function requestJson<T>(path: string): Promise<T> {
   const target = isServer ? new URL(path, serverBaseUrl).toString() : path;
+  const headers: HeadersInit = {
+    Accept: 'application/json',
+  };
+  if (isServer && serverBaseUrl !== publicApiBaseUrl) {
+    // 内部 HTTP 请求仍按公网 HTTPS 请求交给 Django 处理，避免 SSL 重定向。
+    headers["X-Forwarded-Host"] = publicApiUrl.host;
+    headers["X-Forwarded-Proto"] = publicApiUrl.protocol.replace(":", "");
+  }
   const response = await fetch(target, {
-    headers: {
-      Accept: 'application/json'
-    },
+    headers,
     redirect: 'manual',
-    // 发布或保存后必须立即读取 Django 中的最新公开内容。
-    cache: "no-store",
+    // 公开内容短时缓存，文章保存或发布后由 Django 主动失效该标签。
+    next: {
+      revalidate: 300,
+      tags: ["public-api"],
+    },
   });
   if (response.status === 301) {
     const location = response.headers.get('Location');
@@ -301,7 +313,7 @@ export function getSiteSeoContext(): SiteSeoContext {
   };
 }
 
-export async function getPublicSiteSettings(): Promise<PublicSiteSettings> {
+export const getPublicSiteSettings = cache(async function getPublicSiteSettings(): Promise<PublicSiteSettings> {
   try {
     const payload = await requestJson<{
       site_title?: string;
@@ -346,7 +358,7 @@ export async function getPublicSiteSettings(): Promise<PublicSiteSettings> {
       homepageCaseLogoWallImageUrl: "",
     };
   }
-}
+});
 
 export function buildOrganizationJsonLd() {
   const site = getSiteSeoContext();
@@ -440,7 +452,7 @@ export function buildFaqJsonLd(article: PublicArticle) {
 export async function fetchPublishedArticles(): Promise<PublicArticle[]> {
   let payload: ArticleApiItem[];
   try {
-    payload = await requestJson<ArticleApiItem[]>('/api/public/articles/');
+    payload = await requestJson<ArticleApiItem[]>('/api/public/articles/?summary=1');
   } catch (error) {
     logPublicApiError("文章列表", error);
     return [];
@@ -516,7 +528,7 @@ export function resolveArticleSection(article: PublicArticle): PublicArticleSect
   return getPublicArticleSectionConfig(matchedSection || "solutions");
 }
 
-export async function fetchArticleDetailBySlug(slug: string): Promise<PublicArticle | null> {
+export const fetchArticleDetailBySlug = cache(async function fetchArticleDetailBySlug(slug: string): Promise<PublicArticle | null> {
   try {
     const payload = await requestJson<ArticleApiItem>(`/api/public/articles/${slug}/`);
     return mapArticleToPublicArticle(payload);
@@ -526,4 +538,4 @@ export async function fetchArticleDetailBySlug(slug: string): Promise<PublicArti
     }
     throw error;
   }
-}
+});

@@ -21,7 +21,7 @@ def _serialize_featured_article(article_id: int | None):
     article = get_public_article_queryset().filter(pk=article_id).first()
     if article is None:
         return None
-    return serialize_article(article)
+    return serialize_article(article, include_content=False)
 
 
 @require_http_methods(["GET"])

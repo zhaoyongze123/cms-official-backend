@@ -83,9 +83,14 @@ def serialize_faq_item(item: FaqItem) -> dict[str, object]:
     }
 
 
-def serialize_article(article: Article, seo_payload: dict[str, object] | None = None) -> dict[str, object]:
+def serialize_article(
+    article: Article,
+    seo_payload: dict[str, object] | None = None,
+    *,
+    include_content: bool = True,
+) -> dict[str, object]:
     tags = list(article.tags.all().order_by("id"))
-    faq_items = list(article.faq_items.all().order_by("sort_order", "id"))
+    faq_items = list(article.faq_items.all().order_by("sort_order", "id")) if include_content else []
     seo_metadata = getattr(article, "seo_metadata", None)
     canonical_url = ""
     robots = "index,follow"
@@ -122,9 +127,10 @@ def serialize_article(article: Article, seo_payload: dict[str, object] | None = 
         "category": serialize_category(article.category),
         "cover_image": serialize_image(getattr(article, "cover_image", None)),
         "tags": [serialize_tag(tag) for tag in tags],
-        "content_json": article.content_json or {},
-        "content_html": article.content_html or "",
-        "content_hash": build_content_hash(article),
+        # 列表页只需要文章摘要；正文和 content_hash 仅在详情接口返回。
+        "content_json": article.content_json or {} if include_content else {},
+        "content_html": article.content_html or "" if include_content else "",
+        "content_hash": build_content_hash(article) if include_content else "",
         "published_at": article.publish_date.isoformat() if article.publish_date else None,
         "updated_at": article.updated_at.isoformat(),
         "faq_items": [serialize_faq_item(item) for item in faq_items],
@@ -139,7 +145,7 @@ def serialize_article(article: Article, seo_payload: dict[str, object] | None = 
             "og_image": og_image,
             "og_image_url": og_image_url,
         },
-        "seo_payload": seo_payload or {},
+        "seo_payload": seo_payload or {} if include_content else {},
     }
 
 

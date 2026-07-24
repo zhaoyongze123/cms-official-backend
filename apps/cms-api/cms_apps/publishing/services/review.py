@@ -9,6 +9,7 @@ from django.db import transaction
 
 from cms_apps.articles.api.services import serialize_article
 from cms_apps.articles.models import Article
+from cms_apps.common.services.public_cache import invalidate_public_web_cache
 from cms_apps.publishing.selectors import get_article_or_none
 
 
@@ -104,4 +105,5 @@ def publish_article(article_id: int) -> tuple[Article, dict[str, list[dict[str, 
     article.status = "published"
     article.save()
     article.refresh_from_db()
+    transaction.on_commit(invalidate_public_web_cache)
     return article, seo_check

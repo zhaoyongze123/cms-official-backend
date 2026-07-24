@@ -63,6 +63,11 @@ if [[ ! -f "${COMPOSE_FILE}" ]]; then
   exit 1
 fi
 
+if ! grep -q '^PUBLIC_WEB_REVALIDATE_TOKEN=.[^[:space:]]*' "${ENV_FILE}"; then
+  echo "[deploy-pull] ${ENV_FILE} 缺少 PUBLIC_WEB_REVALIDATE_TOKEN" >&2
+  exit 1
+fi
+
 COMPOSE_CMD=(docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}")
 export COMPOSE_PROJECT_NAME
 

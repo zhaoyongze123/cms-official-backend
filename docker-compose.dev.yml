@@ -38,6 +38,8 @@ services:
       - .env
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.dev
+      PUBLIC_WEB_REVALIDATE_URL: http://public-web:3003/api/revalidate
+      PUBLIC_WEB_REVALIDATE_TOKEN: ${PUBLIC_WEB_REVALIDATE_TOKEN:-dev-revalidate-token}
       http_proxy: ""
       https_proxy: ""
       HTTP_PROXY: ""
@@ -172,6 +174,7 @@ services:
     environment:
       NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL: http://127.0.0.1:8001
       NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3003
+      PUBLIC_WEB_REVALIDATE_TOKEN: ${PUBLIC_WEB_REVALIDATE_TOKEN:-dev-revalidate-token}
       WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"
       NODE_ENV: development
