@@ -60,6 +60,10 @@
     @apply my-5;
   }
 
+  .article-content p:empty {
+    min-height: 2rem;
+  }
+
   .article-content ul,
   .article-content ol {
     @apply my-6 pl-6 space-y-2;

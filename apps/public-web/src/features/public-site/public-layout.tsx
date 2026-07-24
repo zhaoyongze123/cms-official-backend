@@ -177,12 +177,12 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
             <div>
               <h5 className="font-bold mb-6 text-sm">友情链接</h5>
               <ul className="space-y-4 text-sm text-white/40">
-                <li className="hover:text-hermes transition-colors">MDaemon中文站</li>
-                <li className="hover:text-hermes transition-colors">SecurityGateway中文站</li>
-                <li className="hover:text-hermes transition-colors">MailStore中文站</li>
+                <li className="hover:text-hermes transition-colors">MDaemon邮件系统</li>
+                <li className="hover:text-hermes transition-colors">SecurityGateway反垃圾邮件安全网关</li>
+                <li className="hover:text-hermes transition-colors">MailStore邮件归档</li>
                 <li className="hover:text-hermes transition-colors">
                   <a href="https://www.zimbra.com.cn" target="_blank" rel="noreferrer">
-                    Zimbra中文站
+                    Zimbra邮件系统
                   </a>
                 </li>
                 <li className="hover:text-hermes transition-colors">可道云</li>

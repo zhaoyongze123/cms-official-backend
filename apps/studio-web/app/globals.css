@@ -1834,6 +1834,10 @@ main {
   margin: 0.85em 0;
 }
 
+.tiptap-paper p:empty {
+  min-height: 1.7em;
+}
+
 .field-error-text,
 .editor-panel-error {
   color: #b42318;

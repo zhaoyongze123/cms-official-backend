@@ -1156,6 +1156,7 @@ export function TipTapEditor({
   const pendingToolbarSelectionRef = useRef<EditorSelectionRange | null>(null);
   const pendingInsertionSelectionRef = useRef<EditorSelectionRange | null>(null);
   const lastSyncedDocumentRef = useRef<string>(JSON.stringify(normalizeBlockIds(value)));
+  const [, forceSelectionRender] = useState(0);
   const [uploadMessage, setUploadMessage] = useState("可直接粘贴图片、拖拽图片，或从媒体库选择 / 本地上传后插入正文。");
   const [showImageSourceMenu, setShowImageSourceMenu] = useState(false);
   const [showMediaLibraryPicker, setShowMediaLibraryPicker] = useState(false);
@@ -1496,6 +1497,21 @@ export function TipTapEditor({
 
     onEditorReady(() => normalizeBlockIds(editor.getJSON() as TipTapDocument));
   }, [editor, onEditorReady]);
+
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) {
+      return;
+    }
+
+    const handleSelectionUpdate = () => {
+      forceSelectionRender((version) => version + 1);
+    };
+
+    editor.on("selectionUpdate", handleSelectionUpdate);
+    return () => {
+      editor.off("selectionUpdate", handleSelectionUpdate);
+    };
+  }, [editor]);
 
   useEffect(() => {
     if (!editor || editor.isDestroyed || !onActiveHeadingChange) {
@@ -2156,7 +2172,7 @@ export function TipTapEditor({
 
     const level = Number(value.replace("h", ""));
     if ([1, 2, 3].includes(level)) {
-      editor.chain().focus().toggleHeading({ level: level as 1 | 2 | 3 }).run();
+      editor.chain().focus().setHeading({ level: level as 1 | 2 | 3 }).run();
     }
   }
 
@@ -2306,24 +2322,24 @@ export function TipTapEditor({
 
             <ToolbarButton
               active={editor?.isActive("heading", { level: 1 })}
-              disabled={!editor?.can().chain().focus().toggleHeading({ level: 1 }).run()}
+              disabled={!editor?.can().chain().focus().setHeading({ level: 1 }).run()}
               icon="<span class='toolbar-heading'>H1</span>"
               label="标题 1"
-              onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
+              onClick={() => editor?.chain().focus().setHeading({ level: 1 }).run()}
             />
             <ToolbarButton
               active={editor?.isActive("heading", { level: 2 })}
-              disabled={!editor?.can().chain().focus().toggleHeading({ level: 2 }).run()}
+              disabled={!editor?.can().chain().focus().setHeading({ level: 2 }).run()}
               icon="<span class='toolbar-heading'>H2</span>"
               label="标题 2"
-              onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+              onClick={() => editor?.chain().focus().setHeading({ level: 2 }).run()}
             />
             <ToolbarButton
               active={editor?.isActive("heading", { level: 3 })}
-              disabled={!editor?.can().chain().focus().toggleHeading({ level: 3 }).run()}
+              disabled={!editor?.can().chain().focus().setHeading({ level: 3 }).run()}
               icon="<span class='toolbar-heading'>H3</span>"
               label="标题 3"
-              onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+              onClick={() => editor?.chain().focus().setHeading({ level: 3 }).run()}
             />
             <ToolbarButton
               active={editor?.isActive("paragraph")}
