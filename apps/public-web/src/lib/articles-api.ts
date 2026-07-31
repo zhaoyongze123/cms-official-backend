@@ -116,6 +116,7 @@ export interface PublicArticle {
   id: string;
   articleId: number;
   slug: string;
+  updatedAt: string;
   title: string;
   excerpt: string;
   category: string;
@@ -206,6 +207,7 @@ export function mapArticleToPublicArticle(article: ArticleApiItem): PublicArticl
     id: String(article.article_id),
     articleId: article.article_id,
     slug: article.slug,
+    updatedAt: article.updated_at,
     title: article.title,
     excerpt,
     category: article.category?.name || '未分类',
@@ -238,6 +240,12 @@ export function mapArticleToPublicArticle(article: ArticleApiItem): PublicArticl
       },
     },
   };
+}
+
+export function buildWechatShareImageUrl(article: Pick<PublicArticle, "slug" | "updatedAt">): string {
+  const url = new URL(`/articles/${article.slug}/wechat-share-image`, `${publicSiteBaseUrl}/`);
+  url.searchParams.set("v", article.updatedAt);
+  return url.toString();
 }
 
 async function requestJson<T>(path: string): Promise<T> {

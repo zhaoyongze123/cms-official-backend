@@ -6,6 +6,7 @@ import {
   buildArticleJsonLd,
   buildBreadcrumbJsonLd,
   buildFaqJsonLd,
+  buildWechatShareImageUrl,
   fetchArticleDetailBySlug,
   resolveArticleSection,
 } from "../../../src/lib/articles-api";
@@ -26,6 +27,8 @@ export async function generateMetadata({
     };
   }
 
+  const shareImageUrl = buildWechatShareImageUrl(article);
+
   return {
     title: `${article.seo.metaTitle} | 云璨科技`,
     description: article.seo.metaDescription,
@@ -38,13 +41,13 @@ export async function generateMetadata({
       description: article.seo.ogDescription,
       type: "article",
       url: article.seo.canonicalUrl,
-      images: article.seo.ogImageUrl ? [{ url: article.seo.ogImageUrl }] : undefined,
+      images: [{ url: shareImageUrl, width: 1200, height: 630, type: "image/jpeg", alt: article.seo.ogTitle }],
     },
     twitter: {
-      card: article.seo.ogImageUrl ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: article.seo.ogTitle,
       description: article.seo.ogDescription,
-      images: article.seo.ogImageUrl ? [article.seo.ogImageUrl] : undefined,
+      images: [shareImageUrl],
     },
   };
 }

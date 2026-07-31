@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import PublicLayout from "./public-layout";
 import SolutionsCMS from "../../components/SolutionsCMS";
-import type { PublicArticle, PublicArticleSectionConfig } from "../../lib/articles-api";
+import { buildWechatShareImageUrl, type PublicArticle, type PublicArticleSectionConfig } from "../../lib/articles-api";
 import { configureWechatShare } from "../../lib/wechat-share";
 
 export default function PublicArticlePage({
@@ -18,7 +18,7 @@ export default function PublicArticlePage({
       title: article.seo.ogTitle || article.title,
       desc: article.seo.ogDescription || article.excerpt,
       link: article.seo.canonicalUrl,
-      imgUrl: article.seo.ogImageUrl,
+      imgUrl: buildWechatShareImageUrl(article),
     }).catch(() => undefined);
   }, [article]);
 
