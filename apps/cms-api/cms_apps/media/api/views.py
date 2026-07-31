@@ -120,7 +120,7 @@ def media_upload_view(request):
 
 @require_http_methods(["GET"])
 def media_image_list_view(request):
-    images = ImageItem.objects.all().order_by("-uploaded_at", "-id")[:60]
+    images = ImageItem.objects.all().order_by("-uploaded_at", "-id")
     return JsonResponse([_serialize_image(request, image) for image in images], safe=False)
 
 

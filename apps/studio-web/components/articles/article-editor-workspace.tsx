@@ -27,6 +27,7 @@ import {
 } from "../../lib/mock-api";
 import type { DjangoArticleCategoryOption, DjangoArticleTag } from "../../lib/articles";
 import { TipTapEditor } from "./tiptap-editor";
+import { MediaImagePickerModal, type ImageCropSelection } from "./media-image-picker-modal";
 import { BLOCK_ID_PATTERN, type EditorPatch, type TipTapDocument } from "@cms/editor-protocol";
 
 type ArticleEditorWorkspaceProps = {
@@ -1070,6 +1071,79 @@ export function ArticleEditorWorkspace({
     setShowCoverImagePicker(false);
   }
 
+  async function cropAndUploadOgImage(image: MediaLibraryImageRecord, selection: ImageCropSelection) {
+    setIsUploadingOgImage(true);
+    setOgImageLibraryStatus("正在生成并上传 OG 方图...");
+
+    try {
+      const response = await fetch(image.file_url, { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error(`原图读取失败：${response.status}`);
+      }
+
+      const sourceBlob = await response.blob();
+      const sourceUrl = URL.createObjectURL(sourceBlob);
+      try {
+        const sourceImage = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const imageElement = new Image();
+          imageElement.onload = () => resolve(imageElement);
+          imageElement.onerror = () => reject(new Error("原图解码失败。"));
+          imageElement.src = sourceUrl;
+        });
+        const canvas = document.createElement("canvas");
+        canvas.width = selection.sourceSize;
+        canvas.height = selection.sourceSize;
+        const context = canvas.getContext("2d");
+        if (!context) {
+          throw new Error("当前浏览器不支持图片裁剪。");
+        }
+
+        context.drawImage(
+          sourceImage,
+          selection.sourceX,
+          selection.sourceY,
+          selection.sourceSize,
+          selection.sourceSize,
+          0,
+          0,
+          selection.sourceSize,
+          selection.sourceSize,
+        );
+        const croppedBlob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(blob);
+              return;
+            }
+            reject(new Error("图片裁剪结果生成失败。"));
+          }, "image/png");
+        });
+        const croppedFile = new File([croppedBlob], `og-image-${image.image_id}-square.png`, {
+          type: "image/png",
+        });
+        const uploadedImage = await uploadEditorImage(
+          croppedFile,
+          image.alt_text,
+          `${image.title || `图片 ${image.image_id}`} - 方形裁剪`,
+        );
+        updateField("ogImage", uploadedImage);
+        setOgImageLibrary((currentImages) => {
+          const nextImages = currentImages.filter((currentImage) => currentImage.image_id !== uploadedImage.image_id);
+          return [uploadedImage, ...nextImages];
+        });
+        setShowOgImagePicker(false);
+        setOgImageLibraryStatus(`OG 方图已上传并选中，image_id=${uploadedImage.image_id}。`);
+      } finally {
+        URL.revokeObjectURL(sourceUrl);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "未知错误";
+      setOgImageLibraryStatus(`OG 图片裁剪失败：${message}`);
+    } finally {
+      setIsUploadingOgImage(false);
+    }
+  }
+
   async function handleUploadCoverImage(file: File | null) {
     if (!file) {
       return;
@@ -1115,13 +1189,12 @@ export function ArticleEditorWorkspace({
         draft.ogImage?.alt_text ?? "",
         draft.ogImage?.title || fallbackTitle,
       );
-      updateField("ogImage", uploadedImage);
       setOgImageLibrary((currentImages) => {
         const nextImages = currentImages.filter((image) => image.image_id !== uploadedImage.image_id);
         return [uploadedImage, ...nextImages];
       });
-      setShowOgImagePicker(false);
-      setOgImageLibraryStatus(`OG 图片已上传并选中，image_id=${uploadedImage.image_id}。`);
+      setShowOgImagePicker(true);
+      setOgImageLibraryStatus("OG 图片已上传，请先预览；非 1:1 图片可以继续裁剪后再使用。");
     } catch (error) {
       const message = error instanceof Error ? error.message : "未知错误";
       setOgImageLibraryStatus(`OG 图片上传失败：${message}`);
@@ -1539,31 +1612,6 @@ export function ArticleEditorWorkspace({
                       </button>
                     ) : null}
                   </div>
-                  {showCoverImagePicker ? (
-                    <div className="word-sidebar-media-modal">
-                      <div className="word-sidebar-media-modal-head">
-                        <strong>选择封面图</strong>
-                        <button className="word-sidebar-mini-button is-muted" onClick={() => setShowCoverImagePicker(false)} type="button">
-                          关闭
-                        </button>
-                      </div>
-                      {coverImageLibraryStatus ? <div className="word-sidebar-media-status">{coverImageLibraryStatus}</div> : null}
-                      <div className="word-sidebar-media-grid">
-                        {coverImageLibrary.map((image) => (
-                          <button
-                            className="word-sidebar-media-option"
-                            key={image.image_id}
-                            onClick={() => selectCoverImage(image)}
-                            type="button"
-                          >
-                            <img alt={image.alt_text || image.title} src={image.file_url} />
-                            <strong>{image.title || `图片 ${image.image_id}`}</strong>
-                            <small>{image.alt_text || "未填写 alt"}</small>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
                   <input
                     ref={coverImageUploadInputRef}
                     className="tiptap-upload-input"
@@ -1673,31 +1721,6 @@ export function ArticleEditorWorkspace({
                       </button>
                     ) : null}
                   </div>
-                  {showOgImagePicker ? (
-                    <div className="word-sidebar-media-modal">
-                      <div className="word-sidebar-media-modal-head">
-                        <strong>选择 OG 图片</strong>
-                        <button className="word-sidebar-mini-button is-muted" onClick={() => setShowOgImagePicker(false)} type="button">
-                          关闭
-                        </button>
-                      </div>
-                      {ogImageLibraryStatus ? <div className="word-sidebar-media-status">{ogImageLibraryStatus}</div> : null}
-                      <div className="word-sidebar-media-grid">
-                        {ogImageLibrary.map((image) => (
-                          <button
-                            className="word-sidebar-media-option"
-                            key={image.image_id}
-                            onClick={() => selectOgImage(image)}
-                            type="button"
-                          >
-                            <img alt={image.alt_text || image.title} src={image.file_url} />
-                            <strong>{image.title || `图片 ${image.image_id}`}</strong>
-                            <small>{image.alt_text || "未填写 alt"}</small>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
                   <input
                     ref={ogImageUploadInputRef}
                     className="tiptap-upload-input"
@@ -2102,6 +2125,29 @@ export function ArticleEditorWorkspace({
           </footer>
         </section>
       </div>
+      {showCoverImagePicker ? (
+        <MediaImagePickerModal
+          currentImageId={draft.coverImage?.image_id}
+          images={coverImageLibrary}
+          onClose={() => setShowCoverImagePicker(false)}
+          onSelect={selectCoverImage}
+          status={coverImageLibraryStatus}
+          title="选择封面图"
+        />
+      ) : null}
+      {showOgImagePicker ? (
+        <MediaImagePickerModal
+          allowCrop
+          busy={isUploadingOgImage}
+          currentImageId={draft.ogImage?.image_id}
+          images={ogImageLibrary}
+          onClose={() => setShowOgImagePicker(false)}
+          onCropAndSelect={cropAndUploadOgImage}
+          onSelect={selectOgImage}
+          status={ogImageLibraryStatus}
+          title="选择 OG 图片"
+        />
+      ) : null}
     </div>
   );
 }
