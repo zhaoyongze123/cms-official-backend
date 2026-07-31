@@ -20,8 +20,6 @@ declare global {
       config(config: { debug?: boolean; appId: string; timestamp: number; nonceStr: string; signature: string; jsApiList: string[] }): void;
       ready(callback: () => void): void;
       error(callback: (error: unknown) => void): void;
-      updateAppMessageShareData(data: WechatShareContent & { success?: () => void }): void;
-      updateTimelineShareData(data: Omit<WechatShareContent, "desc"> & { success?: () => void }): void;
       onMenuShareAppMessage(data: WechatShareContent & { type?: string; dataUrl?: string; success?: () => void; cancel?: () => void; fail?: (error: unknown) => void }): void;
       onMenuShareTimeline(data: Omit<WechatShareContent, "desc"> & { success?: () => void; cancel?: () => void; fail?: (error: unknown) => void }): void;
     };
@@ -72,8 +70,6 @@ export async function configureWechatShare(content: WechatShareContent): Promise
     debug,
     ...config,
     jsApiList: [
-      "updateAppMessageShareData",
-      "updateTimelineShareData",
       "onMenuShareAppMessage",
       "onMenuShareTimeline",
     ],
@@ -83,9 +79,7 @@ export async function configureWechatShare(content: WechatShareContent): Promise
   });
   window.wx.ready(() => {
     const timelineContent = { title: content.title, link: content.link, imgUrl: content.imgUrl };
-    // 新版接口覆盖新微信客户端，旧版接口兼容部分 iOS/公众号环境。
-    window.wx?.updateAppMessageShareData(content);
-    window.wx?.updateTimelineShareData(timelineContent);
+    // 当前微信环境对旧版菜单分享接口兼容性更稳定，避免新版接口失败后阻断分享注册。
     window.wx?.onMenuShareAppMessage({ ...content, type: "link", dataUrl: "" });
     window.wx?.onMenuShareTimeline(timelineContent);
   });
