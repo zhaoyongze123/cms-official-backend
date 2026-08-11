@@ -60,6 +60,7 @@ urlpatterns = [
     path("api/", include("cms_apps.media.api.urls")),
     path("api/", include("cms_apps.publishing.api.urls")),
     path("api/", include("cms_apps.analytics.api.urls")),
+    path("api/", include("cms_apps.leads.urls")),
     path("", include("apps.simple_cms.urls")),
     path("ckeditor/", include("ckeditor_uploader.urls")),
 ]

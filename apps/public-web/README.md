@@ -43,22 +43,44 @@ cp apps/public-web/.env.example apps/public-web/.env.local
 
 当前关键变量：
 
-- `NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL`：Django CMS 公开 API 基础地址，默认 `http://127.0.0.1:8001`
-- `NEXT_PUBLIC_SITE_URL`：public-web 对外站点基础地址，默认 `http://127.0.0.1:3003`
+- `NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL`：Django CMS 公开 API 基础地址，默认 `http://127.0.0.1:9801`
+- `NEXT_PUBLIC_SITE_URL`：public-web 对外站点基础地址，默认 `http://127.0.0.1:9303`
 
 ## 本地运行
 
-先确保 Django CMS 已在 `8001` 端口提供公开 API，再执行：
+完整本地环境以 Process UI 为唯一入口。在 `CMS 官网后台` 中点击“全部启动”，它会调用本仓库的 `docker-compose.dev.yml`，统一启动数据库、缓存、Django、AI 服务、Worker、邮件通知和两个 Next.js 服务。官网以生产模式常驻，编辑端使用 Webpack 开发模式；这样可在本机 Docker 内存配额内稳定共存。
+
+官方访问地址：
+
+```text
+http://127.0.0.1:9303
+```
+
+仅调试 public-web 时可单独执行下列命令；脚本同样固定使用 `9303`，不能与完整环境同时运行：
 
 ```bash
 npm install --prefix apps/public-web
 npm run dev --prefix apps/public-web
 ```
 
-默认地址：
 
-```text
-http://127.0.0.1:3003
+## AI 网盘演示录制
+
+官网首页的 AI 网盘演示使用浏览器自动化录制，产物为可直接发布的 1280×720 H.264 MP4。脚本在真实页面上注入橙色指针、目标聚焦框和点击波纹，再执行同一坐标的真实点击，因此视频中的操作提示和页面行为保持一致。
+
+账号只可通过当前终端环境变量传入，禁止写入任何文件：
+
+```bash
+KODCLOUD_DEMO_USERNAME="<演示账号>" \\
+KODCLOUD_DEMO_PASSWORD="<演示密码>" \\
+npm run record:kodcloud-demo --prefix apps/public-web
+```
+
+原始 WebM 保存在 `apps/public-web/public/media/ai-drive/raw/`，不进入 Git。录制后执行下列转码命令，输出首页引用的 MP4 和封面图：
+
+```bash
+ffmpeg -i raw.webm -an -c:v libx264 -preset slow -crf 23 -pix_fmt yuv420p -movflags +faststart output.mp4
+ffmpeg -ss 00:00:06 -i raw.webm -frames:v 1 -q:v 2 output.jpg
 ```
 
 ## 生产验证

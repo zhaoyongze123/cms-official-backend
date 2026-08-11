@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "motion/react";
-import { Activity, ArrowRight, Cloud, Code, Mail, MapPin, Phone, Server, Settings, Shield, X, Zap } from "lucide-react";
+import { Activity, ArrowRight, CheckCircle2, ChevronLeft, ChevronRight, Cloud, Code, Mail, MapPin, Phone, Server, Settings, Shield, X, Zap } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -207,6 +207,255 @@ function ConsultationModal({ open, onClose }: { open: boolean; onClose: () => vo
   );
 }
 
+const AI_DRIVE_DEMO_SLIDES = [
+  {
+    title: "文件/文件夹直接问 · 答案就在资料里",
+    description: "右键即可发起提问，AI 基于当前文件夹资料整理答案，无需逐份翻阅。",
+    highlights: ["在熟悉的文件管理界面直接提问", "快速获取资料中的关键信息"],
+    video: "/media/ai-drive/scene-01-folder-qa.mp4",
+    poster: "/media/ai-drive/scene-01-folder-qa.jpg",
+  },
+  {
+    title: "快速搭建智能体，成为业务助手",
+    description: "创建智能体、关联知识库后即可围绕业务资料开始问答。",
+    video: "/media/ai-drive/scene-02-agent.mp4",
+    poster: "/media/ai-drive/scene-02-agent.jpg",
+  },
+  {
+    title: "模型服务可配置，适配企业环境",
+    description: "在后台统一查看和配置模型服务、调用参数与可用能力。",
+    video: "/media/ai-drive/scene-03-model-settings.mp4",
+    poster: "/media/ai-drive/scene-03-model-settings.jpg",
+  },
+  {
+    title: "上传并检索，让资料成为知识库",
+    description: "上传文件并配置 RAG 检索增强，让企业资料可被准确调用。",
+    video: "/media/ai-drive/scene-04-upload-rag.mp4",
+    poster: "/media/ai-drive/scene-04-upload-rag.jpg",
+  },
+];
+
+type LeadValues = {
+  companyName: string;
+  contactName: string;
+  phone: string;
+  email: string;
+  requirement: string;
+  privacyConsent: boolean;
+};
+
+type LeadErrors = Partial<Record<keyof LeadValues, string>>;
+
+const INITIAL_LEAD_VALUES: LeadValues = {
+  companyName: "",
+  contactName: "",
+  phone: "",
+  email: "",
+  requirement: "",
+  privacyConsent: false,
+};
+
+function validateLeadField(name: keyof LeadValues, values: LeadValues): string | undefined {
+  const value = values[name];
+  if (name === "companyName" && !String(value).trim()) return "请填写公司名称。";
+  if (name === "contactName" && !String(value).trim()) return "请填写您的姓名。";
+  if (name === "phone" && !/^1[3-9]\d{9}$/.test(String(value).replace(/\s/g, ""))) return "请填写正确的 11 位手机号。";
+  if (name === "email" && String(value).trim() && !/^[\w.+-]+@[\w-]+(?:\.[\w-]+)+$/.test(String(value).trim())) return "请填写正确的邮箱地址。";
+  if (name === "privacyConsent" && value !== true) return "提交前请同意隐私政策。";
+  return undefined;
+}
+
+function ContactLeadForm() {
+  const [values, setValues] = useState<LeadValues>(INITIAL_LEAD_VALUES);
+  const [website, setWebsite] = useState("");
+  const [errors, setErrors] = useState<LeadErrors>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  const updateValue = <K extends keyof LeadValues>(name: K, value: LeadValues[K]) => {
+    setValues((current) => ({ ...current, [name]: value }));
+    setErrors((current) => ({ ...current, [name]: undefined }));
+  };
+
+  const validateOne = (name: keyof LeadValues) => {
+    const message = validateLeadField(name, values);
+    setErrors((current) => ({ ...current, [name]: message }));
+  };
+
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const nextErrors = (Object.keys(values) as Array<keyof LeadValues>).reduce<LeadErrors>((result, name) => {
+      const message = validateLeadField(name, values);
+      if (message) result[name] = message;
+      return result;
+    }, {});
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      const response = await fetch("/api/contact-leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          company_name: values.companyName,
+          contact_name: values.contactName,
+          phone: values.phone.replace(/\s/g, ""),
+          email: values.email,
+          requirement: values.requirement,
+          privacy_consent: values.privacyConsent,
+          source: "homepage_ai_drive_demo",
+          referrer: window.location.href,
+          website,
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const details = body?.error?.details;
+        if (details && typeof details === "object") {
+          const fieldMap: Record<string, keyof LeadValues> = {
+            company_name: "companyName",
+            contact_name: "contactName",
+            phone: "phone",
+            email: "email",
+            privacy_consent: "privacyConsent",
+          };
+          const serverErrors = Object.entries(details).reduce<LeadErrors>((result, [key, value]) => {
+            const field = fieldMap[key];
+            if (field) result[field] = Array.isArray(value) ? String(value[0]) : String(value);
+            return result;
+          }, {});
+          if (Object.keys(serverErrors).length > 0) setErrors(serverErrors);
+        }
+        throw new Error(body?.error?.message || "提交失败，请稍后重试。");
+      }
+      setSubmitted(true);
+      setValues(INITIAL_LEAD_VALUES);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "提交失败，请稍后重试。");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="flex min-h-72 flex-col items-center justify-center px-6 py-12 text-center">
+        <CheckCircle2 className="text-hermes" size={44} aria-hidden="true" />
+        <h3 className="mt-5 text-balance text-2xl font-black text-charcoal">提交成功</h3>
+        <p className="mt-3 max-w-lg text-pretty leading-7 text-muted">云璨顾问将在 1 个工作日内联系您，为您安排可道云 AI 网盘演示。</p>
+      </div>
+    );
+  }
+
+  const fieldClass = "mt-2 w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm text-charcoal outline-none transition-colors focus:border-hermes";
+  return (
+    <form className="border-t border-line px-5 py-7 md:px-8" noValidate onSubmit={submit}>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h3 className="text-balance text-xl font-black text-charcoal">留下联系方式</h3>
+          <p className="mt-1 text-pretty text-sm text-muted">架构师将在 1 个工作日内与您联系。</p>
+        </div>
+        <span className="rounded-full bg-hermes/10 px-3 py-1 text-sm font-bold text-hermes">免费咨询</span>
+      </div>
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <label className="block text-sm font-bold text-charcoal">
+          公司名称 <span className="text-hermes">*</span>
+          <input aria-describedby={errors.companyName ? "lead-company-error" : undefined} aria-invalid={Boolean(errors.companyName)} className={fieldClass} maxLength={60} name="companyName" onBlur={() => validateOne("companyName")} onChange={(event) => updateValue("companyName", event.target.value)} value={values.companyName} />
+          {errors.companyName ? <span className="mt-1 block text-sm text-red-700" id="lead-company-error">{errors.companyName}</span> : null}
+        </label>
+        <label className="block text-sm font-bold text-charcoal">
+          您的姓名 <span className="text-hermes">*</span>
+          <input aria-describedby={errors.contactName ? "lead-name-error" : undefined} aria-invalid={Boolean(errors.contactName)} className={fieldClass} maxLength={20} name="contactName" onBlur={() => validateOne("contactName")} onChange={(event) => updateValue("contactName", event.target.value)} value={values.contactName} />
+          {errors.contactName ? <span className="mt-1 block text-sm text-red-700" id="lead-name-error">{errors.contactName}</span> : null}
+        </label>
+        <label className="block text-sm font-bold text-charcoal">
+          手机号码 <span className="text-hermes">*</span>
+          <input aria-describedby={errors.phone ? "lead-phone-error" : undefined} aria-invalid={Boolean(errors.phone)} className={fieldClass} inputMode="numeric" maxLength={11} name="phone" onBlur={() => validateOne("phone")} onChange={(event) => updateValue("phone", event.target.value)} placeholder="用于演示预约联系" type="tel" value={values.phone} />
+          {errors.phone ? <span className="mt-1 block text-sm text-red-700" id="lead-phone-error">{errors.phone}</span> : null}
+        </label>
+        <label className="block text-sm font-bold text-charcoal">
+          邮箱地址 <span className="font-normal text-muted">（选填）</span>
+          <input aria-describedby={errors.email ? "lead-email-error" : undefined} aria-invalid={Boolean(errors.email)} className={fieldClass} maxLength={254} name="email" onBlur={() => validateOne("email")} onChange={(event) => updateValue("email", event.target.value)} placeholder="方便接收方案资料" type="email" value={values.email} />
+          {errors.email ? <span className="mt-1 block text-sm text-red-700" id="lead-email-error">{errors.email}</span> : null}
+        </label>
+      </div>
+      <label className="mt-4 block text-sm font-bold text-charcoal">
+        咨询需求 <span className="font-normal text-muted">（选填）</span>
+        <textarea className={`${fieldClass} min-h-24 resize-y`} maxLength={1000} name="requirement" onChange={(event) => updateValue("requirement", event.target.value)} placeholder="可填写部署规模、现有环境或希望重点了解的能力" value={values.requirement} />
+      </label>
+      <input aria-hidden="true" autoComplete="off" className="hidden" name="website" onChange={(event) => setWebsite(event.target.value)} tabIndex={-1} value={website} />
+      <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <label className="flex items-start gap-2 text-sm leading-6 text-muted">
+          <input checked={values.privacyConsent} className="mt-1 size-4 accent-hermes" name="privacyConsent" onBlur={() => validateOne("privacyConsent")} onChange={(event) => updateValue("privacyConsent", event.target.checked)} type="checkbox" />
+          <span>我已阅读并同意<a className="ml-1 font-bold text-hermes underline underline-offset-2" href="/legal/privacy-policy" target="_blank">隐私政策</a>，同意云璨为本次咨询联系我。</span>
+        </label>
+        <button className="inline-flex min-h-11 items-center justify-center rounded-lg bg-hermes px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-hermes-dark disabled:cursor-not-allowed disabled:opacity-60" disabled={submitting} type="submit">
+          {submitting ? "提交中..." : "提交咨询"}
+        </button>
+      </div>
+      {errors.privacyConsent ? <p className="mt-2 text-sm text-red-700">{errors.privacyConsent}</p> : null}
+      {submitError ? <p className="mt-3 text-sm text-red-700" role="alert">{submitError}</p> : null}
+    </form>
+  );
+}
+
+function AiDriveDemoModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const activeSlide = AI_DRIVE_DEMO_SLIDES[activeIndex];
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const video = videoRef.current;
+    if (!video) return;
+    video.currentTime = 0;
+    void video.play().catch(() => undefined);
+    return () => video.pause();
+  }, [activeIndex, open]);
+
+  const selectSlide = (nextIndex: number) => {
+    setActiveIndex((nextIndex + AI_DRIVE_DEMO_SLIDES.length) % AI_DRIVE_DEMO_SLIDES.length);
+  };
+
+  return (
+    <dialog aria-labelledby="ai-drive-demo-title" className="m-auto max-h-[92dvh] w-[min(100%-1rem,72rem)] overflow-hidden rounded-xl border border-line bg-white p-0 text-charcoal shadow-2xl backdrop:bg-charcoal/65" onCancel={onClose} onClick={(event) => { if (event.target === event.currentTarget) onClose(); }} onClose={onClose} ref={dialogRef}>
+      <div className="max-h-[92dvh] overflow-y-auto">
+        <div className="relative bg-charcoal px-5 pb-5 pt-14 md:px-8">
+          <button aria-label="关闭 AI 网盘演示" className="absolute right-4 top-4 inline-flex size-10 items-center justify-center rounded-full bg-white text-charcoal transition-colors hover:bg-hermes hover:text-white" onClick={onClose} type="button"><X size={18} /></button>
+          <div className="relative overflow-hidden rounded-lg bg-black">
+            <video aria-label={activeSlide.title} className="aspect-video w-full object-contain" controls key={activeSlide.video} muted onEnded={() => selectSlide(activeIndex + 1)} playsInline poster={activeSlide.poster} preload="metadata" ref={videoRef} src={activeSlide.video} />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent px-5 pb-16 pt-24 text-white md:px-8">
+              <p className="text-sm font-bold text-hermes">SCENE {String(activeIndex + 1).padStart(2, "0")}</p>
+              <h2 className="mt-1 text-balance text-2xl font-black md:text-4xl" id="ai-drive-demo-title">{activeSlide.title}</h2>
+              <p className="mt-2 max-w-3xl text-pretty text-sm leading-6 text-white/85 md:text-lg md:leading-7">{activeSlide.description}</p>
+              {activeSlide.highlights ? <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white md:text-base">{activeSlide.highlights.map((highlight) => <li className="flex items-center gap-2" key={highlight}><span className="size-2 rounded-full bg-hermes" aria-hidden="true" />{highlight}</li>)}</ul> : null}
+            </div>
+          </div>
+          <div className="mt-4 flex items-center justify-end gap-2">
+            <button aria-label="上一个演示场景" className="inline-flex size-10 items-center justify-center rounded-full border border-white/35 text-white transition-colors hover:border-hermes hover:bg-hermes" onClick={() => selectSlide(activeIndex - 1)} type="button"><ChevronLeft size={20} /></button>
+            {AI_DRIVE_DEMO_SLIDES.map((slide, index) => <button aria-label={`切换到场景 ${index + 1}: ${slide.title}`} aria-pressed={index === activeIndex} className={`size-2.5 rounded-full ${index === activeIndex ? "bg-hermes" : "bg-white/50"}`} key={slide.video} onClick={() => selectSlide(index)} type="button" />)}
+            <button aria-label="下一个演示场景" className="inline-flex size-10 items-center justify-center rounded-full border border-white/35 text-white transition-colors hover:border-hermes hover:bg-hermes" onClick={() => selectSlide(activeIndex + 1)} type="button"><ChevronRight size={20} /></button>
+          </div>
+        </div>
+        <ContactLeadForm />
+      </div>
+    </dialog>
+  );
+}
+
 interface PublicLandingPageProps {
   featuredArticles: PublicArticle[];
   solutionArticles: PublicArticle[];
@@ -214,24 +463,11 @@ interface PublicLandingPageProps {
 }
 
 export default function PublicLandingPage({ featuredArticles, solutionArticles, caseLogoWallImageUrl }: PublicLandingPageProps) {
-  const titleContainerRef = useRef<HTMLDivElement>(null);
   const [consultationOpen, setConsultationOpen] = useState(false);
+  const [aiDriveDemoOpen, setAiDriveDemoOpen] = useState(false);
   const homepageSolutionItems = buildHomepageSolutionItems(solutionArticles);
 
   useEffect(() => {
-    const lens = document.getElementById("hero-lens");
-    const moveCursor = (e: MouseEvent) => {
-      if (lens && titleContainerRef.current) {
-        const rect = titleContainerRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const mask = `circle(80px at ${x}px ${y}px)`;
-        (lens.style as CSSStyleDeclaration & { webkitClipPath?: string }).webkitClipPath = mask;
-        lens.style.clipPath = mask;
-      }
-    };
-
-    window.addEventListener("mousemove", moveCursor);
     const counter = { val: 0 };
     gsap.to(counter, {
       val: 99.98,
@@ -246,7 +482,7 @@ export default function PublicLandingPage({ featuredArticles, solutionArticles, 
       }
     });
 
-    return () => window.removeEventListener("mousemove", moveCursor);
+    return () => undefined;
   }, []);
 
   useEffect(() => {
@@ -312,60 +548,41 @@ export default function PublicLandingPage({ featuredArticles, solutionArticles, 
 
   return (
     <PublicLayout active="landing">
+      <ConsultationModal onClose={() => setConsultationOpen(false)} open={consultationOpen} />
+      <AiDriveDemoModal onClose={() => setAiDriveDemoOpen(false)} open={aiDriveDemoOpen} />
       <section className="relative pt-40 pb-20 px-6 overflow-hidden min-h-[90vh] flex items-center">
         <HeroScene />
         <div className="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-20 items-center">
           <div>
-            <div className="inline-block px-4 py-1.5 bg-hermes/10 rounded-full mb-6">
-              <span className="text-hermes text-xs font-bold tracking-widest uppercase flex items-center gap-2">
-                <Activity size={12} className="animate-pulse" /> Global Enterprise Cloud Solution
-              </span>
+            <div className="inline-flex items-center gap-2 rounded-full border border-hermes/25 bg-hermes/10 px-4 py-2 text-sm font-bold text-hermes">
+              <Activity size={14} aria-hidden="true" /> 本地部署 · LLM 接入
             </div>
-            <div ref={titleContainerRef} className="relative group/hero overflow-visible mb-12">
-              <h1 className="text-5xl lg:text-7xl font-black text-charcoal leading-tight pointer-events-none select-none">
-                让云贴近业务，
+            <div className="mt-7">
+              <h1 className="text-balance text-5xl font-black leading-tight text-charcoal lg:text-6xl">
+                私有化 AI 网盘
                 <br />
-                让 AI 驱动增长
+                <span className="text-hermes">数据不出企业，AI 直接答</span>
               </h1>
-              <div
-                id="hero-lens"
-                className="absolute inset-0 pointer-events-none select-none hidden md:block"
-                style={{
-                  clipPath: "circle(0px at 0px 0px)",
-                  WebkitClipPath: "circle(0px at 0px 0px)"
-                }}
-              >
-                <h1 className="text-5xl lg:text-7xl font-black text-hermes leading-tight">
-                  让云贴近业务，
-                  <br />
-                  让 AI 驱动增长
-                </h1>
-              </div>
             </div>
-            <p className="text-xl text-muted leading-relaxed mb-10 max-w-xl">
-              整合公有云、私有云与 AI 能力，为企业提供全栈云解决方案与定制开发服务，助力数智化转型。
+            <p className="mt-6 max-w-xl text-pretty text-lg leading-8 text-muted">
+              企业文件留在内网，AI 能力直接接入。右键文件或文件夹即可提问，也能快速搭建业务智能体，文件不动，知识库不重建。
             </p>
-            <div className="flex flex-wrap gap-4">
-              <button
-                type="button"
-                onClick={() => setConsultationOpen(true)}
-                className="bg-hermes text-white px-8 py-4 rounded-full font-bold shadow-xl shadow-hermes/30"
-              >
-                立即咨询架构专家
+            <div className="mt-6 flex flex-wrap gap-2 text-sm font-bold text-charcoal">
+              {["文件夹问答", "LLM 灵活接入", "快速搭建智能体", "数据不出企业"].map((item) => (
+                <span className="rounded-full border border-line bg-white px-3 py-2" key={item}>{item}</span>
+              ))}
+            </div>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <button className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-hermes px-6 py-3 font-bold text-white transition-colors hover:bg-hermes-dark" onClick={() => setAiDriveDemoOpen(true)} type="button">
+                看 AI 网盘怎么用 <ArrowRight size={18} aria-hidden="true" />
+              </button>
+              <button className="inline-flex min-h-12 items-center justify-center rounded-lg border border-line bg-white px-6 py-3 font-bold text-charcoal transition-colors hover:border-hermes hover:text-hermes" onClick={() => setConsultationOpen(true)} type="button">
+                联系云璨顾问
               </button>
             </div>
-
-            <div className="mt-16 grid grid-cols-3 gap-8">
-              {[
-                { label: "IT服务经验", val: "20年+" },
-                { label: "客户案例", val: "500+" },
-                { label: "解决方案", val: "100+" }
-              ].map((stat, i) => (
-                <div key={i} className="border-l-2 border-hermes/20 pl-4">
-                  <div className="text-2xl font-black text-charcoal">{stat.val}</div>
-                  <div className="text-[10px] text-muted font-bold mt-1 uppercase tracking-widest">{stat.label}</div>
-                </div>
-              ))}
+            <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
+              <span>阿里云授权合作伙伴</span>
+              <span>500+ 企业客户的选择</span>
             </div>
           </div>
 
@@ -470,7 +687,6 @@ export default function PublicLandingPage({ featuredArticles, solutionArticles, 
         </section>
       ) : null}
 
-      <ConsultationModal open={consultationOpen} onClose={() => setConsultationOpen(false)} />
     </PublicLayout>
   );
 }

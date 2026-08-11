@@ -53,6 +53,13 @@ NEXT_PUBLIC_EDITOR_BASE_URL = env("NEXT_PUBLIC_EDITOR_BASE_URL", default="")
 PUBLIC_MEDIA_URL = env("PUBLIC_MEDIA_URL", default="/media/")
 PUBLIC_WEB_REVALIDATE_URL = env("PUBLIC_WEB_REVALIDATE_URL", default="")
 PUBLIC_WEB_REVALIDATE_TOKEN = env("PUBLIC_WEB_REVALIDATE_TOKEN", default="")
+EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = env("EMAIL_HOST", default="")
+EMAIL_PORT = env("EMAIL_PORT", default=587)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = env("EMAIL_USE_TLS", default=True)
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="no-reply@yuncan.com")
 
 INSTALLED_APPS = [
     "jazzmin",
@@ -69,6 +76,7 @@ INSTALLED_APPS = [
     "cms_apps.analytics.apps.AnalyticsConfig",
     "cms_apps.knowledge.apps.KnowledgeConfig",
     "cms_apps.publishing.apps.PublishingConfig",
+    "cms_apps.leads.apps.LeadsConfig",
     "apps.sys_settings.apps.SysSettingsConfig",
     "apps.media_library.apps.MediaLibraryConfig",
     "apps.aliyun_monitor.apps.AliyunMonitorConfig",
@@ -202,7 +210,7 @@ JAZZMIN_SETTINGS = {
         {"name": "管理后台", "url": "admin:index"},
         {"name": "前台首页", "url": "/"},
     ],
-    "order_with_respect_to": ["simple_cms", "media_library", "users", "sys_settings", "aliyun_monitor"],
+    "order_with_respect_to": ["simple_cms", "media_library", "cms_leads", "users", "sys_settings", "aliyun_monitor"],
     "hide_apps": [
         "taggit",
     ],
@@ -217,6 +225,8 @@ JAZZMIN_SETTINGS = {
         "simple_cms.Category": "fas fa-tags",
         "media_library.ImageItem": "fas fa-image",
         "media_library.FileItem": "fas fa-file",
+        "cms_leads.ContactLead": "fas fa-user-headset",
+        "cms_leads.LeadNotificationRule": "fas fa-envelope",
         "sys_settings.SiteSetting": "fas fa-sliders-h",
     },
     "default_icon_parents": "fas fa-chevron-circle-right",

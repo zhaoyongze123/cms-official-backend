@@ -4,7 +4,7 @@ info:
   version: v1
   description: Next.js Studio 调用 Django CMS 的公开 API 契约。
 servers:
-  - url: http://127.0.0.1:8001
+  - url: http://127.0.0.1:9801
 paths:
   /api/ai/settings/generation/:
     get:
@@ -81,6 +81,45 @@ paths:
           description: slug 已变更，返回新 slug 跳转位置
         "404":
           description: 公开文章不存在
+  /api/public/leads/:
+    post:
+      summary: 提交官网咨询线索
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [company_name, contact_name, phone, privacy_consent]
+              properties:
+                company_name:
+                  type: string
+                  maxLength: 60
+                contact_name:
+                  type: string
+                  maxLength: 20
+                phone:
+                  type: string
+                  pattern: '^1[3-9]\\d{9}$'
+                email:
+                  type: string
+                  format: email
+                requirement:
+                  type: string
+                  maxLength: 1000
+                source:
+                  type: string
+                referrer:
+                  type: string
+                privacy_consent:
+                  type: boolean
+      responses:
+        "201":
+          description: 线索已接收
+        "400":
+          description: 字段校验失败
+        "429":
+          description: 提交过于频繁
   /api/public/wechat/js-config/:
     get:
       summary: 获取微信公众号网页 JS-SDK 签名配置

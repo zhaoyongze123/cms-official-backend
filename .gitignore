@@ -42,6 +42,12 @@ staticfiles/
 media.tar.gz
 db_dump.sql
 
+# 官网 AI 网盘演示素材：仅提交发布版本，原始录制文件仍保持本地。
+!apps/public-web/public/media/
+!apps/public-web/public/media/ai-drive/
+!apps/public-web/public/media/ai-drive/*.mp4
+!apps/public-web/public/media/ai-drive/*.jpg
+
 # Environment Variables
 .env
 .env.local
