@@ -298,7 +298,7 @@ function ContactLeadForm() {
     setSubmitting(true);
     setSubmitError("");
     try {
-      const response = await fetch("/api/contact-leads", {
+      const response = await fetch("/contact-leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
