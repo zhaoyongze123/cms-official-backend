@@ -243,7 +243,7 @@ echo "[deploy] 清理当前 Compose 项目旧容器"
 cleanup_reserved_port_containers
 
 echo "[deploy] 更新后端容器"
-if ! "${COMPOSE_CMD[@]}" up -d --build --remove-orphans db redis web ai-service worker; then
+if ! "${COMPOSE_CMD[@]}" up -d --build --remove-orphans db redis web ai-service worker lead-notifier; then
   echo "[deploy] docker compose up 失败" >&2
   print_compose_diagnostics >&2
   exit 1

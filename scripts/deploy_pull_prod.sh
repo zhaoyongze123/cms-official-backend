@@ -176,10 +176,10 @@ echo "[deploy-pull] 停止当前 Compose 项目"
 cleanup_reserved_ports
 
 echo "[deploy-pull] 拉取最新镜像"
-"${COMPOSE_CMD[@]}" pull db redis web ai-service worker public-web editor-web
+"${COMPOSE_CMD[@]}" pull db redis web ai-service worker lead-notifier public-web editor-web
 
 echo "[deploy-pull] 启动后端核心服务"
-"${COMPOSE_CMD[@]}" up -d --remove-orphans db redis web ai-service worker
+"${COMPOSE_CMD[@]}" up -d --remove-orphans db redis web ai-service worker lead-notifier
 wait_http "http://127.0.0.1:18001/" 24 5
 
 echo "[deploy-pull] 执行数据库迁移"

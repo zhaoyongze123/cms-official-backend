@@ -1,11 +1,13 @@
 from datetime import datetime, time, timedelta
+from unittest.mock import patch
 
 from django.core import mail
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from .models import ContactLead, LeadEmailDelivery, LeadNotificationRule
-from .services import process_pending_deliveries
+from .admin import LeadNotificationRuleAdminForm
+from .models import ContactLead, LeadEmailConfiguration, LeadEmailDelivery, LeadNotificationRule
+from .services import _email_connection_and_sender, process_pending_deliveries
 
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
@@ -88,3 +90,44 @@ class ContactLeadApiTests(TestCase):
         self.assertEqual(delivery.status, LeadEmailDelivery.Status.SENT)
         rule.refresh_from_db()
         self.assertEqual(rule.last_scheduled_for, scheduled_at.date())
+
+    def test_immediate_rule_does_not_require_daily_time(self):
+        form = LeadNotificationRuleAdminForm(
+            data={
+                "name": "销售即时通知",
+                "recipient_email": "sales@example.com",
+                "schedule": LeadNotificationRule.Schedule.IMMEDIATE,
+                "is_active": "on",
+            }
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        rule = form.save()
+        self.assertEqual(rule.daily_send_at, time(9, 0))
+
+    @patch("cms_apps.leads.services.get_connection")
+    def test_admin_smtp_configuration_is_encrypted_and_used(self, get_connection):
+        configuration = LeadEmailConfiguration(
+            host="smtp.example.com",
+            port=465,
+            username="mailer@example.com",
+            from_email="mailer@example.com",
+            use_tls=False,
+            use_ssl=True,
+        )
+        configuration.set_password("app-password")
+        configuration.save()
+
+        self.assertNotIn("app-password", configuration.password_encrypted)
+        self.assertEqual(configuration.get_password(), "app-password")
+        _email_connection_and_sender()
+        get_connection.assert_called_once_with(
+            backend="django.core.mail.backends.smtp.EmailBackend",
+            host="smtp.example.com",
+            port=465,
+            username="mailer@example.com",
+            password="app-password",
+            use_tls=False,
+            use_ssl=True,
+            timeout=20,
+        )

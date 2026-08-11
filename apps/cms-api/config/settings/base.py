@@ -60,6 +60,7 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = env("EMAIL_USE_TLS", default=True)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="no-reply@yuncan.com")
+LEAD_EMAIL_ENCRYPTION_KEY = env("LEAD_EMAIL_ENCRYPTION_KEY", default="")
 
 INSTALLED_APPS = [
     "jazzmin",
@@ -227,6 +228,7 @@ JAZZMIN_SETTINGS = {
         "media_library.FileItem": "fas fa-file",
         "cms_leads.ContactLead": "fas fa-user-headset",
         "cms_leads.LeadNotificationRule": "fas fa-envelope",
+        "cms_leads.LeadEmailConfiguration": "fas fa-paper-plane",
         "sys_settings.SiteSetting": "fas fa-sliders-h",
     },
     "default_icon_parents": "fas fa-chevron-circle-right",

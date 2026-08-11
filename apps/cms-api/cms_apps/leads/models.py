@@ -8,6 +8,8 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
 
+from .crypto import decrypt_secret, encrypt_secret
+
 
 MOBILE_PHONE_PATTERN = r"^1[3-9]\d{9}$"
 mobile_phone_validator = RegexValidator(
@@ -82,6 +84,45 @@ class LeadNotificationRule(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name} ({self.recipient_email})"
+
+
+class LeadEmailConfiguration(models.Model):
+    """官网线索邮件的唯一 SMTP 配置。"""
+
+    host = models.CharField("SMTP 服务器", max_length=255)
+    port = models.PositiveIntegerField("SMTP 端口", default=587)
+    username = models.CharField("发信账号", max_length=254)
+    password_encrypted = models.TextField("加密后的授权密码", blank=True, editable=False)
+    from_email = models.EmailField("发件人邮箱", max_length=254)
+    use_tls = models.BooleanField("使用 TLS", default=True)
+    use_ssl = models.BooleanField("使用 SSL", default=False)
+    timeout = models.PositiveSmallIntegerField("连接超时（秒）", default=20)
+    test_recipient_email = models.EmailField("测试收件邮箱", max_length=254, blank=True)
+    is_active = models.BooleanField("启用此发信配置", default=True)
+    updated_at = models.DateTimeField("更新时间", auto_now=True)
+
+    class Meta:
+        verbose_name = "邮件发送配置"
+        verbose_name_plural = "邮件发送配置"
+
+    def save(self, *args, **kwargs) -> None:
+        if self._state.adding:
+            self.pk = 1
+        super().save(*args, **kwargs)
+
+    def clean(self) -> None:
+        super().clean()
+        if self.use_tls and self.use_ssl:
+            raise ValidationError("TLS 和 SSL 不能同时启用。")
+
+    def set_password(self, password: str) -> None:
+        self.password_encrypted = encrypt_secret(password)
+
+    def get_password(self) -> str:
+        return decrypt_secret(self.password_encrypted)
+
+    def __str__(self) -> str:
+        return self.from_email or "未配置"
 
 
 class LeadEmailDelivery(models.Model):

@@ -3,11 +3,11 @@ from __future__ import annotations
 from datetime import datetime, time, timedelta
 from typing import Iterable
 
-from django.core.mail import send_mail
+from django.core.mail import get_connection, send_mail
 from django.db import transaction
 from django.utils import timezone
 
-from .models import ContactLead, LeadEmailDelivery, LeadNotificationRule
+from .models import ContactLead, LeadEmailConfiguration, LeadEmailDelivery, LeadNotificationRule
 
 
 def queue_immediate_notifications(lead: ContactLead) -> None:
@@ -82,6 +82,48 @@ def _render_delivery(delivery: LeadEmailDelivery) -> tuple[str, str]:
     return subject, "\n\n".join(_lead_lines(leads)) or "本时段没有新增咨询线索。"
 
 
+def _connection_for_configuration(configuration: LeadEmailConfiguration) -> tuple[object, str]:
+    """从指定的后台 SMTP 配置创建邮件连接。"""
+    return (
+        get_connection(
+            backend="django.core.mail.backends.smtp.EmailBackend",
+            host=configuration.host,
+            port=configuration.port,
+            username=configuration.username,
+            password=configuration.get_password(),
+            use_tls=configuration.use_tls,
+            use_ssl=configuration.use_ssl,
+            timeout=configuration.timeout,
+        ),
+        configuration.from_email,
+    )
+
+
+def _email_connection_and_sender() -> tuple[object, str | None]:
+    """优先从后台配置创建 SMTP 连接，未配置时兼容环境变量方案。"""
+    configuration = LeadEmailConfiguration.objects.filter(is_active=True).first()
+    if configuration is None:
+        return get_connection(), None
+    return _connection_for_configuration(configuration)
+
+
+def send_test_email(configuration: LeadEmailConfiguration) -> None:
+    """使用当前配置向后台设置的测试收件人发送验证邮件。"""
+    if not configuration.is_active:
+        raise ValueError("请先启用此邮件发送配置。")
+    if not configuration.test_recipient_email:
+        raise ValueError("请先填写测试收件邮箱。")
+    connection, sender = _connection_for_configuration(configuration)
+    send_mail(
+        "云璨官网邮件发送测试",
+        "这是一封来自云璨官网后台的测试邮件。收到此邮件表示 SMTP 配置可用。",
+        sender,
+        [configuration.test_recipient_email],
+        connection=connection,
+        fail_silently=False,
+    )
+
+
 def process_pending_deliveries(now: datetime | None = None, limit: int = 50) -> int:
     """发送待处理邮件。失败记录会保留，供下一轮重试与后台排查。"""
     now = now or timezone.now()
@@ -108,7 +150,8 @@ def process_pending_deliveries(now: datetime | None = None, limit: int = 50) -> 
             delivery.save(update_fields=["status", "attempts", "updated_at"])
         try:
             subject, body = _render_delivery(delivery)
-            send_mail(subject, body, None, [delivery.recipient_email], fail_silently=False)
+            connection, sender = _email_connection_and_sender()
+            send_mail(subject, body, sender, [delivery.recipient_email], connection=connection, fail_silently=False)
         except Exception as exc:  # pragma: no cover - 真实邮件服务故障仅在集成环境发生
             LeadEmailDelivery.objects.filter(pk=delivery_id).update(
                 status=LeadEmailDelivery.Status.FAILED,

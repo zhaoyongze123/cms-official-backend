@@ -111,6 +111,23 @@ services:
       redis:
         condition: service_healthy
 
+  lead-notifier:
+    <<: *backend-image
+    restart: unless-stopped
+    entrypoint: []
+    working_dir: /app/apps/cms-api
+    command: ["python", "-m", "cms_apps.leads.notifier"]
+    env_file:
+      - .env.prod
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      PYTHONPATH: /app/apps/cms-api:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   editor-web:
     <<: *frontend-common
     image: ${STUDIO_IMAGE:-ghcr.io/zhaoyongze123/cms-studio-web:latest}
