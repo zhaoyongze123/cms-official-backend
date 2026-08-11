@@ -10,7 +10,10 @@ from .models import ContactLead, LeadEmailConfiguration, LeadEmailDelivery, Lead
 from .services import _email_connection_and_sender, process_pending_deliveries
 
 
-@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+@override_settings(
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}},
+)
 class ContactLeadApiTests(TestCase):
     def test_public_endpoint_validates_and_creates_lead(self):
         response = self.client.post(
@@ -23,6 +26,7 @@ class ContactLeadApiTests(TestCase):
                 "privacy_consent": True,
             },
             content_type="application/json",
+            secure=True,
         )
         self.assertEqual(response.status_code, 201)
         self.assertEqual(ContactLead.objects.count(), 1)
@@ -38,6 +42,7 @@ class ContactLeadApiTests(TestCase):
                 "privacy_consent": True,
             },
             content_type="application/json",
+            secure=True,
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn("phone", response.json()["error"]["details"])
@@ -58,6 +63,7 @@ class ContactLeadApiTests(TestCase):
                 "privacy_consent": True,
             },
             content_type="application/json",
+            secure=True,
         )
         self.assertEqual(response.status_code, 201)
         self.assertEqual(LeadEmailDelivery.objects.count(), 1)
