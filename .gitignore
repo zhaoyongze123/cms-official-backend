@@ -47,6 +47,8 @@ db_dump.sql
 !apps/public-web/public/media/ai-drive/
 !apps/public-web/public/media/ai-drive/*.mp4
 !apps/public-web/public/media/ai-drive/*.jpg
+apps/public-web/public/media/ai-drive/page@*.webm
+apps/public-web/public/media/ai-drive/raw/
 
 # Environment Variables
 .env
@@ -79,6 +81,7 @@ docker-compose.override.yml
 
 # Project Specific (Temporary/Debug files)
 jazzmin_change_form.html
+tmp/
 # Playwright artifacts
 output/
 .vendor-wheels/
