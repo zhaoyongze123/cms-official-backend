@@ -27,7 +27,7 @@ class ArticleListView(ListView):
     paginate_by = 10
 
     def dispatch(self, request, *args, **kwargs):
-        public_web_url = getattr(settings, "PUBLIC_WEB_BASE_URL", "http://127.0.0.1:3003").rstrip("/")
+        public_web_url = getattr(settings, "PUBLIC_WEB_BASE_URL", "http://127.0.0.1:9303").rstrip("/")
         return redirect(public_web_url)
 
     def get_queryset(self):

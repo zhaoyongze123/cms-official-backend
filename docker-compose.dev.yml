@@ -4,7 +4,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "127.0.0.1:15432:5432"
+      - "127.0.0.1:9543:5432"
     environment:
       POSTGRES_DB: wagtailcms
       POSTGRES_USER: wagtailcms
@@ -18,7 +18,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "127.0.0.1:16379:6379"
+      - "127.0.0.1:9637:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -26,6 +26,7 @@ services:
       retries: 5
 
   web:
+    image: cms-web
     build: .
     working_dir: /app/apps/cms-api
     command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
@@ -33,12 +34,12 @@ services:
       - .:/app
       - media_data:/app/apps/cms-api/media
     ports:
-      - "127.0.0.1:8001:8000"
+      - "127.0.0.1:9801:8000"
     env_file:
       - .env
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.dev
-      PUBLIC_WEB_REVALIDATE_URL: http://public-web:3003/api/revalidate
+      PUBLIC_WEB_REVALIDATE_URL: http://public-web:9303/api/revalidate
       PUBLIC_WEB_REVALIDATE_TOKEN: ${PUBLIC_WEB_REVALIDATE_TOKEN:-dev-revalidate-token}
       http_proxy: ""
       https_proxy: ""
@@ -60,14 +61,14 @@ services:
       retries: 10
 
   ai-service:
-    build: .
+    image: cms-web
     entrypoint: []
     working_dir: /app/apps/ai-service
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     volumes:
       - .:/app
     ports:
-      - "127.0.0.1:8002:8000"
+      - "127.0.0.1:9802:8000"
     env_file:
       - .env
     environment:
@@ -90,7 +91,7 @@ services:
       retries: 10
 
   worker:
-    build: .
+    image: cms-web
     entrypoint: []
     working_dir: /app/apps/ai-service
     command: ["python", "-m", "app.worker_stub"]
@@ -114,6 +115,31 @@ services:
       redis:
         condition: service_healthy
 
+  lead-notifier:
+    image: cms-web
+    working_dir: /app/apps/cms-api
+    command: ["python", "-m", "cms_apps.leads.notifier"]
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      PYTHONPATH: /app/apps/cms-api:/app
+      http_proxy: ""
+      https_proxy: ""
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      all_proxy: ""
+      ALL_PROXY: ""
+      NO_PROXY: localhost,127.0.0.1,web,db,redis
+      no_proxy: localhost,127.0.0.1,web,db,redis
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   editor-web:
     image: node:22-bookworm
     working_dir: /app/apps/studio-web
@@ -121,21 +147,22 @@ services:
       [
         "sh",
         "-c",
-        "if [ ! -x node_modules/.bin/next ]; then npm install --include=dev --no-audit --no-fund; fi && npm run dev -- --hostname 0.0.0.0 --port 3000",
+        "if [ ! -x node_modules/.bin/next ]; then npm install --include=dev --no-audit --no-fund; fi && npm run dev -- --webpack --hostname 0.0.0.0 --port 3000",
       ]
     volumes:
       - .:/app
       - editor_web_node_modules:/app/apps/studio-web/node_modules
       - editor_web_next_cache:/app/apps/studio-web/.next
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:9300:3000"
     env_file:
       - .env
     environment:
-      NEXT_EDITOR_DEV_ORIGIN: http://127.0.0.1:8001
+      NEXT_EDITOR_DEV_ORIGIN: http://127.0.0.1:9801
       NEXT_PUBLIC_DJANGO_MEDIA_URL: /media/
       WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"
+      NODE_OPTIONS: --max-old-space-size=512
       NODE_ENV: development
       http_proxy: ""
       https_proxy: ""
@@ -161,23 +188,26 @@ services:
       [
         "sh",
         "-c",
-        "if [ ! -x node_modules/.bin/next ]; then npm install --include=dev --no-audit --no-fund; fi && npm run dev -- --hostname 0.0.0.0 --port 3003",
+        "npm install --include=dev --no-audit --no-fund && npm run build && npm run start",
       ]
     volumes:
       - .:/app
       - public_web_node_modules:/app/apps/public-web/node_modules
       - public_web_next_cache:/app/apps/public-web/.next
     ports:
-      - "127.0.0.1:3003:3003"
+      - "127.0.0.1:9303:9303"
     env_file:
       - .env
     environment:
-      NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL: http://127.0.0.1:8001
-      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3003
+      DJANGO_INTERNAL_BASE_URL: http://web:8000
+      NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL: http://127.0.0.1:9801
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:9303
       PUBLIC_WEB_REVALIDATE_TOKEN: ${PUBLIC_WEB_REVALIDATE_TOKEN:-dev-revalidate-token}
       WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"
-      NODE_ENV: development
+      NEXT_NODE_MAX_OLD_SPACE_SIZE: "512"
+      NODE_OPTIONS: --max-old-space-size=768
+      NODE_ENV: production
       http_proxy: ""
       https_proxy: ""
       HTTP_PROXY: ""
@@ -190,7 +220,7 @@ services:
       web:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3003/solutions').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:9303/solutions').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))"]
       interval: 15s
       timeout: 10s
       retries: 20

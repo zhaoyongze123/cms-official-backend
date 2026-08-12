@@ -171,23 +171,23 @@ COMPOSE_DOCKER_CLI_BUILD=0 DOCKER_BUILDKIT=0 docker compose -f docker-compose.de
 
 ### 开发环境端口
 
-- Django：`http://127.0.0.1:8001`
-- Django Health：`http://127.0.0.1:8001/api/health/`
-- FastAPI Health：`http://127.0.0.1:8002/health`
-- Studio Web：`http://127.0.0.1:3000/django-admin/next-editor/login`
-- Public Web：`http://127.0.0.1:3003/solutions`
-- PostgreSQL：`127.0.0.1:15432`
-- Redis：`127.0.0.1:16379`
+- Django：`http://127.0.0.1:9801`
+- Django Health：`http://127.0.0.1:9801/api/health/`
+- FastAPI Health：`http://127.0.0.1:9802/health`
+- Studio Web：`http://127.0.0.1:9300/django-admin/next-editor/login`
+- Public Web：`http://127.0.0.1:9303/solutions`
+- PostgreSQL：`127.0.0.1:9543`
+- Redis：`127.0.0.1:9637`
 
 ### 开发环境最小验证
 
 ```bash
 docker compose -f docker-compose.dev.yml ps
 docker compose -f docker-compose.dev.yml exec -T web python manage.py check
-curl -I http://127.0.0.1:8001/api/health/
-curl -I http://127.0.0.1:8002/health
-curl -I http://127.0.0.1:3000/django-admin/next-editor/login
-curl -I http://127.0.0.1:3003/solutions
+curl -I http://127.0.0.1:9801/api/health/
+curl -I http://127.0.0.1:9802/health
+curl -I http://127.0.0.1:9300/django-admin/next-editor/login
+curl -I http://127.0.0.1:9303/solutions
 ```
 
 ## ✅ 测试与质量校验
@@ -203,7 +203,7 @@ docker compose -f docker-compose.dev.yml exec -T web python manage.py makemigrat
 ### FastAPI
 
 ```bash
-curl -s http://127.0.0.1:8002/health
+curl -s http://127.0.0.1:9802/health
 docker compose -f docker-compose.dev.yml exec -T ai-service pytest
 ```
 

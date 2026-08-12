@@ -110,7 +110,7 @@
 ```bash
 docker compose exec -T web python manage.py check
 docker compose exec -T web python manage.py test
-curl -I http://127.0.0.1:8001/
+curl -I http://127.0.0.1:9801/
 ```
 
 Django 迁移验证：
@@ -123,7 +123,7 @@ docker compose exec -T web python manage.py migrate
 FastAPI 验证：
 
 ```bash
-curl -s http://127.0.0.1:8002/health
+curl -s http://127.0.0.1:9802/health
 docker compose exec -T ai-service pytest
 ```
 

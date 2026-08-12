@@ -6,6 +6,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
 const nextBin = path.join(projectRoot, "node_modules", "next", "dist", "bin", "next");
+const publicWebPort = "9303";
+const maxOldSpaceSize = process.env.NEXT_NODE_MAX_OLD_SPACE_SIZE;
 
 const command = process.argv[2];
 
@@ -19,9 +21,14 @@ const childEnv = { ...process.env };
 // 某些本地运行环境会注入异常的 localStorage 实现，导致 Next dev overlay 在服务端抛错。
 delete childEnv.NODE_OPTIONS;
 
+const nodeArgs = ["--no-experimental-webstorage"];
+if (maxOldSpaceSize) {
+  nodeArgs.push(`--max-old-space-size=${maxOldSpaceSize}`);
+}
+
 const child = spawn(
   process.execPath,
-  ["--no-experimental-webstorage", nextBin, command, "--hostname", "0.0.0.0", "--port", "3003"],
+  [...nodeArgs, nextBin, command, "--hostname", "0.0.0.0", "--port", publicWebPort],
   {
     cwd: projectRoot,
     env: childEnv,

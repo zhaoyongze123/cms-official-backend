@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STUDIO_DIR="$ROOT_DIR/apps/studio-web"
-DJANGO_BASE_URL="${DJANGO_BASE_URL:-http://127.0.0.1:8001}"
+DJANGO_BASE_URL="${DJANGO_BASE_URL:-http://127.0.0.1:9801}"
 STUDIO_BASE_PATH="/django-admin/next-editor"
 VERIFY_ADMIN_USERNAME="${VERIFY_ADMIN_USERNAME:-codex-studio-check}"
 VERIFY_ADMIN_PASSWORD="${VERIFY_ADMIN_PASSWORD:-codex-local-only-verify-pass}"

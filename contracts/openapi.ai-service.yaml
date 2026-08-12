@@ -4,7 +4,7 @@ info:
   version: v1
   description: Django CMS 调用 FastAPI AI/RAG Service 的内部 API 契约。
 servers:
-  - url: http://127.0.0.1:8002
+  - url: http://127.0.0.1:9802
 paths:
   /health:
     get:

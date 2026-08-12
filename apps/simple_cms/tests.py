@@ -363,13 +363,13 @@ class ArticleAdminEditorUrlTests(SimpleTestCase):
     def test_article_list_does_not_display_publish_date(self):
         self.assertNotIn("publish_date", ArticleAdmin.list_display)
 
-    @override_settings(NEXT_PUBLIC_EDITOR_BASE_URL="http://127.0.0.1:3000")
+    @override_settings(NEXT_PUBLIC_EDITOR_BASE_URL="http://127.0.0.1:9300")
     def test_build_next_editor_url_prefers_public_editor_origin(self):
         url = ArticleAdmin._build_next_editor_url("/django-admin/articles/17/")
 
         self.assertEqual(
             url,
-            "http://127.0.0.1:3000/django-admin/next-editor/django-admin/articles/17/",
+            "http://127.0.0.1:9300/django-admin/next-editor/django-admin/articles/17/",
         )
 
     @override_settings(NEXT_PUBLIC_EDITOR_BASE_URL="https://www.yuncan.com/django-admin/next-editor")

@@ -33,7 +33,7 @@ ARTICLE_TAGS = [
     "积分规则",
 ]
 ARTICLE_PUBLISH_AT = datetime(2026, 5, 11, 9, 0, 0)
-CANONICAL_URL = f"http://127.0.0.1:3003/articles/{ARTICLE_SLUG}"
+CANONICAL_URL = f"http://127.0.0.1:9303/articles/{ARTICLE_SLUG}"
 
 
 @dataclass

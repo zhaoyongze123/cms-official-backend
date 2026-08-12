@@ -24,8 +24,8 @@
 docker compose -f docker-compose.dev.yml ps
 docker compose -f docker-compose.dev.yml exec -T web python manage.py check
 docker compose -f docker-compose.dev.yml exec -T web python manage.py test
-curl -I http://127.0.0.1:8001/api/health/
-curl -s http://127.0.0.1:8002/health
+curl -I http://127.0.0.1:9801/api/health/
+curl -s http://127.0.0.1:9802/health
 ```
 
 前端变更建议补充：
