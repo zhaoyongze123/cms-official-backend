@@ -207,29 +207,40 @@ function ConsultationModal({ open, onClose }: { open: boolean; onClose: () => vo
   );
 }
 
-const AI_DRIVE_DEMO_SLIDES = [
+type AiDriveDemoSlide = {
+  title: string;
+  description: string;
+  highlights: string[];
+  video: string;
+  poster: string;
+};
+
+const DEFAULT_AI_DRIVE_DEMO_SLIDES: AiDriveDemoSlide[] = [
   {
-    title: "文件/文件夹直接问 · 答案就在资料里",
-    description: "右键即可发起提问，AI 基于当前文件夹资料整理答案，无需逐份翻阅。",
-    highlights: ["在熟悉的文件管理界面直接提问", "快速获取资料中的关键信息"],
+    title: "右键制度文件，直接开始提问",
+    description: "在 AI 测试资料中选中制度文件，从右键菜单进入 AI 助手，问题和资料上下文同步带入。",
+    highlights: ["员工考勤管理制度", "答案引用当前资料"],
     video: "/media/ai-drive/scene-01-folder-qa.mp4",
     poster: "/media/ai-drive/scene-01-folder-qa.jpg",
   },
   {
-    title: "快速搭建智能体，成为业务助手",
-    description: "创建智能体、关联知识库后即可围绕业务资料开始问答。",
+    title: "配置智能体，关联 AI 解决方案知识库",
+    description: "新建智能体后直接选择 AI 解决方案文档作为知识库，再围绕企业资料进行问答。",
+    highlights: [],
     video: "/media/ai-drive/scene-02-agent.mp4",
     poster: "/media/ai-drive/scene-02-agent.jpg",
   },
   {
-    title: "模型服务可配置，适配企业环境",
-    description: "在后台统一查看和配置模型服务、调用参数与可用能力。",
+    title: "后台统一管理模型服务与参数",
+    description: "在 AI 助手管理后台查看模型服务、模型选择和调用参数，按企业环境配置。",
+    highlights: [],
     video: "/media/ai-drive/scene-03-model-settings.mp4",
     poster: "/media/ai-drive/scene-03-model-settings.jpg",
   },
   {
-    title: "上传并检索，让资料成为知识库",
-    description: "上传文件并配置 RAG 检索增强，让企业资料可被准确调用。",
+    title: "上传资料，完成解析并用于 RAG 检索",
+    description: "上传 Word 或 TXT 后查看解析状态，并在 RAG 检索增强中确认资料可被召回。",
+    highlights: [],
     video: "/media/ai-drive/scene-04-upload-rag.mp4",
     poster: "/media/ai-drive/scene-04-upload-rag.jpg",
   },
@@ -404,11 +415,11 @@ function ContactLeadForm() {
   );
 }
 
-function AiDriveDemoModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function AiDriveDemoModal({ open, onClose, slides }: { open: boolean; onClose: () => void; slides: AiDriveDemoSlide[] }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  const activeSlide = AI_DRIVE_DEMO_SLIDES[activeIndex];
+  const activeSlide = slides[activeIndex];
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -427,27 +438,27 @@ function AiDriveDemoModal({ open, onClose }: { open: boolean; onClose: () => voi
   }, [activeIndex, open]);
 
   const selectSlide = (nextIndex: number) => {
-    setActiveIndex((nextIndex + AI_DRIVE_DEMO_SLIDES.length) % AI_DRIVE_DEMO_SLIDES.length);
+    setActiveIndex((nextIndex + slides.length) % slides.length);
   };
 
   return (
-    <dialog aria-labelledby="ai-drive-demo-title" className="m-auto max-h-[92dvh] w-[min(100%-1rem,72rem)] overflow-hidden rounded-xl border border-line bg-white p-0 text-charcoal shadow-2xl backdrop:bg-charcoal/65" onCancel={onClose} onClick={(event) => { if (event.target === event.currentTarget) onClose(); }} onClose={onClose} ref={dialogRef}>
-      <div className="max-h-[92dvh] overflow-y-auto">
-        <div className="relative bg-charcoal px-5 pb-5 pt-14 md:px-8">
-          <button aria-label="关闭 AI 网盘演示" className="absolute right-4 top-4 inline-flex size-10 items-center justify-center rounded-full bg-white text-charcoal transition-colors hover:bg-hermes hover:text-white" onClick={onClose} type="button"><X size={18} /></button>
+    <dialog aria-labelledby="ai-drive-demo-title" className="m-auto max-h-[94dvh] w-[min(100%-1rem,84rem)] overflow-hidden rounded-xl border border-line bg-white p-0 text-charcoal shadow-2xl backdrop:bg-charcoal/65" onCancel={onClose} onClick={(event) => { if (event.target === event.currentTarget) onClose(); }} onClose={onClose} ref={dialogRef}>
+      <div className="max-h-[94dvh] overflow-y-auto">
+        <div className="relative bg-charcoal p-2 pt-12 sm:p-3 sm:pt-14">
+          <button aria-label="关闭 AI 网盘演示" className="absolute right-3 top-3 inline-flex size-9 items-center justify-center rounded-full bg-white text-charcoal transition-colors hover:bg-hermes hover:text-white" onClick={onClose} type="button"><X size={17} /></button>
           <div className="relative overflow-hidden rounded-lg bg-black">
-            <video aria-label={activeSlide.title} className="aspect-video w-full object-contain" controls key={activeSlide.video} muted onEnded={() => selectSlide(activeIndex + 1)} playsInline poster={activeSlide.poster} preload="metadata" ref={videoRef} src={activeSlide.video} />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent px-5 pb-16 pt-24 text-white md:px-8">
-              <p className="text-sm font-bold text-hermes">SCENE {String(activeIndex + 1).padStart(2, "0")}</p>
-              <h2 className="mt-1 text-balance text-2xl font-black md:text-4xl" id="ai-drive-demo-title">{activeSlide.title}</h2>
-              <p className="mt-2 max-w-3xl text-pretty text-sm leading-6 text-white/85 md:text-lg md:leading-7">{activeSlide.description}</p>
-              {activeSlide.highlights ? <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white md:text-base">{activeSlide.highlights.map((highlight) => <li className="flex items-center gap-2" key={highlight}><span className="size-2 rounded-full bg-hermes" aria-hidden="true" />{highlight}</li>)}</ul> : null}
+            <video aria-label={activeSlide.title} className="aspect-[40/21] w-full object-contain" controls key={activeSlide.video} muted onEnded={() => selectSlide(activeIndex + 1)} playsInline poster={activeSlide.poster} preload="metadata" ref={videoRef} src={activeSlide.video} />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-3 pb-3 pt-10 text-white sm:px-4 sm:pb-4 sm:pt-12">
+              <p className="text-[10px] font-bold text-hermes">场景 {activeIndex + 1} / {slides.length}</p>
+              <h2 className="mt-0.5 text-balance text-base font-black sm:text-lg" id="ai-drive-demo-title">{activeSlide.title}</h2>
+              <p className="mt-1 max-w-4xl text-pretty text-xs leading-5 text-white/85 sm:text-sm">{activeSlide.description}</p>
+              {activeSlide.highlights ? <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/90">{activeSlide.highlights.map((highlight) => <li className="flex items-center gap-1.5" key={highlight}><span className="size-1.5 rounded-full bg-hermes" aria-hidden="true" />{highlight}</li>)}</ul> : null}
             </div>
           </div>
-          <div className="mt-4 flex items-center justify-end gap-2">
-            <button aria-label="上一个演示场景" className="inline-flex size-10 items-center justify-center rounded-full border border-white/35 text-white transition-colors hover:border-hermes hover:bg-hermes" onClick={() => selectSlide(activeIndex - 1)} type="button"><ChevronLeft size={20} /></button>
-            {AI_DRIVE_DEMO_SLIDES.map((slide, index) => <button aria-label={`切换到场景 ${index + 1}: ${slide.title}`} aria-pressed={index === activeIndex} className={`size-2.5 rounded-full ${index === activeIndex ? "bg-hermes" : "bg-white/50"}`} key={slide.video} onClick={() => selectSlide(index)} type="button" />)}
-            <button aria-label="下一个演示场景" className="inline-flex size-10 items-center justify-center rounded-full border border-white/35 text-white transition-colors hover:border-hermes hover:bg-hermes" onClick={() => selectSlide(activeIndex + 1)} type="button"><ChevronRight size={20} /></button>
+          <div className="mt-2 flex items-center justify-end gap-2 sm:mt-3">
+            <button aria-label="上一个演示场景" className="inline-flex size-8 items-center justify-center rounded-full border border-white/35 text-white transition-colors hover:border-hermes hover:bg-hermes" onClick={() => selectSlide(activeIndex - 1)} type="button"><ChevronLeft size={18} /></button>
+            {slides.map((slide, index) => <button aria-label={`切换到场景 ${index + 1}: ${slide.title}`} aria-pressed={index === activeIndex} className={`size-2 rounded-full ${index === activeIndex ? "bg-hermes" : "bg-white/50"}`} key={slide.video} onClick={() => selectSlide(index)} type="button" />)}
+            <button aria-label="下一个演示场景" className="inline-flex size-8 items-center justify-center rounded-full border border-white/35 text-white transition-colors hover:border-hermes hover:bg-hermes" onClick={() => selectSlide(activeIndex + 1)} type="button"><ChevronRight size={18} /></button>
           </div>
         </div>
         <ContactLeadForm />
@@ -460,12 +471,32 @@ interface PublicLandingPageProps {
   featuredArticles: PublicArticle[];
   solutionArticles: PublicArticle[];
   caseLogoWallImageUrl?: string;
+  aiDriveDemos?: Array<{
+    title: string;
+    description: string;
+    highlights: string[];
+    videoUrl: string;
+  }>;
 }
 
-export default function PublicLandingPage({ featuredArticles, solutionArticles, caseLogoWallImageUrl }: PublicLandingPageProps) {
+function buildAiDriveDemoSlides(aiDriveDemos: PublicLandingPageProps["aiDriveDemos"]): AiDriveDemoSlide[] {
+  return DEFAULT_AI_DRIVE_DEMO_SLIDES.map((fallback, index) => {
+    const configuredDemo = aiDriveDemos?.[index];
+    return {
+      title: configuredDemo?.title.trim() || fallback.title,
+      description: configuredDemo?.description.trim() || fallback.description,
+      highlights: configuredDemo ? configuredDemo.highlights : fallback.highlights,
+      video: configuredDemo?.videoUrl || fallback.video,
+      poster: configuredDemo?.videoUrl ? "" : fallback.poster,
+    };
+  });
+}
+
+export default function PublicLandingPage({ featuredArticles, solutionArticles, caseLogoWallImageUrl, aiDriveDemos }: PublicLandingPageProps) {
   const [consultationOpen, setConsultationOpen] = useState(false);
   const [aiDriveDemoOpen, setAiDriveDemoOpen] = useState(false);
   const homepageSolutionItems = buildHomepageSolutionItems(solutionArticles);
+  const aiDriveDemoSlides = buildAiDriveDemoSlides(aiDriveDemos);
 
   useEffect(() => {
     const counter = { val: 0 };
@@ -549,7 +580,7 @@ export default function PublicLandingPage({ featuredArticles, solutionArticles, 
   return (
     <PublicLayout active="landing">
       <ConsultationModal onClose={() => setConsultationOpen(false)} open={consultationOpen} />
-      <AiDriveDemoModal onClose={() => setAiDriveDemoOpen(false)} open={aiDriveDemoOpen} />
+      <AiDriveDemoModal onClose={() => setAiDriveDemoOpen(false)} open={aiDriveDemoOpen} slides={aiDriveDemoSlides} />
       <section className="relative pt-40 pb-20 px-6 overflow-hidden min-h-[90vh] flex items-center">
         <HeroScene />
         <div className="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-20 items-center">

@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib import admin
 from django.conf import settings
+from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils import timezone
@@ -10,6 +11,7 @@ from cms_apps.articles.models import Article, ArticleRevision, Category, Tag
 from cms_apps.faq.models import FaqItem
 from cms_apps.knowledge.models import KnowledgeChunk, KnowledgeSource
 from cms_apps.seo.models import SeoMetadata
+from cms_apps.common.services.public_cache import invalidate_public_web_cache
 from apps.sys_settings.models import SiteSetting
 
 
@@ -77,6 +79,22 @@ class FrontendContentSettingForm(forms.ModelForm):
             "homepage_solution_article_3",
             "homepage_solution_article_4",
             "homepage_case_logo_wall_image",
+            "homepage_ai_drive_demo_video_1",
+            "homepage_ai_drive_demo_title_1",
+            "homepage_ai_drive_demo_description_1",
+            "homepage_ai_drive_demo_highlights_1",
+            "homepage_ai_drive_demo_video_2",
+            "homepage_ai_drive_demo_title_2",
+            "homepage_ai_drive_demo_description_2",
+            "homepage_ai_drive_demo_highlights_2",
+            "homepage_ai_drive_demo_video_3",
+            "homepage_ai_drive_demo_title_3",
+            "homepage_ai_drive_demo_description_3",
+            "homepage_ai_drive_demo_highlights_3",
+            "homepage_ai_drive_demo_video_4",
+            "homepage_ai_drive_demo_title_4",
+            "homepage_ai_drive_demo_description_4",
+            "homepage_ai_drive_demo_highlights_4",
         )
 
 
@@ -260,8 +278,39 @@ class FrontendContentSettingAdmin(admin.ModelAdmin):
                 "classes": ("wide", "admin-section"),
             },
         ),
+        (
+            "AI 网盘演示视频",
+            {
+                "description": "配置官网“看 AI 网盘怎么用”弹窗的四个场景。未上传视频时，官网继续使用当前默认素材；上传后使用新视频。遮罩卖点每行一条。",
+                "fields": (
+                    ("homepage_ai_drive_demo_video_1", "homepage_ai_drive_demo_video_1_preview"),
+                    "homepage_ai_drive_demo_title_1",
+                    "homepage_ai_drive_demo_description_1",
+                    "homepage_ai_drive_demo_highlights_1",
+                    ("homepage_ai_drive_demo_video_2", "homepage_ai_drive_demo_video_2_preview"),
+                    "homepage_ai_drive_demo_title_2",
+                    "homepage_ai_drive_demo_description_2",
+                    "homepage_ai_drive_demo_highlights_2",
+                    ("homepage_ai_drive_demo_video_3", "homepage_ai_drive_demo_video_3_preview"),
+                    "homepage_ai_drive_demo_title_3",
+                    "homepage_ai_drive_demo_description_3",
+                    "homepage_ai_drive_demo_highlights_3",
+                    ("homepage_ai_drive_demo_video_4", "homepage_ai_drive_demo_video_4_preview"),
+                    "homepage_ai_drive_demo_title_4",
+                    "homepage_ai_drive_demo_description_4",
+                    "homepage_ai_drive_demo_highlights_4",
+                ),
+                "classes": ("wide", "admin-section"),
+            },
+        ),
     )
-    readonly_fields = ("homepage_case_logo_wall_image_preview",)
+    readonly_fields = (
+        "homepage_case_logo_wall_image_preview",
+        "homepage_ai_drive_demo_video_1_preview",
+        "homepage_ai_drive_demo_video_2_preview",
+        "homepage_ai_drive_demo_video_3_preview",
+        "homepage_ai_drive_demo_video_4_preview",
+    )
 
     def has_add_permission(self, request):
         return False
@@ -282,6 +331,37 @@ class FrontendContentSettingAdmin(admin.ModelAdmin):
             '<img src="{}" alt="首页客户案例 LOGO 墙预览" style="max-width: 100%; width: 720px; border: 1px solid #d6dde8; border-radius: 12px;" />',
             obj.homepage_case_logo_wall_image.url,
         )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        transaction.on_commit(invalidate_public_web_cache)
+
+    @staticmethod
+    def _ai_drive_demo_video_preview(obj, field_name, scene_number):
+        video = getattr(obj, field_name)
+        if not video:
+            return "未上传，官网将使用当前默认视频。"
+        return format_html(
+            '<video controls preload="metadata" style="display:block; width:720px; max-width:100%; border:1px solid #d6dde8; border-radius:12px; background:#111;">'
+            '<source src="{}" />当前浏览器不支持视频预览。</video>',
+            video.url,
+        )
+
+    @admin.display(description="场景一当前视频")
+    def homepage_ai_drive_demo_video_1_preview(self, obj):
+        return self._ai_drive_demo_video_preview(obj, "homepage_ai_drive_demo_video_1", 1)
+
+    @admin.display(description="场景二当前视频")
+    def homepage_ai_drive_demo_video_2_preview(self, obj):
+        return self._ai_drive_demo_video_preview(obj, "homepage_ai_drive_demo_video_2", 2)
+
+    @admin.display(description="场景三当前视频")
+    def homepage_ai_drive_demo_video_3_preview(self, obj):
+        return self._ai_drive_demo_video_preview(obj, "homepage_ai_drive_demo_video_3", 3)
+
+    @admin.display(description="场景四当前视频")
+    def homepage_ai_drive_demo_video_4_preview(self, obj):
+        return self._ai_drive_demo_video_preview(obj, "homepage_ai_drive_demo_video_4", 4)
 
 
 @admin.register(KnowledgeSource)

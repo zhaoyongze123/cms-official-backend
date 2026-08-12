@@ -426,3 +426,26 @@ class ArticleApiTests(TestCase):
             payload["homepage_case_logo_wall_image_url"],
             self.site_setting.homepage_case_logo_wall_image.url,
         )
+
+    def test_public_site_settings_returns_ai_drive_demo_configuration(self):
+        self.site_setting.homepage_ai_drive_demo_title_1 = "自定义场景标题"
+        self.site_setting.homepage_ai_drive_demo_description_1 = "自定义场景说明"
+        self.site_setting.homepage_ai_drive_demo_highlights_1 = "第一条卖点\n第二条卖点\n"
+        self.site_setting.homepage_ai_drive_demo_video_1 = SimpleUploadedFile(
+            "scene-one.mp4",
+            b"demo-video-bytes",
+            content_type="video/mp4",
+        )
+        self.site_setting.save()
+
+        response = self.client.get("/api/public/site-settings/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload["homepage_ai_drive_demos"]), 4)
+        first_demo = payload["homepage_ai_drive_demos"][0]
+        self.assertEqual(first_demo["title"], "自定义场景标题")
+        self.assertEqual(first_demo["description"], "自定义场景说明")
+        self.assertEqual(first_demo["highlights"], ["第一条卖点", "第二条卖点"])
+        self.assertEqual(first_demo["video_url"], self.site_setting.homepage_ai_drive_demo_video_1.url)
+        self.assertIsNone(payload["homepage_ai_drive_demos"][1]["video_url"])

@@ -1,4 +1,5 @@
-﻿from django.db import models
+﻿from django.core.validators import FileExtensionValidator
+from django.db import models
 
 
 class SiteSetting(models.Model):
@@ -150,6 +151,86 @@ class SiteSetting(models.Model):
         blank=True,
         null=True,
         help_text="用于官网首页底部展示客户案例 LOGO 墙，建议上传横向大图。",
+    )
+    homepage_ai_drive_demo_video_1 = models.FileField(
+        "AI 网盘演示视频一",
+        upload_to="settings/homepage/ai-drive/",
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(allowed_extensions=["mp4", "webm", "ogv"])],
+        help_text="上传后替换官网演示场景一。支持 MP4、WebM、Ogv，建议使用无音轨 H.264 MP4。",
+    )
+    homepage_ai_drive_demo_title_1 = models.CharField(
+        "场景一遮罩标题", max_length=80, default="右键制度文件，直接开始提问"
+    )
+    homepage_ai_drive_demo_description_1 = models.CharField(
+        "场景一遮罩说明",
+        max_length=240,
+        default="在 AI 测试资料中选中制度文件，从右键菜单进入 AI 助手，问题和资料上下文同步带入。",
+    )
+    homepage_ai_drive_demo_highlights_1 = models.CharField(
+        "场景一遮罩卖点", max_length=160, default="员工考勤管理制度\n答案引用当前资料", blank=True,
+        help_text="每行一条卖点，留空则不展示卖点。",
+    )
+    homepage_ai_drive_demo_video_2 = models.FileField(
+        "AI 网盘演示视频二",
+        upload_to="settings/homepage/ai-drive/",
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(allowed_extensions=["mp4", "webm", "ogv"])],
+        help_text="上传后替换官网演示场景二。支持 MP4、WebM、Ogv，建议使用无音轨 H.264 MP4。",
+    )
+    homepage_ai_drive_demo_title_2 = models.CharField(
+        "场景二遮罩标题", max_length=80, default="配置智能体，关联 AI 解决方案知识库"
+    )
+    homepage_ai_drive_demo_description_2 = models.CharField(
+        "场景二遮罩说明",
+        max_length=240,
+        default="新建智能体后直接选择 AI 解决方案文档作为知识库，再围绕企业资料进行问答。",
+    )
+    homepage_ai_drive_demo_highlights_2 = models.CharField(
+        "场景二遮罩卖点", max_length=160, default="", blank=True,
+        help_text="每行一条卖点，留空则不展示卖点。",
+    )
+    homepage_ai_drive_demo_video_3 = models.FileField(
+        "AI 网盘演示视频三",
+        upload_to="settings/homepage/ai-drive/",
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(allowed_extensions=["mp4", "webm", "ogv"])],
+        help_text="上传后替换官网演示场景三。支持 MP4、WebM、Ogv，建议使用无音轨 H.264 MP4。",
+    )
+    homepage_ai_drive_demo_title_3 = models.CharField(
+        "场景三遮罩标题", max_length=80, default="后台统一管理模型服务与参数"
+    )
+    homepage_ai_drive_demo_description_3 = models.CharField(
+        "场景三遮罩说明",
+        max_length=240,
+        default="在 AI 助手管理后台查看模型服务、模型选择和调用参数，按企业环境配置。",
+    )
+    homepage_ai_drive_demo_highlights_3 = models.CharField(
+        "场景三遮罩卖点", max_length=160, default="", blank=True,
+        help_text="每行一条卖点，留空则不展示卖点。",
+    )
+    homepage_ai_drive_demo_video_4 = models.FileField(
+        "AI 网盘演示视频四",
+        upload_to="settings/homepage/ai-drive/",
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(allowed_extensions=["mp4", "webm", "ogv"])],
+        help_text="上传后替换官网演示场景四。支持 MP4、WebM、Ogv，建议使用无音轨 H.264 MP4。",
+    )
+    homepage_ai_drive_demo_title_4 = models.CharField(
+        "场景四遮罩标题", max_length=80, default="上传资料，完成解析并用于 RAG 检索"
+    )
+    homepage_ai_drive_demo_description_4 = models.CharField(
+        "场景四遮罩说明",
+        max_length=240,
+        default="上传 Word 或 TXT 后查看解析状态，并在 RAG 检索增强中确认资料可被召回。",
+    )
+    homepage_ai_drive_demo_highlights_4 = models.CharField(
+        "场景四遮罩卖点", max_length=160, default="", blank=True,
+        help_text="每行一条卖点，留空则不展示卖点。",
     )
 
     ai_review_model = models.CharField(

@@ -81,6 +81,37 @@ paths:
           description: slug 已变更，返回新 slug 跳转位置
         "404":
           description: 公开文章不存在
+  /api/public/site-settings/:
+    get:
+      summary: 获取官网公开站点设置与首页 AI 网盘演示配置
+      responses:
+        "200":
+          description: 公开站点设置
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  homepage_ai_drive_demos:
+                    type: array
+                    minItems: 4
+                    maxItems: 4
+                    items:
+                      type: object
+                      required: [title, description, highlights, video_url]
+                      properties:
+                        title:
+                          type: string
+                        description:
+                          type: string
+                        highlights:
+                          type: array
+                          items:
+                            type: string
+                        video_url:
+                          type: string
+                          format: uri
+                          nullable: true
   /api/public/leads/:
     post:
       summary: 提交官网咨询线索

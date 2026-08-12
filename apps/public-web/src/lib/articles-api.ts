@@ -179,6 +179,12 @@ export interface PublicSiteSettings {
   homepageFeaturedArticles: PublicArticle[];
   homepageSolutionArticles: PublicArticle[];
   homepageCaseLogoWallImageUrl: string;
+  homepageAiDriveDemos: Array<{
+    title: string;
+    description: string;
+    highlights: string[];
+    videoUrl: string;
+  }>;
 }
 
 function buildDefaultArticleCanonicalUrl(slug: string): string {
@@ -333,6 +339,12 @@ export const getPublicSiteSettings = cache(async function getPublicSiteSettings(
       homepage_featured_articles?: ArticleApiItem[];
       homepage_solution_articles?: ArticleApiItem[];
       homepage_case_logo_wall_image_url?: string | null;
+      homepage_ai_drive_demos?: Array<{
+        title?: string;
+        description?: string;
+        highlights?: string[];
+        video_url?: string | null;
+      }>;
     }>("/api/public/site-settings/");
 
     return {
@@ -351,6 +363,12 @@ export const getPublicSiteSettings = cache(async function getPublicSiteSettings(
       homepageCaseLogoWallImageUrl: payload.homepage_case_logo_wall_image_url
         ? new URL(payload.homepage_case_logo_wall_image_url, publicApiBaseUrl).toString()
         : "",
+      homepageAiDriveDemos: (payload.homepage_ai_drive_demos || []).map((demo) => ({
+        title: demo.title || "",
+        description: demo.description || "",
+        highlights: (demo.highlights || []).filter((item) => Boolean(item?.trim())),
+        videoUrl: demo.video_url ? new URL(demo.video_url, publicApiBaseUrl).toString() : "",
+      })),
     };
   } catch (error) {
     logPublicApiError("公开站点设置", error);
@@ -364,6 +382,7 @@ export const getPublicSiteSettings = cache(async function getPublicSiteSettings(
       homepageFeaturedArticles: [],
       homepageSolutionArticles: [],
       homepageCaseLogoWallImageUrl: "",
+      homepageAiDriveDemos: [],
     };
   }
 });

@@ -58,6 +58,7 @@ export default async function HomePage() {
       featuredArticles={featuredArticles}
       solutionArticles={homepageSolutionArticles}
       caseLogoWallImageUrl={publicSiteSettings.homepageCaseLogoWallImageUrl}
+      aiDriveDemos={publicSiteSettings.homepageAiDriveDemos}
     />
   );
 }
