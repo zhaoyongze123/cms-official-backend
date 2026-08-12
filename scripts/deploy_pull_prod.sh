@@ -71,6 +71,26 @@ fi
 COMPOSE_CMD=(docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}")
 export COMPOSE_PROJECT_NAME
 
+validate_pullable_image() {
+  local variable_name="$1"
+  local fallback_image="$2"
+  local configured_image
+
+  configured_image="$(grep -E "^${variable_name}=" "${ENV_FILE}" | tail -n 1 | cut -d '=' -f2- || true)"
+  configured_image="${configured_image:-${fallback_image}}"
+
+  if [[ "${configured_image}" != */* ]]; then
+    echo "[deploy-pull] ${variable_name}=${configured_image} 不是可拉取的远程镜像地址。" >&2
+    echo "[deploy-pull] 请配置带仓库域名或命名空间的镜像，例如 registry.example.com/namespace/image:tag。" >&2
+    exit 1
+  fi
+}
+
+# pull 部署只能使用镜像仓库中的镜像，不能填写仅存在于某台机器上的本地标签。
+validate_pullable_image "BACKEND_IMAGE" "ghcr.io/zhaoyongze123/cms-backend:latest"
+validate_pullable_image "STUDIO_IMAGE" "ghcr.io/zhaoyongze123/cms-studio-web:latest"
+validate_pullable_image "PUBLIC_IMAGE" "ghcr.io/zhaoyongze123/cms-public-web:latest"
+
 audit_public_web_env() {
   echo "[deploy-pull] 审计 public-web 独立环境文件 ${PUBLIC_WEB_ENV_FILE}"
   grep -E '^(NEXT_PUBLIC_DJANGO_PUBLIC_BASE_URL|NEXT_PUBLIC_SITE_URL)=' "${PUBLIC_WEB_ENV_FILE}" || {
