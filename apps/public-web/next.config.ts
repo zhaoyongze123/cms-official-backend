@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 import type { RemotePattern } from "next/dist/shared/lib/image-config";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 
 const cmsImageRemotePatterns: RemotePattern[] = [
   {
@@ -39,7 +42,7 @@ const cmsImageRemotePatterns: RemotePattern[] = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  outputFileTracingRoot: path.resolve(__dirname, "../.."),
+  outputFileTracingRoot: path.resolve(currentDirectory, "../.."),
   allowedDevOrigins: ["127.0.0.1"],
   images: {
     remotePatterns: [

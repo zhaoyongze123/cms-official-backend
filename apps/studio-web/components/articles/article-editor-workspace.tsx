@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import {
   DjangoValidationError,
+  createArticlePreviewLink,
   fetchCategorySuggestions,
   fetchMediaLibraryImages,
   fetchTagSuggestions,
@@ -566,7 +567,8 @@ export function ArticleEditorWorkspace({
   onPublish,
 }: ArticleEditorWorkspaceProps) {
   const [isPending, startTransition] = useTransition();
-  const [activeAction, setActiveAction] = useState<"save" | "publish" | null>(null);
+  const [activeAction, setActiveAction] = useState<"save" | "publish" | "preview" | null>(null);
+  const [previewLink, setPreviewLink] = useState<{ url: string; expiresAt: string } | null>(null);
   const [activeGenerationTarget, setActiveGenerationTarget] = useState<GenerationTarget | null>(null);
   const [htmlMode, setHtmlMode] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -613,7 +615,6 @@ export function ArticleEditorWorkspace({
   });
   const hasPersistedArticle = article.article_id > 0;
   const wordCount = JSON.stringify(draft.content_json).length;
-  const readTime = Math.max(1, Math.round(wordCount / 350));
   const reviewSummary = getReviewSummaryLabel(reviewState.suggestions.length);
   const hasDraftChanges = useMemo(
     () => JSON.stringify(draft) !== JSON.stringify(createDraft(articleSnapshot)),
@@ -1376,6 +1377,38 @@ export function ArticleEditorWorkspace({
     requestPersistAction("publish");
   }
 
+  function handlePreview() {
+    const nextErrors = validateDraftBeforePersist();
+    const issues = buildDraftValidationIssues(nextErrors);
+    if (issues.length > 0) {
+      setSaveNotice({ tone: "error", text: "请先补全草稿必填字段，再生成预览链接。" });
+      return;
+    }
+    startTransition(async () => {
+      setActiveAction("preview");
+      try {
+        let savedArticle = articleSnapshot;
+        if (hasDraftChanges) {
+          const payload = buildPersistPayload("draft");
+          savedArticle = onSaveDraft
+            ? await onSaveDraft(payload)
+            : await updateArticleDraft(article.article_id, payload);
+          applyPersistedResult(savedArticle, "草稿已保存，正在生成预览链接。");
+        }
+        const result = await createArticlePreviewLink(savedArticle.article_id);
+        const url = new URL(result.preview_path, window.location.origin).toString();
+        const expiresAt = formatStudioDateTime(result.expires_at);
+        setPreviewLink({ url, expiresAt });
+        setSaveNotice({ tone: "success", text: `预览链接已生成，有效期至 ${expiresAt}。` });
+        setSuccessToast({ open: true, text: "草稿预览链接已生成。" });
+      } catch (error) {
+        applyBackendValidationError(error instanceof Error ? error : new Error("预览链接生成失败。"));
+      } finally {
+        setActiveAction(null);
+      }
+    });
+  }
+
   function buildGenerationPayload() {
     return {
       title: draft.title,
@@ -2099,7 +2132,6 @@ export function ArticleEditorWorkspace({
             <div className="word-statusbar-right">
               <span>{htmlMode ? "HTML 源码视图" : "富文本视图"}</span>
               <span>{wordCount} 字</span>
-              <span>预计 {readTime} 分钟</span>
               <span>{formatStudioDateTime(saveTime)}</span>
               <button
                 className="word-save-button"
@@ -2116,6 +2148,11 @@ export function ArticleEditorWorkspace({
               <button className="word-save-button" onClick={handleSave} type="button">
                 {isPending && activeAction === "save" ? "保存中..." : "保存"}
               </button>
+              {draft.status === "draft" ? (
+                <button className="word-save-button" disabled={isPending} onClick={handlePreview} type="button">
+                  {isPending && activeAction === "preview" ? "生成中..." : "预览草稿"}
+                </button>
+              ) : null}
               {showPublishAction ? (
                 <button className="word-save-button word-publish-button" onClick={handlePublish} type="button">
                   {isPending && activeAction === "publish" ? "发布中..." : "发布"}
@@ -2147,6 +2184,21 @@ export function ArticleEditorWorkspace({
           status={ogImageLibraryStatus}
           title="选择 OG 图片"
         />
+      ) : null}
+      {previewLink ? (
+        <div aria-live="polite" className="word-preview-link-panel">
+          <strong>草稿预览链接</strong>
+          <span>有效期至 {previewLink.expiresAt}</span>
+          <div className="word-preview-link-actions">
+            <a href={previewLink.url} rel="noreferrer" target="_blank">打开预览</a>
+            <button
+              onClick={() => void navigator.clipboard?.writeText(previewLink.url)}
+              type="button"
+            >
+              复制链接
+            </button>
+          </div>
+        </div>
       ) : null}
     </div>
   );

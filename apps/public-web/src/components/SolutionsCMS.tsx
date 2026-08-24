@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BookOpen, ChevronRight, Clock, Home, Search, Tag } from "lucide-react";
+import { ArrowRight, BookOpen, ChevronRight, Home, Search, Tag } from "lucide-react";
 import { motion } from "motion/react";
 
 import type { PublicArticle, PublicArticleSectionConfig } from "../lib/articles-api";
@@ -46,7 +46,6 @@ function ArticleDetail({
         <div className="flex items-center gap-4 text-xs font-black uppercase tracking-widest">
           <span className="text-hermes px-3 py-1 bg-hermes/5 rounded-md border border-hermes/10">{article.category}</span>
           <span className="text-muted">{article.date}</span>
-          <span className="text-muted flex items-center gap-1"><Clock size={12} /> {article.readTime} 阅读</span>
         </div>
         <h1 className="text-4xl lg:text-6xl font-black text-charcoal leading-tight">{article.title}</h1>
         <div className="flex items-center gap-4 py-6 border-y border-line">
@@ -94,7 +93,7 @@ function ArticleList({
           <h1 className="text-4xl md:text-5xl font-black text-charcoal mb-4 tracking-tight">{section.title}</h1>
           <div className="h-1 lg:h-2 w-20 lg:w-32 bg-hermes/30 rounded-full" />
         </div>
-        <p className="max-w-3xl text-base md:text-lg leading-8 text-muted">
+        <p className="max-w-none text-base md:text-lg leading-8 text-muted xl:whitespace-nowrap">
           {section.description}
         </p>
       </div>
@@ -154,10 +153,6 @@ function ArticleList({
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-muted font-medium">分类</span>
                         <span className="text-[10px] text-charcoal font-black">{article.category}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-muted font-medium">用时</span>
-                        <span className="text-[10px] text-charcoal font-black">{article.readTime}</span>
                       </div>
                     </div>
                   </div>

@@ -3,17 +3,20 @@
 from __future__ import annotations
 
 import json
+import secrets
+from datetime import timedelta
 
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from cms_apps.articles.api.selectors import get_article_queryset, get_public_article_queryset
 from cms_apps.articles.api.services import apply_article_payload, serialize_article
 from cms_apps.articles.models import Article, ArticleSlugHistory, Category, Tag
-from cms_apps.common.services.public_cache import invalidate_public_web_cache
 from cms_apps.seo.services.public import (
     build_article_breadcrumb_items,
     build_article_breadcrumb_json_ld,
@@ -62,8 +65,6 @@ def article_list_view(request):
         return _validation_error_response(error)
 
     article = get_article_queryset().get(pk=article.pk)
-    if article.status == "published":
-        invalidate_public_web_cache()
     return JsonResponse(serialize_article(article), status=201)
 
 
@@ -77,7 +78,6 @@ def article_detail_view(request, article_id):
     if request.method == "GET":
         return JsonResponse(serialize_article(article))
 
-    previous_status = article.status
     try:
         payload = _parse_json_body(request)
         apply_article_payload(article, payload, partial=True)
@@ -85,8 +85,6 @@ def article_detail_view(request, article_id):
         return _validation_error_response(error)
 
     article = get_article_queryset().get(pk=article.pk)
-    if previous_status == "published" or article.status == "published":
-        invalidate_public_web_cache()
     return JsonResponse(serialize_article(article))
 
 
@@ -124,6 +122,51 @@ def public_article_detail_by_slug_view(request, slug):
         return response
 
     return _not_found_response()
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def article_preview_link_view(request, article_id):
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return JsonResponse({"error": {"code": "forbidden", "message": "需要后台编辑权限。", "details": {}}}, status=403)
+
+    article = get_article_queryset().filter(pk=article_id).first()
+    if article is None:
+        return _not_found_response()
+    if article.status != "draft":
+        return JsonResponse({"error": {"code": "preview_requires_draft", "message": "仅草稿文章可生成预览链接。", "details": {}}}, status=409)
+
+    now = timezone.now()
+    if not article.preview_token or not article.preview_expires_at or article.preview_expires_at <= now:
+        for _ in range(3):
+            article.preview_token = secrets.token_urlsafe(32)
+            article.preview_expires_at = now + timedelta(hours=24)
+            try:
+                article.save(update_fields=("preview_token", "preview_expires_at", "updated_at"))
+                break
+            except IntegrityError:
+                continue
+        else:
+            return JsonResponse({"error": {"code": "preview_token_generation_failed", "message": "预览链接生成失败，请重试。", "details": {}}}, status=500)
+
+    return JsonResponse(
+        {
+            "preview_path": f"/preview/articles/{article.preview_token}",
+            "expires_at": article.preview_expires_at.isoformat(),
+        }
+    )
+
+
+@require_http_methods(["GET"])
+def public_article_preview_view(request, token):
+    article = get_article_queryset().filter(
+        status="draft",
+        preview_token=token,
+        preview_expires_at__gt=timezone.now(),
+    ).first()
+    if article is None:
+        return _not_found_response()
+    return JsonResponse(serialize_article(article))
 
 
 @require_http_methods(["GET"])

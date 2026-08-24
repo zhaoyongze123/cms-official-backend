@@ -1,7 +1,8 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from cms_apps.articles.models import Article, Category, Tag
+from cms_apps.articles.models import Article, Category, Tag, ManagedPage
 from cms_apps.faq.models import FaqItem
 from cms_apps.seo.models.metadata import SeoMetadata
 from apps.media_library.models import ImageItem
@@ -88,6 +89,7 @@ class ArticleApiTests(TestCase):
             content_html="<p>draft</p>",
             status="draft",
         )
+        self.staff = get_user_model().objects.create_user(username="preview-editor", password="test-password", is_staff=True)
 
     def test_get_list_returns_serialized_articles(self):
         response = self.client.get("/api/articles/")
@@ -123,6 +125,32 @@ class ArticleApiTests(TestCase):
         self.assertEqual(article["seo"]["og_description"], self.seo_metadata.og_description)
         self.assertEqual(article["seo"]["meta_keywords"], self.seo_metadata.meta_keywords)
         self.assertEqual(article["seo"]["og_image"]["image_id"], self.og_image.id)
+
+    def test_draft_preview_link_reuses_and_invalidates(self):
+        self.client.force_login(self.staff)
+        first = self.client.post(f"/api/articles/{self.draft_article.id}/preview-link/")
+        self.assertEqual(first.status_code, 200)
+        first_payload = first.json()
+        second = self.client.post(f"/api/articles/{self.draft_article.id}/preview-link/")
+        self.assertEqual(second.json()["preview_path"], first_payload["preview_path"])
+        preview_token = first_payload["preview_path"].split("/")[-1]
+        self.assertEqual(self.client.get(f"/api/public/article-previews/{preview_token}/").status_code, 200)
+
+        self.client.patch(
+            f"/api/articles/{self.draft_article.id}/",
+            data={"content_html": "<p>updated draft</p>"},
+            content_type="application/json",
+        )
+        self.assertEqual(self.client.get(f"/api/public/article-previews/{preview_token}/").status_code, 404)
+
+    def test_managed_page_public_endpoint_only_returns_published(self):
+        page = ManagedPage.objects.create(path="/join-custom", title="加入我们", content_html="<h1>Join</h1>", status="draft")
+        self.assertEqual(self.client.get("/api/public/pages/join-custom/").status_code, 404)
+        page.status = "published"
+        page.save()
+        response = self.client.get("/api/public/pages/join-custom/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["title"], "加入我们")
 
     def test_post_create_returns_serialized_article(self):
         response = self.client.post(

@@ -16,6 +16,7 @@ type StudioShellProps = {
 const navigationItems = [
   { href: "/studio" as Route, label: "工作台总览" },
   { href: "/studio/articles" as Route, label: "文章列表" },
+  { href: "/studio/pages" as Route, label: "页面内容" },
   { href: "/studio/ai-settings" as Route, label: "模型管理" },
   { href: "/studio/settings" as Route, label: "工作台设置" }
 ];

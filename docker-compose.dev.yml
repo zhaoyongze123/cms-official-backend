@@ -188,7 +188,7 @@ services:
       [
         "sh",
         "-c",
-        "npm install --include=dev --no-audit --no-fund && npm run build && npm run start",
+        "npm ci --include=dev --no-audit --no-fund && npm run build && npm run start",
       ]
     volumes:
       - .:/app

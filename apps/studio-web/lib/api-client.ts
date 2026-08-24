@@ -1,4 +1,5 @@
 import type { ArticleRecord } from "./mock-api";
+import type { ManagedPageRecord } from "./pages";
 import { toStudioArticleList, toStudioArticleRecord } from "./articles";
 import type { DjangoArticleCategoryOption, DjangoArticleRecord, DjangoArticleTag } from "./articles";
 import {
@@ -269,6 +270,24 @@ export async function createArticle(
   return toStudioArticleRecord(article);
 }
 
+export async function createManagedPage(payload: Partial<ManagedPageRecord>) {
+  const response = await fetch(studioBrowserPath("/api/pages/"), {
+    method: "POST",
+    headers: buildJsonHeaders(),
+    body: JSON.stringify(payload),
+  });
+  return readJson<ManagedPageRecord>(response);
+}
+
+export async function updateManagedPage(pageId: number, payload: Partial<ManagedPageRecord>) {
+  const response = await fetch(studioBrowserPath(`/api/pages/${pageId}/`), {
+    method: "PATCH",
+    headers: buildJsonHeaders(),
+    body: JSON.stringify(payload),
+  });
+  return readJson<ManagedPageRecord>(response);
+}
+
 type PublishArticleResponse = {
   article: DjangoArticleRecord;
   seo_check: {
@@ -289,6 +308,19 @@ export async function publishArticle(articleId: number) {
     article: toStudioArticleRecord(result.article),
     seo_check: result.seo_check,
   };
+}
+
+export type ArticlePreviewLinkResponse = {
+  preview_path: string;
+  expires_at: string;
+};
+
+export async function createArticlePreviewLink(articleId: number) {
+  const response = await fetch(studioBrowserPath(`/api/articles/${articleId}/preview-link/`), {
+    method: "POST",
+    headers: buildJsonHeaders(),
+  });
+  return readJson<ArticlePreviewLinkResponse>(response);
 }
 
 export async function fetchTagSuggestions(query = "") {

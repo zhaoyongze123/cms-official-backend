@@ -3,6 +3,7 @@ from .category import Category
 from .history import ArticleRevision, ArticleSlugHistory
 from .tag import Tag
 from .article import Article
+from .page import ManagedPage
 
 __all__ = [
     "ARTICLE_STATUS_CHOICES",
@@ -12,4 +13,5 @@ __all__ = [
     "ArticleSlugHistory",
     "Category",
     "Tag",
+    "ManagedPage",
 ]

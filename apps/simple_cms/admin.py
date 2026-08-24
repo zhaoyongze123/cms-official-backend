@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
 
-from cms_apps.articles.models import Article, ArticleRevision, Category, Tag
+from cms_apps.articles.models import Article, ArticleRevision, Category, Tag, ManagedPage
 from cms_apps.faq.models import FaqItem
 from cms_apps.knowledge.models import KnowledgeChunk, KnowledgeSource
 from cms_apps.seo.models import SeoMetadata
@@ -227,6 +227,18 @@ class ArticleAdmin(admin.ModelAdmin):
             article.save()
             count += 1
         self.message_user(request, f"已归档 {count} 篇文章")
+
+
+@admin.register(ManagedPage)
+class ManagedPageAdmin(admin.ModelAdmin):
+    list_display = ("title", "path", "template_key", "status", "updated_at")
+    list_filter = ("status", "template_key")
+    search_fields = ("title", "path", "content_html")
+    fieldsets = (
+        ("页面路由", {"fields": ("path", "title", "template_key", "status")} ),
+        ("页面内容", {"fields": ("content_html", "content_json")} ),
+        ("SEO", {"fields": ("meta_description", "canonical_url", "robots")} ),
+    )
 
 
 @admin.register(FrontendContentSetting)

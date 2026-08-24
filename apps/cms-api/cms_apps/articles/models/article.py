@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
@@ -65,6 +65,15 @@ class Article(models.Model):
         blank=True,
         help_text="若设置未来的时间，将在此时间后才对外展示",
     )
+    preview_token = models.CharField(
+        "草稿预览令牌",
+        max_length=64,
+        unique=True,
+        null=True,
+        blank=True,
+        editable=False,
+    )
+    preview_expires_at = models.DateTimeField("草稿预览到期时间", null=True, blank=True, editable=False)
 
     meta_description = models.TextField(
         "独立 SEO Description",
@@ -141,6 +150,9 @@ class Article(models.Model):
                     changed_fields.append(field_name)
 
         if changed_fields:
+            if old_article and old_article.preview_token:
+                Article.objects.filter(pk=self.pk).update(preview_token=None, preview_expires_at=None)
+
             ArticleRevision.objects.create(
                 article=self,
                 title_snapshot=self.title,
@@ -152,6 +164,15 @@ class Article(models.Model):
                 category_name_snapshot=self.category.name if self.category else "",
                 changed_fields=", ".join(changed_fields),
             )
+
+        public_content_changed = bool(changed_fields) and (
+            self.status == "published" or (old_article is not None and old_article.status == "published")
+        )
+        if public_content_changed:
+            # 只在事务真正提交后通知 Next，避免前台缓存到未提交的数据。
+            from cms_apps.common.services.public_cache import invalidate_public_web_cache
+
+            transaction.on_commit(invalidate_public_web_cache)
 
     def get_absolute_url(self):
         return reverse("simple_cms:article_detail", kwargs={"slug": self.slug})

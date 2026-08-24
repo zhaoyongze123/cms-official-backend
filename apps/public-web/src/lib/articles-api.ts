@@ -103,15 +103,6 @@ function formatDate(value: string | null): string {
   }).format(parsed);
 }
 
-function estimateReadTime(source: string): string {
-  const text = source.trim();
-  if (!text) {
-    return '1 min';
-  }
-  const count = Math.max(1, Math.ceil(text.length / 220));
-  return `${count} min`;
-}
-
 export interface PublicArticle {
   id: string;
   articleId: number;
@@ -123,7 +114,6 @@ export interface PublicArticle {
   categorySlug: string;
   date: string;
   author: string;
-  readTime: string;
   tags: string[];
   contentHtml: string;
   contentText: string;
@@ -187,6 +177,20 @@ export interface PublicSiteSettings {
   }>;
 }
 
+export interface ManagedPage {
+  pageId: number;
+  path: string;
+  title: string;
+  templateKey: string;
+  status: string;
+  contentHtml: string;
+  contentJson: Record<string, unknown>;
+  metaDescription: string;
+  canonicalUrl: string;
+  robots: string;
+  updatedAt: string;
+}
+
 function buildDefaultArticleCanonicalUrl(slug: string): string {
   return new URL(`/articles/${slug}`, publicSiteBaseUrl).toString();
 }
@@ -220,7 +224,6 @@ export function mapArticleToPublicArticle(article: ArticleApiItem): PublicArticl
     categorySlug: article.category?.slug || "",
     date: formatDate(article.published_at),
     author: '云璨技术团队',
-    readTime: estimateReadTime(textContent || excerpt),
     tags: article.tags.map((tag) => tag.name),
     contentHtml: article.content_html,
     contentText: textContent || excerpt,
@@ -282,6 +285,18 @@ async function requestJson<T>(path: string): Promise<T> {
       return requestJson<T>(nextPath);
     }
   }
+  if (!response.ok) {
+    throw new PublicApiRequestError(response.status);
+  }
+  return response.json() as Promise<T>;
+}
+
+async function requestUncachedJson<T>(path: string): Promise<T> {
+  const target = isServer ? new URL(path, serverBaseUrl).toString() : path;
+  const response = await fetch(target, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
   if (!response.ok) {
     throw new PublicApiRequestError(response.status);
   }
@@ -566,3 +581,55 @@ export const fetchArticleDetailBySlug = cache(async function fetchArticleDetailB
     throw error;
   }
 });
+
+export const fetchManagedPageByPath = cache(async function fetchManagedPageByPath(path: string): Promise<ManagedPage | null> {
+  const normalizedPath = `/${path.replace(/^\/+|\/+$/g, "")}`;
+  try {
+    const payload = await requestJson<{
+      page_id: number;
+      path: string;
+      title: string;
+      template_key: string;
+      status: string;
+      content_html: string;
+      content_json: Record<string, unknown>;
+      meta_description: string;
+      canonical_url: string;
+      robots: string;
+      updated_at: string;
+    }>(`/api/public/pages/${normalizedPath.replace(/^\//, "")}/`);
+    return {
+      pageId: payload.page_id,
+      path: payload.path,
+      title: payload.title,
+      templateKey: payload.template_key,
+      status: payload.status,
+      contentHtml: payload.content_html || "",
+      contentJson: payload.content_json || {},
+      metaDescription: payload.meta_description || "",
+      canonicalUrl: payload.canonical_url || buildAbsoluteSiteUrl(normalizedPath),
+      robots: payload.robots || "index,follow",
+      updatedAt: payload.updated_at,
+    };
+  } catch (error) {
+    if (error instanceof PublicApiRequestError && error.status === 404) {
+      return null;
+    }
+    if (isNetworkFetchError(error)) {
+      return null;
+    }
+    throw error;
+  }
+});
+
+export async function fetchArticlePreviewByToken(token: string): Promise<PublicArticle | null> {
+  try {
+    const payload = await requestUncachedJson<ArticleApiItem>(`/api/public/article-previews/${encodeURIComponent(token)}/`);
+    return mapArticleToPublicArticle(payload);
+  } catch (error) {
+    if (error instanceof PublicApiRequestError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
+}

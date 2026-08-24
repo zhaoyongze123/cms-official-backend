@@ -103,7 +103,7 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
               }`}
               href="/join"
             >
-              关联注册享折扣
+              上阿里云享五折
             </Link>
           </div>
           <button
@@ -143,7 +143,7 @@ export default function PublicLayout({ active, children }: PublicLayoutProps) {
                 active === "join" ? "bg-hermes text-white" : "bg-hermes text-white hover:bg-hermes/90"
               }`}
             >
-              关联注册享折扣
+              上阿里云享五折
             </Link>
           </div>
         </motion.div>
