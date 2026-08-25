@@ -34,6 +34,7 @@ class ContactLead(models.Model):
     referrer = models.CharField("来源页面", max_length=500, blank=True)
     status = models.CharField("跟进状态", max_length=20, choices=Status.choices, default=Status.NEW)
     follow_up_note = models.TextField("跟进备注", blank=True)
+    contact_consent = models.BooleanField("联系授权", default=False)
     consent_at = models.DateTimeField("隐私授权时间")
     created_at = models.DateTimeField("提交时间", auto_now_add=True)
     updated_at = models.DateTimeField("更新时间", auto_now=True)

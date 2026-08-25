@@ -4,13 +4,13 @@ import PublicContactPage from "../../src/features/public-site/public-contact-pag
 import { buildAbsoluteSiteUrl } from "../../src/lib/articles-api";
 
 export const metadata: Metadata = {
-  title: "预约产品演示 | 云璨信息",
-  description: "预约云璨私有化 AI 网盘产品演示，了解企业文件问答、智能体和 RAG 检索能力。",
+  title: "申请免费体验 | 云璨信息",
+  description: "留下联系方式，云璨信息将在 1 个工作日内与您联系。",
   alternates: { canonical: "/contact" },
   openGraph: {
     type: "website",
-    title: "预约产品演示 | 云璨信息",
-    description: "预约云璨私有化 AI 网盘产品演示。",
+    title: "申请免费体验 | 云璨信息",
+    description: "留下联系方式，云璨信息将在 1 个工作日内与您联系。",
     url: buildAbsoluteSiteUrl("/contact"),
     siteName: "云璨信息",
   },

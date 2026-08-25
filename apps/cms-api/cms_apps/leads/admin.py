@@ -76,14 +76,14 @@ class LeadEmailConfigurationAdminForm(forms.ModelForm):
 
 @admin.register(ContactLead)
 class ContactLeadAdmin(admin.ModelAdmin):
-    list_display = ("company_name", "contact_name", "phone", "email", "status", "created_at")
+    list_display = ("company_name", "contact_name", "phone", "email", "contact_consent", "status", "created_at")
     list_filter = ("status", "source", "created_at")
     search_fields = ("company_name", "contact_name", "phone", "email")
-    readonly_fields = ("source", "referrer", "consent_at", "created_at", "updated_at")
+    readonly_fields = ("source", "referrer", "contact_consent", "consent_at", "created_at", "updated_at")
     fieldsets = (
         ("联系信息", {"fields": ("company_name", "contact_name", "phone", "email", "requirement")} ),
         ("跟进", {"fields": ("status", "follow_up_note")} ),
-        ("提交信息", {"fields": ("source", "referrer", "consent_at", "created_at", "updated_at")} ),
+        ("提交信息", {"fields": ("source", "referrer", "contact_consent", "consent_at", "created_at", "updated_at")} ),
     )
 
 

@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { motion } from "motion/react";
-import { ArrowRight, Cloud, Code, Server, Settings, Shield, Zap } from "lucide-react";
+import { ArrowRight, Cloud, Code, Server, Settings, Shield, X, Zap } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import PublicLayout from "./public-layout";
 import AiDriveProductShowcase, { type AiDriveProduct } from "./ai-drive-product-showcase";
+import PublicLeadForm from "./public-lead-form";
 import type { PublicArticle } from "../../lib/articles-api";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -265,6 +266,31 @@ function DemoConsultationModal({ open, onClose }: { open: boolean; onClose: () =
 }
 */
 
+function DemoConsultationModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+
+  return (
+    <dialog aria-labelledby="ai-drive-consultation-title" className="m-auto max-h-[94dvh] w-[min(100%-1rem,42rem)] overflow-hidden rounded-2xl border border-line bg-white p-0 text-charcoal shadow-2xl backdrop:bg-charcoal/65" onCancel={onClose} onClick={(event) => { if (event.target === event.currentTarget) onClose(); }} onClose={onClose} ref={dialogRef}>
+      <div className="max-h-[94dvh] overflow-y-auto">
+        <div className="relative border-b border-line bg-mist px-5 pb-7 pt-10 md:px-8">
+          <button aria-label="关闭联系顾问弹窗" className="absolute right-4 top-4 inline-flex size-9 items-center justify-center rounded-full border border-line bg-white text-charcoal transition-colors hover:border-hermes hover:text-hermes" onClick={onClose} type="button"><X size={17} /></button>
+          <p className="text-xs font-black tracking-[0.2em] text-hermes">AI DRIVE / CONTACT</p>
+          <h2 className="mt-3 text-3xl font-black text-charcoal" id="ai-drive-consultation-title">申请免费体验</h2>
+          <p className="mt-2 text-sm leading-6 text-muted">留下联系方式，云璨信息将在 1 个工作日内与您联系</p>
+        </div>
+        <PublicLeadForm source="homepage_ai_drive_consultant" submitLabel="提交申请" successDescription="云璨信息将在 1 个工作日内与您联系。" />
+      </div>
+    </dialog>
+  );
+}
+
 interface PublicLandingPageProps {
   solutionArticles: PublicArticle[];
   caseLogoWallImageUrl?: string;
@@ -298,6 +324,7 @@ function buildAiDriveProducts(aiDriveDemos: PublicLandingPageProps["aiDriveDemos
 export default function PublicLandingPage({ solutionArticles, caseLogoWallImageUrl, aiDriveDemos }: PublicLandingPageProps) {
   const homepageSolutionItems = buildHomepageSolutionItems(solutionArticles);
   const aiDriveProducts = buildAiDriveProducts(aiDriveDemos);
+  const [consultationOpen, setConsultationOpen] = useState(false);
 
   useEffect(() => {
     const counter = { val: 0 };
@@ -383,15 +410,16 @@ export default function PublicLandingPage({ solutionArticles, caseLogoWallImageU
       <AiDriveProductShowcase
         description={<>企业文件留在内网，AI 能力直接接入。右键文件或文件夹即可提问，也能快速搭建业务智能体，文件不动，知识库不重建。</>}
         eyebrow="本地部署 · LLM 接入"
-        onPrimaryCta={() => document.getElementById("ai-drive-showcase")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-        onSecondaryCta={() => { window.location.href = "/contact"; }}
-        primaryCtaLabel="看 AI 网盘怎么用"
+        onPrimaryCta={() => { window.location.href = "https://www.yuncan.com/contact"; }}
+        onSecondaryCta={() => setConsultationOpen(true)}
+        primaryCtaLabel="申请免费体验"
         products={aiDriveProducts}
         secondaryCtaLabel="联系云璨顾问"
         tags={["文件夹问答", "LLM 灵活接入", "快速搭建智能体", "数据不出企业"]}
         title={<><span className="block">私有化 AI 网盘</span><span className="mt-2 block text-hermes">数据不出企业，AI 直接答。</span></>}
         trustItems={["阿里云授权合作伙伴", "500+ 企业客户的选择"]}
       />
+      <DemoConsultationModal open={consultationOpen} onClose={() => setConsultationOpen(false)} />
 
       <section id="service-matrix" className="scroll-mt-32 py-32 px-6 bg-mist">
         <div className="max-w-7xl mx-auto">

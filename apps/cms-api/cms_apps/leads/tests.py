@@ -24,6 +24,7 @@ class ContactLeadApiTests(TestCase):
                 "phone": "13800138000",
                 "email": "sales@example.com",
                 "privacy_consent": True,
+                "contact_consent": True,
             },
             content_type="application/json",
             secure=True,
@@ -40,6 +41,7 @@ class ContactLeadApiTests(TestCase):
                 "phone": "123",
                 "email": "not-an-email",
                 "privacy_consent": True,
+                "contact_consent": True,
             },
             content_type="application/json",
             secure=True,
@@ -61,6 +63,7 @@ class ContactLeadApiTests(TestCase):
                 "contact_name": "张三",
                 "phone": "13800138000",
                 "privacy_consent": True,
+                "contact_consent": True,
             },
             content_type="application/json",
             secure=True,
@@ -70,6 +73,22 @@ class ContactLeadApiTests(TestCase):
         self.assertEqual(process_pending_deliveries(), 1)
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(LeadEmailDelivery.objects.get().status, LeadEmailDelivery.Status.SENT)
+
+    def test_public_endpoint_requires_contact_consent(self):
+        response = self.client.post(
+            "/api/public/leads/",
+            data={
+                "company_name": "云璨测试企业",
+                "contact_name": "张三",
+                "phone": "13800138000",
+                "privacy_consent": True,
+                "contact_consent": False,
+            },
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("contact_consent", response.json()["error"]["details"])
 
     def test_daily_notification_is_delivered_at_configured_time(self):
         rule = LeadNotificationRule.objects.create(

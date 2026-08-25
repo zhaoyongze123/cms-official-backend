@@ -53,8 +53,13 @@ def public_lead_create_view(request):
 
     if str(payload.get("website", "")).strip():
         return JsonResponse({"status": "accepted"}, status=201)
+    consent_errors: dict[str, list[str]] = {}
     if payload.get("privacy_consent") is not True:
-        return _error("validation_error", "请先阅读并同意隐私政策。", {"privacy_consent": ["请先阅读并同意隐私政策。"]}, 400)
+        consent_errors["privacy_consent"] = ["请先阅读并同意隐私政策。"]
+    if payload.get("contact_consent") is not True:
+        consent_errors["contact_consent"] = ["请同意云璨信息通过电话或邮件联系您并回复方案。"]
+    if consent_errors:
+        return _error("validation_error", "提交前请完成授权确认。", consent_errors, 400)
 
     lead = ContactLead(
         company_name=str(payload.get("company_name", "")),
@@ -64,6 +69,7 @@ def public_lead_create_view(request):
         requirement=str(payload.get("requirement", "")),
         source=str(payload.get("source", "homepage_ai_drive_demo"))[:80],
         referrer=str(payload.get("referrer", ""))[:500],
+        contact_consent=True,
         consent_at=timezone.now(),
     )
     try:
