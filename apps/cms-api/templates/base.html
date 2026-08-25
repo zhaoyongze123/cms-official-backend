@@ -26,7 +26,7 @@
         <nav class="site-nav" id="site-nav">
           <ul class="nav-list" id="nav-list">
             <li><a href="/" class="{% if request.path == '/' %}active{% endif %}">首页</a></li>
-            <li><a href="/django-admin/">后台管理</a></li>
+            <li><a href="{% url 'admin:index' %}">后台管理</a></li>
           </ul>
         </nav>
       </div>
@@ -50,7 +50,7 @@
             <h4 class="text-white mb-3">相关链接</h4>
             <ul class="list-unstyled">
               <li class="mb-2"><a href="/" class="text-muted">返回首页</a></li>
-              <li class="mb-2"><a href="/django-admin/" class="text-muted">进入后台</a></li>
+              <li class="mb-2"><a href="{% url 'admin:index' %}" class="text-muted">进入后台</a></li>
             </ul>
           </div>
         </div>

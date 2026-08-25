@@ -197,13 +197,13 @@ JAZZMIN_SETTINGS = {
             },
             {
                 "name": "SEO 监控",
-                "url": "/django-admin/analytics",
+                "url": "analytics_dashboard",
                 "icon": "fas fa-chart-line",
             },
         ],
         "aliyun_monitor": [{
             "name": "云资源概览",
-            "url": "/django-admin/aliyun-monitor/",
+            "url": "admin:aliyun-monitor",
             "icon": "fas fa-cloud",
         }],
     },

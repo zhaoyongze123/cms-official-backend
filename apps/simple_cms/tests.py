@@ -6,8 +6,11 @@ from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
+from django.test.utils import override_script_prefix
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
+from jazzmin.utils import get_custom_url
 
 from apps.simple_cms.admin import ArticleAdmin
 from apps.simple_cms.admin_views import next_editor_proxy
@@ -386,3 +389,18 @@ class ArticleAdminEditorUrlTests(SimpleTestCase):
         url = ArticleAdmin._build_next_editor_url("/django-admin/articles/new/")
 
         self.assertEqual(url, "/django-admin/next-editor/django-admin/articles/new/")
+
+
+@override_settings(FORCE_SCRIPT_NAME="/django")
+class AdminUrlPrefixTests(TestCase):
+    def test_custom_admin_links_use_script_name_aware_reverse_urls(self):
+        with override_script_prefix("/django/"):
+            self.assertEqual(get_custom_url("analytics_dashboard"), "/django/django-admin/analytics")
+            self.assertEqual(get_custom_url("admin:aliyun-monitor"), "/django/django-admin/aliyun-monitor/")
+
+    def test_public_template_admin_links_use_script_name_aware_reverse_urls(self):
+        with override_script_prefix("/django/"):
+            html = render_to_string("base.html", {}, request=RequestFactory().get("/"))
+
+        self.assertIn('href="/django/django-admin/"', html)
+        self.assertNotIn('href="/django-admin/"', html)
