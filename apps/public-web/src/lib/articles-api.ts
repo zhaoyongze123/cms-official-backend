@@ -259,14 +259,7 @@ export function buildWechatShareImageUrl(article: Pick<PublicArticle, "slug" | "
 
 async function requestJson<T>(path: string): Promise<T> {
   const target = isServer ? new URL(path, serverBaseUrl).toString() : path;
-  const headers: HeadersInit = {
-    Accept: 'application/json',
-  };
-  if (isServer && serverBaseUrl !== publicApiBaseUrl) {
-    // 内部 HTTP 请求仍按公网 HTTPS 请求交给 Django 处理，避免 SSL 重定向。
-    headers["X-Forwarded-Host"] = publicApiUrl.host;
-    headers["X-Forwarded-Proto"] = publicApiUrl.protocol.replace(":", "");
-  }
+  const headers = buildPublicApiHeaders();
   const response = await fetch(target, {
     headers,
     redirect: 'manual',
@@ -279,9 +272,7 @@ async function requestJson<T>(path: string): Promise<T> {
   if (response.status === 301) {
     const location = response.headers.get('Location');
     if (location) {
-      const nextPath = isServer
-        ? new URL(location, serverBaseUrl).pathname
-        : location;
+      const nextPath = resolvePublicApiRedirect(location);
       return requestJson<T>(nextPath);
     }
   }
@@ -294,13 +285,40 @@ async function requestJson<T>(path: string): Promise<T> {
 async function requestUncachedJson<T>(path: string): Promise<T> {
   const target = isServer ? new URL(path, serverBaseUrl).toString() : path;
   const response = await fetch(target, {
-    headers: { Accept: "application/json" },
+    headers: buildPublicApiHeaders(),
+    redirect: 'manual',
     cache: "no-store",
   });
+  if (response.status === 301) {
+    const location = response.headers.get('Location');
+    if (location) {
+      return requestUncachedJson<T>(resolvePublicApiRedirect(location));
+    }
+  }
   if (!response.ok) {
     throw new PublicApiRequestError(response.status);
   }
   return response.json() as Promise<T>;
+}
+
+function resolvePublicApiRedirect(location: string): string {
+  if (!isServer) {
+    return location;
+  }
+  const redirectUrl = new URL(location, serverBaseUrl);
+  return `${redirectUrl.pathname}${redirectUrl.search}`;
+}
+
+function buildPublicApiHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    Accept: "application/json",
+  };
+  if (isServer && serverBaseUrl !== publicApiBaseUrl) {
+    // 内部 HTTP 请求仍按公网 HTTPS 请求交给 Django 处理，避免 SSL 重定向。
+    headers["X-Forwarded-Host"] = publicApiUrl.host;
+    headers["X-Forwarded-Proto"] = publicApiUrl.protocol.replace(":", "");
+  }
+  return headers;
 }
 
 function logPublicApiError(scope: string, error: unknown) {
