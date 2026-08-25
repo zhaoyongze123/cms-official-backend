@@ -656,6 +656,14 @@ function buildImageAttributeString(attrs: GenericNode["attrs"]) {
   return htmlAttributes.length > 0 ? ` ${htmlAttributes.join(" ")}` : "";
 }
 
+function buildTextAlignAttribute(attrs: GenericNode["attrs"]) {
+  const align = attrs?.textAlign;
+  if (align !== "left" && align !== "center" && align !== "right" && align !== "justify") {
+    return "";
+  }
+  return ` style="text-align:${align};"`;
+}
+
 function renderNode(node: GenericNode | undefined): string {
   if (!node?.type) {
     return "";
@@ -666,12 +674,12 @@ function renderNode(node: GenericNode | undefined): string {
   }
 
   if (node.type === "paragraph") {
-    return `<p>${renderInlineContent(node.content)}</p>`;
+    return `<p${buildTextAlignAttribute(node.attrs)}>${renderInlineContent(node.content)}</p>`;
   }
 
   if (node.type === "heading") {
     const level = typeof node.attrs?.level === "number" ? node.attrs.level : 2;
-    return `<h${level}>${renderInlineContent(node.content)}</h${level}>`;
+    return `<h${level}${buildTextAlignAttribute(node.attrs)}>${renderInlineContent(node.content)}</h${level}>`;
   }
 
   if (node.type === "bulletList") {

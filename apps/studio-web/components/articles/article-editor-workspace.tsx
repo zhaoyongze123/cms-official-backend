@@ -423,6 +423,14 @@ export function documentToHtml(document: TipTapDocument) {
       .replaceAll("'", "&#39;");
   }
 
+  function buildTextAlignAttribute(attrs?: Record<string, unknown>) {
+    const align = attrs?.textAlign;
+    if (align !== "left" && align !== "center" && align !== "right" && align !== "justify") {
+      return "";
+    }
+    return ` style="text-align:${align};"`;
+  }
+
   function renderNode(node: SerializableNode): string {
     if (!node?.type) {
       return "";
@@ -465,11 +473,11 @@ export function documentToHtml(document: TipTapDocument) {
 
     const children = (node.content ?? []).map((child) => renderNode(child)).join("");
     if (node.type === "paragraph") {
-      return `<p>${children}</p>`;
+      return `<p${buildTextAlignAttribute(node.attrs)}>${children}</p>`;
     }
     if (node.type === "heading") {
       const level = typeof node.attrs?.level === "number" ? node.attrs.level : 2;
-      return `<h${level}>${children}</h${level}>`;
+      return `<h${level}${buildTextAlignAttribute(node.attrs)}>${children}</h${level}>`;
     }
     if (node.type === "bulletList") {
       const items = (node.content ?? [])
