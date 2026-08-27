@@ -29,6 +29,8 @@ class ContactLead(models.Model):
     contact_name = models.CharField("联系人姓名", max_length=20)
     phone = models.CharField("手机号码", max_length=11, validators=[mobile_phone_validator])
     email = models.EmailField("邮箱地址", max_length=254, blank=True)
+    product_key = models.CharField("咨询产品参数", max_length=64, blank=True)
+    product_name = models.CharField("咨询产品", max_length=80, blank=True)
     requirement = models.TextField("咨询需求", max_length=1000, blank=True)
     source = models.CharField("线索来源", max_length=80, default="homepage_ai_drive_demo")
     referrer = models.CharField("来源页面", max_length=500, blank=True)
@@ -50,6 +52,8 @@ class ContactLead(models.Model):
         self.contact_name = self.contact_name.strip()
         self.phone = re.sub(r"\s+", "", self.phone)
         self.email = self.email.strip().lower()
+        self.product_key = self.product_key.strip().lower()
+        self.product_name = self.product_name.strip()
         self.requirement = self.requirement.strip()
         self.referrer = self.referrer.strip()
         errors: dict[str, str] = {}

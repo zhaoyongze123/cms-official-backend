@@ -6,7 +6,7 @@ from cms_apps.articles.models import Article, Category, Tag, ManagedPage
 from cms_apps.faq.models import FaqItem
 from cms_apps.seo.models.metadata import SeoMetadata
 from apps.media_library.models import ImageItem
-from apps.sys_settings.models import SiteSetting
+from apps.sys_settings.models import ContactProductOption, SiteSetting
 
 
 class ArticleApiTests(TestCase):
@@ -395,6 +395,7 @@ class ArticleApiTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_public_site_settings_returns_third_party_scripts(self):
+        ContactProductOption.objects.filter(site_setting=self.site_setting).delete()
         response = self.client.get("/api/public/site-settings/")
 
         self.assertEqual(response.status_code, 200)
@@ -406,6 +407,39 @@ class ArticleApiTests(TestCase):
         self.assertEqual(payload["homepage_featured_articles"], [None, None, None])
         self.assertEqual(payload["homepage_solution_articles"], [None, None, None, None])
         self.assertIsNone(payload["homepage_case_logo_wall_image_url"])
+        self.assertEqual(payload["contact_product_options"], [])
+
+    def test_public_site_settings_returns_active_contact_product_options_in_order(self):
+        ContactProductOption.objects.filter(site_setting=self.site_setting).delete()
+        ContactProductOption.objects.create(
+            site_setting=self.site_setting,
+            name="Zimbra 邮箱协同",
+            product_key="zimbra",
+            sort_order=20,
+        )
+        ContactProductOption.objects.create(
+            site_setting=self.site_setting,
+            name="Kodbox 企业网盘",
+            product_key="kodbox",
+            sort_order=10,
+        )
+        ContactProductOption.objects.create(
+            site_setting=self.site_setting,
+            name="已停用产品",
+            product_key="archived-product",
+            is_active=False,
+        )
+
+        response = self.client.get("/api/public/site-settings/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["contact_product_options"],
+            [
+                {"name": "Kodbox 企业网盘", "product_key": "kodbox"},
+                {"name": "Zimbra 邮箱协同", "product_key": "zimbra"},
+            ],
+        )
 
     def test_public_site_settings_returns_featured_articles(self):
         self.site_setting.homepage_featured_article_primary = self.article

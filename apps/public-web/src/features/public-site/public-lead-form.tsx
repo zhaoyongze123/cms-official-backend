@@ -8,6 +8,7 @@ type LeadValues = {
   contactName: string;
   phone: string;
   email: string;
+  productKey: string;
   requirement: string;
   privacyConsent: boolean;
   contactConsent: boolean;
@@ -20,6 +21,7 @@ const INITIAL_LEAD_VALUES: LeadValues = {
   contactName: "",
   phone: "",
   email: "",
+  productKey: "",
   requirement: "",
   privacyConsent: false,
   contactConsent: false,
@@ -38,18 +40,33 @@ function validateLeadField(name: keyof LeadValues, values: LeadValues): string |
 
 interface PublicLeadFormProps {
   source: string;
+  productOptions?: ContactProductOption[];
+  initialProductKey?: string;
   submitLabel?: string;
   successDescription?: string;
   className?: string;
 }
 
+export interface ContactProductOption {
+  name: string;
+  productKey: string;
+}
+
 export default function PublicLeadForm({
   source,
+  productOptions = [],
+  initialProductKey = "",
   submitLabel = "提交申请",
   successDescription = "云璨信息将在 1 个工作日内与您联系。",
   className = "",
 }: PublicLeadFormProps) {
-  const [values, setValues] = useState<LeadValues>(INITIAL_LEAD_VALUES);
+  const [values, setValues] = useState<LeadValues>(() => ({
+    ...INITIAL_LEAD_VALUES,
+    // 仅接受后台返回的产品参数，避免 URL 传入无效值后直接提交。
+    productKey: productOptions.some((option) => option.productKey === initialProductKey)
+      ? initialProductKey
+      : "",
+  }));
   const [website, setWebsite] = useState("");
   const [errors, setErrors] = useState<LeadErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -89,6 +106,7 @@ export default function PublicLeadForm({
           contact_name: values.contactName,
           phone: values.phone.replace(/\s/g, ""),
           email: values.email,
+          product_key: values.productKey,
           requirement: values.requirement,
           privacy_consent: values.privacyConsent,
           contact_consent: values.contactConsent,
@@ -106,6 +124,7 @@ export default function PublicLeadForm({
             contact_name: "contactName",
             phone: "phone",
             email: "email",
+            product_key: "productKey",
             privacy_consent: "privacyConsent",
             contact_consent: "contactConsent",
           };
@@ -145,6 +164,7 @@ export default function PublicLeadForm({
         <label className="block text-sm font-bold text-charcoal">您的姓名 <span className="text-hermes">*</span><input aria-invalid={Boolean(errors.contactName)} className={fieldClass} maxLength={20} onBlur={() => validateOne("contactName")} onChange={(event) => updateValue("contactName", event.target.value)} value={values.contactName} />{errors.contactName ? <span className="mt-1 block text-sm text-red-700">{errors.contactName}</span> : null}</label>
         <label className="block text-sm font-bold text-charcoal">手机号码 <span className="text-hermes">*</span><input aria-invalid={Boolean(errors.phone)} className={fieldClass} inputMode="numeric" maxLength={11} onBlur={() => validateOne("phone")} onChange={(event) => updateValue("phone", event.target.value)} placeholder="用于联系您" type="tel" value={values.phone} />{errors.phone ? <span className="mt-1 block text-sm text-red-700">{errors.phone}</span> : null}</label>
         <label className="block text-sm font-bold text-charcoal">邮箱地址 <span className="font-normal text-muted">（选填）</span><input aria-invalid={Boolean(errors.email)} className={fieldClass} maxLength={254} onBlur={() => validateOne("email")} onChange={(event) => updateValue("email", event.target.value)} placeholder="方便接收方案资料" type="email" value={values.email} />{errors.email ? <span className="mt-1 block text-sm text-red-700">{errors.email}</span> : null}</label>
+        {productOptions.length > 0 ? <label className="block text-sm font-bold text-charcoal">意向产品 <span className="font-normal text-muted">（选填）</span><select className={fieldClass} onChange={(event) => updateValue("productKey", event.target.value)} value={values.productKey}><option value="">请选择感兴趣的产品</option>{productOptions.map((option) => <option key={option.productKey} value={option.productKey}>{option.name}</option>)}</select></label> : null}
       </div>
       <label className="mt-5 block text-sm font-bold text-charcoal">咨询需求 <span className="font-normal text-muted">（选填）</span><textarea className={`${fieldClass} min-h-28 resize-y`} maxLength={1000} onChange={(event) => updateValue("requirement", event.target.value)} placeholder="可填写部署规模、现有环境或希望重点了解的能力" value={values.requirement} /></label>
       <input aria-hidden="true" autoComplete="off" className="hidden" onChange={(event) => setWebsite(event.target.value)} tabIndex={-1} value={website} />

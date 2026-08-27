@@ -1,5 +1,7 @@
-﻿from django.core.validators import FileExtensionValidator
-from django.db import models
+﻿from django.core.validators import FileExtensionValidator, RegexValidator
+from django.db import models, transaction
+
+from cms_apps.common.services.public_cache import invalidate_public_web_cache
 
 
 class SiteSetting(models.Model):
@@ -367,3 +369,56 @@ class SiteSetting(models.Model):
         if not self.ai_alt_model:
             self.ai_alt_model = self.ai_generate_model or self.DEFAULT_AI_GENERATE_MODEL
         super().save(*args, **kwargs)
+        # 官网会缓存站点设置，后台保存后主动通知前端刷新配置。
+        transaction.on_commit(invalidate_public_web_cache)
+
+
+class ContactProductOption(models.Model):
+    """官网咨询表单可选产品，参数值同时用于 /contact?product=xxx。"""
+
+    site_setting = models.ForeignKey(
+        SiteSetting,
+        verbose_name="所属站点设置",
+        on_delete=models.CASCADE,
+        related_name="contact_product_options",
+        editable=False,
+    )
+    product_key = models.CharField(
+        "URL 参数值",
+        max_length=64,
+        unique=True,
+        validators=[
+            RegexValidator(
+                regex=r"^[a-z0-9][a-z0-9-]{0,63}$",
+                message="仅支持小写字母、数字和连字符，且必须以字母或数字开头。",
+            )
+        ],
+        help_text="例如 kodbox。对应访问地址 /contact?product=kodbox。",
+    )
+    name = models.CharField("产品显示名称", max_length=80)
+    is_active = models.BooleanField("在官网表单中启用", default=True)
+    sort_order = models.PositiveIntegerField("排序", default=0)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+        verbose_name = "咨询表单产品选项"
+        verbose_name_plural = "咨询表单产品选项"
+
+    def clean(self):
+        super().clean()
+        self.product_key = self.product_key.strip().lower()
+        self.name = self.name.strip()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+        # 产品配置变化后，联系页下拉框和 URL 预选需立即同步。
+        transaction.on_commit(invalidate_public_web_cache)
+
+    def delete(self, *args, **kwargs):
+        result = super().delete(*args, **kwargs)
+        transaction.on_commit(invalidate_public_web_cache)
+        return result
+
+    def __str__(self):
+        return self.name

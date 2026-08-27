@@ -6,7 +6,16 @@ from django.urls import reverse
 from cms_apps.ai_reviews.services import fetch_siliconflow_models
 from cms_apps.ai_reviews.services.configuration import mask_api_key
 
-from .models import SiteSetting
+from .models import ContactProductOption, SiteSetting
+
+
+class ContactProductOptionInline(admin.TabularInline):
+    """在全局设置页维护官网咨询表单的产品下拉选项。"""
+
+    model = ContactProductOption
+    extra = 1
+    fields = ("name", "product_key", "is_active", "sort_order")
+    ordering = ("sort_order", "id")
 
 
 class SiteSettingForm(forms.ModelForm):
@@ -137,6 +146,7 @@ class SiteSettingForm(forms.ModelForm):
 @admin.register(SiteSetting)
 class SiteSettingAdmin(admin.ModelAdmin):
     form = SiteSettingForm
+    inlines = (ContactProductOptionInline,)
     list_display = ("site_title", "storage_path", "allow_video", "max_upload_size")
     readonly_fields = (
         "google_last_sync_at",

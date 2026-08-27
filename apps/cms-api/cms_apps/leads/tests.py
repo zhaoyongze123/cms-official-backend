@@ -8,6 +8,7 @@ from django.utils import timezone
 from .admin import LeadNotificationRuleAdminForm
 from .models import ContactLead, LeadEmailConfiguration, LeadEmailDelivery, LeadNotificationRule
 from .services import _email_connection_and_sender, process_pending_deliveries
+from apps.sys_settings.models import ContactProductOption, SiteSetting
 
 
 @override_settings(
@@ -31,6 +32,56 @@ class ContactLeadApiTests(TestCase):
         )
         self.assertEqual(response.status_code, 201)
         self.assertEqual(ContactLead.objects.count(), 1)
+
+    def test_public_endpoint_saves_product_snapshot_from_active_configuration(self):
+        product_option = ContactProductOption.objects.get(product_key="kodbox")
+        product_option.name = "Kodbox 私有云网盘"
+        product_option.save()
+
+        response = self.client.post(
+            "/api/public/leads/",
+            data={
+                "company_name": "云璨测试企业",
+                "contact_name": "张三",
+                "phone": "13800138000",
+                "product_key": "KODBOX",
+                "privacy_consent": True,
+                "contact_consent": True,
+            },
+            content_type="application/json",
+            secure=True,
+        )
+
+        self.assertEqual(response.status_code, 201)
+        lead = ContactLead.objects.get()
+        self.assertEqual(lead.product_key, "kodbox")
+        self.assertEqual(lead.product_name, "Kodbox 私有云网盘")
+
+    def test_public_endpoint_rejects_unknown_or_inactive_product(self):
+        setting, _ = SiteSetting.objects.get_or_create(id=1)
+        ContactProductOption.objects.create(
+            site_setting=setting,
+            name="已停用产品",
+            product_key="archived-product",
+            is_active=False,
+        )
+
+        response = self.client.post(
+            "/api/public/leads/",
+            data={
+                "company_name": "云璨测试企业",
+                "contact_name": "张三",
+                "phone": "13800138000",
+                "product_key": "archived-product",
+                "privacy_consent": True,
+                "contact_consent": True,
+            },
+            content_type="application/json",
+            secure=True,
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("product_key", response.json()["error"]["details"])
 
     def test_public_endpoint_rejects_invalid_phone_and_email(self):
         response = self.client.post(

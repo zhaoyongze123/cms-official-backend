@@ -1,9 +1,17 @@
 "use client";
 
 import PublicLayout from "./public-layout";
-import PublicLeadForm from "./public-lead-form";
+import PublicLeadForm, { type ContactProductOption } from "./public-lead-form";
 
-export default function PublicContactPage() {
+interface PublicContactPageProps {
+  initialProductKey: string;
+  productOptions: ContactProductOption[];
+}
+
+export default function PublicContactPage({
+  initialProductKey,
+  productOptions,
+}: PublicContactPageProps) {
   return (
     <PublicLayout active="join">
       <main className="min-h-screen bg-[#f5f8fc] px-5 pb-20 pt-36 text-charcoal md:px-8 md:pb-28 md:pt-44 lg:px-12">
@@ -13,7 +21,11 @@ export default function PublicContactPage() {
           <h1 className="mt-4 text-4xl font-black tracking-tight text-charcoal md:text-5xl">申请免费体验</h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-muted">留下联系方式，云璨信息将在 1 个工作日内与您联系</p>
         </div>
-        <PublicLeadForm source="public_contact_page" />
+        <PublicLeadForm
+          initialProductKey={initialProductKey}
+          productOptions={productOptions}
+          source="public_contact_page"
+        />
       </div>
       </main>
     </PublicLayout>

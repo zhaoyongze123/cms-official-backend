@@ -13,6 +13,7 @@ from django.views.decorators.http import require_POST
 
 from .models import ContactLead
 from .services import queue_immediate_notifications
+from apps.sys_settings.models import ContactProductOption
 
 
 def _error(code: str, message: str, details: dict[str, object], status: int) -> JsonResponse:
@@ -61,11 +62,29 @@ def public_lead_create_view(request):
     if consent_errors:
         return _error("validation_error", "提交前请完成授权确认。", consent_errors, 400)
 
+    # 前端只提交参数值，服务端以后台启用的配置为唯一事实源并保存名称快照。
+    product_key = str(payload.get("product_key", "")).strip().lower()
+    product_option = None
+    if product_key:
+        product_option = ContactProductOption.objects.filter(
+            product_key=product_key,
+            is_active=True,
+        ).first()
+        if product_option is None:
+            return _error(
+                "validation_error",
+                "参数校验失败",
+                {"product_key": ["请选择当前可用的产品。"]},
+                400,
+            )
+
     lead = ContactLead(
         company_name=str(payload.get("company_name", "")),
         contact_name=str(payload.get("contact_name", "")),
         phone=str(payload.get("phone", "")),
         email=str(payload.get("email", "")),
+        product_key=product_option.product_key if product_option else "",
+        product_name=product_option.name if product_option else "",
         requirement=str(payload.get("requirement", "")),
         source=str(payload.get("source", "homepage_ai_drive_demo"))[:80],
         referrer=str(payload.get("referrer", ""))[:500],

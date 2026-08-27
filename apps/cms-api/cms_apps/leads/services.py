@@ -64,7 +64,8 @@ def _lead_lines(leads: Iterable[ContactLead]) -> list[str]:
     return [
         (
             f"公司：{lead.company_name}\n联系人：{lead.contact_name}\n手机：{lead.phone}\n"
-            f"邮箱：{lead.email or '未填写'}\n需求：{lead.requirement or '未填写'}\n"
+            f"邮箱：{lead.email or '未填写'}\n意向产品：{lead.product_name or '未选择'}\n"
+            f"需求：{lead.requirement or '未填写'}\n"
             f"提交时间：{timezone.localtime(lead.created_at):%Y-%m-%d %H:%M}"
         )
         for lead in leads

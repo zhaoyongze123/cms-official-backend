@@ -68,5 +68,9 @@ def public_site_setting_view(request):
             _serialize_ai_drive_demo(setting, scene_number)
             for scene_number in range(1, 5)
         ],
+        "contact_product_options": [
+            {"name": option.name, "product_key": option.product_key}
+            for option in setting.contact_product_options.filter(is_active=True)
+        ],
     }
     return JsonResponse(payload)

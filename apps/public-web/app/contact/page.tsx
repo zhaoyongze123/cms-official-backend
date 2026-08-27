@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import PublicContactPage from "../../src/features/public-site/public-contact-page";
-import { buildAbsoluteSiteUrl } from "../../src/lib/articles-api";
+import { buildAbsoluteSiteUrl, getPublicSiteSettings } from "../../src/lib/articles-api";
 
 export const metadata: Metadata = {
   title: "申请免费体验 | 云璨信息",
@@ -17,6 +17,18 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-export default function ContactPage() {
-  return <PublicContactPage />;
+export default async function ContactPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ product?: string | string[] }>;
+}) {
+  const [{ product }, siteSettings] = await Promise.all([searchParams, getPublicSiteSettings()]);
+  const requestedProductKey = Array.isArray(product) ? product[0] : product;
+
+  return (
+    <PublicContactPage
+      initialProductKey={requestedProductKey?.trim().toLowerCase() || ""}
+      productOptions={siteSettings.contactProductOptions}
+    />
+  );
 }

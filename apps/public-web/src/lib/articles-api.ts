@@ -175,6 +175,12 @@ export interface PublicSiteSettings {
     highlights: string[];
     videoUrl: string;
   }>;
+  contactProductOptions: ContactProductOption[];
+}
+
+export interface ContactProductOption {
+  name: string;
+  productKey: string;
 }
 
 export interface ManagedPage {
@@ -378,6 +384,10 @@ export const getPublicSiteSettings = cache(async function getPublicSiteSettings(
         highlights?: string[];
         video_url?: string | null;
       }>;
+      contact_product_options?: Array<{
+        name?: string;
+        product_key?: string;
+      }>;
     }>("/api/public/site-settings/");
 
     return {
@@ -402,6 +412,12 @@ export const getPublicSiteSettings = cache(async function getPublicSiteSettings(
         highlights: (demo.highlights || []).filter((item) => Boolean(item?.trim())),
         videoUrl: demo.video_url ? new URL(demo.video_url, publicApiBaseUrl).toString() : "",
       })),
+      contactProductOptions: (payload.contact_product_options || [])
+        .filter((option) => Boolean(option.name?.trim() && option.product_key?.trim()))
+        .map((option) => ({
+          name: option.name!.trim(),
+          productKey: option.product_key!.trim(),
+        })),
     };
   } catch (error) {
     logPublicApiError("公开站点设置", error);
@@ -416,6 +432,7 @@ export const getPublicSiteSettings = cache(async function getPublicSiteSettings(
       homepageSolutionArticles: [],
       homepageCaseLogoWallImageUrl: "",
       homepageAiDriveDemos: [],
+      contactProductOptions: [],
     };
   }
 });
