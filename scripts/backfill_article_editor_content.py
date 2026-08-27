@@ -4,7 +4,9 @@ import json
 import os
 import re
 import sys
+import argparse
 from dataclasses import dataclass, field
+from html import escape as escape_html
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
@@ -42,14 +44,18 @@ class HtmlNode:
     attrs: dict[str, str] = field(default_factory=dict)
     text_parts: list[str] = field(default_factory=list)
     children: list["HtmlNode"] = field(default_factory=list)
+    parts: list[str | "HtmlNode"] = field(default_factory=list)
 
     @property
     def text(self) -> str:
-        parts = list(self.text_parts)
+        if self.parts:
+            values = [part if isinstance(part, str) else part.text for part in self.parts]
+            return normalize_text(" ".join(part for part in values if part))
+        values = list(self.text_parts)
         for child in self.children:
             if child.text:
-                parts.append(child.text)
-        return normalize_text(" ".join(part for part in parts if part))
+                values.append(child.text)
+        return normalize_text(" ".join(part for part in values if part))
 
 
 class ArticleHtmlParser(HTMLParser):
@@ -62,6 +68,7 @@ class ArticleHtmlParser(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         node = HtmlNode(tag=tag, attrs={key: value or "" for key, value in attrs})
         self.stack[-1].children.append(node)
+        self.stack[-1].parts.append(node)
         if tag not in self.void_tags:
             self.stack.append(node)
 
@@ -71,10 +78,14 @@ class ArticleHtmlParser(HTMLParser):
 
     def handle_data(self, data: str) -> None:
         self.stack[-1].text_parts.append(data)
+        self.stack[-1].parts.append(data)
 
 
-def create_text_node(text: str) -> dict[str, Any]:
-    return {"type": "text", "text": text}
+def create_text_node(text: str, marks: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    node: dict[str, Any] = {"type": "text", "text": text}
+    if marks:
+        node["marks"] = marks
+    return node
 
 
 def create_paragraph(text: str, block_id: str) -> dict[str, Any]:
@@ -105,6 +116,97 @@ def create_list_item(text: str, block_id: str) -> dict[str, Any]:
             }
         ],
     }
+
+
+def create_paragraph_content(content: list[dict[str, Any]], block_id: str) -> dict[str, Any]:
+    node: dict[str, Any] = {
+        "type": "paragraph",
+        "attrs": {"blockId": block_id},
+    }
+    if content:
+        node["content"] = content
+    return node
+
+
+def _normalize_inline_text(value: str) -> str:
+    if not value or not value.strip():
+        return ""
+    normalized = WHITESPACE_RE.sub(" ", value)
+    if "\n" in value or "\r" in value or "\t" in value:
+        return normalized.strip()
+    return normalized
+
+
+def _inline_content(node: HtmlNode, marks: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    active_marks = list(marks or [])
+    if node.tag in {"strong", "b"}:
+        active_marks.append({"type": "bold"})
+    elif node.tag in {"em", "i"}:
+        active_marks.append({"type": "italic"})
+    elif node.tag == "u":
+        active_marks.append({"type": "underline"})
+    elif node.tag in {"s", "strike", "del"}:
+        active_marks.append({"type": "strike"})
+    elif node.tag == "code":
+        active_marks.append({"type": "code"})
+    elif node.tag == "mark":
+        active_marks.append({"type": "highlight"})
+    elif node.tag == "a":
+        href = node.attrs.get("href", "").strip()
+        if href:
+            active_marks.append(
+                {
+                    "type": "link",
+                    "attrs": {
+                        "href": href,
+                        "target": node.attrs.get("target") or "_blank",
+                    },
+                }
+            )
+
+    result: list[dict[str, Any]] = []
+    for part in node.parts:
+        if isinstance(part, str):
+            text = _normalize_inline_text(part)
+            if text:
+                result.append(create_text_node(text, active_marks))
+            continue
+        if part.tag in {"img", "br"}:
+            continue
+        result.extend(_inline_content(part, active_marks))
+    return result
+
+
+def _find_node(node: HtmlNode, tag: str) -> HtmlNode | None:
+    if node.tag == tag:
+        return node
+    for child in node.children:
+        found = _find_node(child, tag)
+        if found is not None:
+            return found
+    return None
+
+
+def _find_link_href(node: HtmlNode) -> str:
+    link = _find_node(node, "a")
+    return link.attrs.get("href", "").strip() if link else ""
+
+
+def _create_caption_paragraph(caption: str, source_url: str, block_id: str) -> dict[str, Any] | None:
+    caption_text = normalize_text(caption)
+    content: list[dict[str, Any]] = []
+    if caption_text:
+        content.append(create_text_node(caption_text))
+    if source_url:
+        if content:
+            content.append(create_text_node(" "))
+        content.append(
+            create_text_node(
+                "打开原图",
+                [{"type": "link", "attrs": {"href": source_url, "target": "_blank"}}],
+            )
+        )
+    return create_paragraph_content(content, block_id) if content else None
 
 
 def _normalize_html(value: str) -> str:
@@ -230,11 +332,19 @@ def build_tiptap_document_from_html(html: str) -> dict[str, Any]:
 
         if node.tag in {"h1", "h2", "h3"} and node_text:
             level = int(node.tag[1])
-            items.append(create_heading(node_text, level, next_block_id()))
+            items.append(
+                {
+                    "type": "heading",
+                    "attrs": {"level": level, "blockId": next_block_id()},
+                    "content": _inline_content(node),
+                }
+            )
             return items
 
-        if node.tag == "p" and node_text:
-            items.append(create_paragraph(node_text, next_block_id()))
+        if node.tag == "p":
+            inline_content = _inline_content(node)
+            if inline_content:
+                items.append(create_paragraph_content(inline_content, next_block_id()))
             return items
 
         if node.tag == "blockquote":
@@ -256,9 +366,37 @@ def build_tiptap_document_from_html(html: str) -> dict[str, Any]:
         if node.tag in {"ul", "ol"}:
             list_items = []
             for child in node.children:
-                child_text = child.text
-                if child.tag == "li" and child_text:
-                    list_items.append(create_list_item(child_text, next_block_id()))
+                if child.tag != "li":
+                    continue
+                item_content: list[dict[str, Any]] = []
+                inline_content: list[dict[str, Any]] = []
+
+                def flush_inline_content() -> None:
+                    if inline_content:
+                        item_content.append(create_paragraph_content(inline_content.copy(), f"{item_id}_p"))
+                        inline_content.clear()
+
+                item_id = next_block_id()
+                # li 的直接文本位于 parts 中，不能只遍历 children，否则会丢失“<li>文本</li>”。
+                for part in child.parts:
+                    if isinstance(part, str):
+                        text = _normalize_inline_text(part)
+                        if text:
+                            inline_content.append(create_text_node(text))
+                    elif part.tag in {"ul", "ol"}:
+                        flush_inline_content()
+                        item_content.extend(convert_node(part))
+                    else:
+                        inline_content.extend(_inline_content(part))
+                flush_inline_content()
+                if item_content:
+                    list_items.append(
+                        {
+                            "type": "listItem",
+                            "attrs": {"blockId": item_id},
+                            "content": item_content,
+                        }
+                    )
             if list_items:
                 items.append(
                     {
@@ -270,7 +408,8 @@ def build_tiptap_document_from_html(html: str) -> dict[str, Any]:
             return items
 
         if node.tag in {"figure", "img"}:
-            src = _normalize_public_media_src(_extract_image_src(node))
+            image_node = _find_node(node, "img") or node
+            src = _normalize_public_media_src(_extract_image_src(image_node))
             caption = ""
             for child in node.children:
                 if child.tag == "figcaption" and child.text:
@@ -278,25 +417,73 @@ def build_tiptap_document_from_html(html: str) -> dict[str, Any]:
                     break
             if src:
                 image_id = _find_image_id_for_src(src)
+                image_attrs: dict[str, Any] = {
+                    "blockId": next_block_id(),
+                    "src": src,
+                    "alt": image_node.attrs.get("alt", ""),
+                    "title": "",
+                    "imageId": image_id,
+                    "align": node.attrs.get("data-align") or image_node.attrs.get("data-align") or "center",
+                }
+                width = image_node.attrs.get("width", "").strip()
+                if width.isdigit() and int(width) > 0:
+                    image_attrs["width"] = int(width)
                 items.append(
                     {
                         "type": "image",
-                        "attrs": {
-                            "blockId": next_block_id(),
-                            "src": src,
-                            "alt": node.attrs.get("alt", ""),
-                            "title": caption,
-                            "imageId": image_id,
-                        },
+                        "attrs": image_attrs,
                     }
                 )
-            if caption:
-                items.append(create_paragraph(caption, next_block_id()))
+            caption_node = _create_caption_paragraph(caption, _find_link_href(node), next_block_id())
+            if caption_node:
+                items.append(caption_node)
             return items
 
         if node.tag == "table":
-            if node_text:
-                items.append(create_paragraph(node_text, next_block_id()))
+            rows: list[HtmlNode] = []
+
+            def collect_rows(current: HtmlNode) -> None:
+                for child in current.children:
+                    if child.tag == "tr":
+                        rows.append(child)
+                    elif child.tag in {"thead", "tbody", "tfoot"}:
+                        collect_rows(child)
+
+            collect_rows(node)
+            table_rows: list[dict[str, Any]] = []
+            for row_index, row in enumerate(rows):
+                cells: list[dict[str, Any]] = []
+                row_has_header = any(child.tag == "th" for child in row.children)
+                for cell in row.children:
+                    if cell.tag not in {"td", "th"}:
+                        continue
+                    cell_content: list[dict[str, Any]] = []
+                    inline_content = _inline_content(cell)
+                    if inline_content:
+                        cell_content.append(create_paragraph_content(inline_content, next_block_id()))
+                    if not cell_content:
+                        cell_content.append(create_paragraph_content([], next_block_id()))
+                    cell_attrs: dict[str, Any] = {"colspan": 1, "rowspan": 1, "colwidth": None}
+                    for attr_name in ("colspan", "rowspan"):
+                        value = cell.attrs.get(attr_name, "").strip()
+                        if value.isdigit() and int(value) > 0:
+                            cell_attrs[attr_name] = int(value)
+                    cell_type = "tableHeader" if cell.tag == "th" or (row_index == 0 and not row_has_header) else "tableCell"
+                    cells.append({"type": cell_type, "attrs": cell_attrs, "content": cell_content})
+                if cells:
+                    table_rows.append({"type": "tableRow", "content": cells})
+            if table_rows:
+                items.append(
+                    {
+                        "type": "table",
+                        "attrs": {"blockId": next_block_id()},
+                        "content": table_rows,
+                    }
+                )
+            return items
+
+        if node.tag == "hr":
+            items.append({"type": "horizontalRule"})
             return items
 
         if node.tag == "br":
@@ -305,7 +492,7 @@ def build_tiptap_document_from_html(html: str) -> dict[str, Any]:
         for child in node.children:
             items.extend(convert_node(child))
 
-        if not items and node_text and node.tag in {"div", "section", "article", "main"}:
+        if not items and node_text and node.tag in {"div", "section", "article", "main", "body"}:
             items.append(create_paragraph(node_text, next_block_id()))
         return items
 
@@ -320,7 +507,99 @@ def build_tiptap_document_from_html(html: str) -> dict[str, Any]:
     }
 
 
-def select_target_articles() -> list[Article]:
+def _render_inline_html(node: dict[str, Any]) -> str:
+    if node.get("type") != "text":
+        return ""
+    value = escape_html(str(node.get("text", "")))
+    for mark in node.get("marks", []) or []:
+        mark_type = mark.get("type") if isinstance(mark, dict) else ""
+        if mark_type == "bold":
+            value = f"<strong>{value}</strong>"
+        elif mark_type == "italic":
+            value = f"<em>{value}</em>"
+        elif mark_type == "underline":
+            value = f"<u>{value}</u>"
+        elif mark_type == "strike":
+            value = f"<s>{value}</s>"
+        elif mark_type == "highlight":
+            value = f"<mark>{value}</mark>"
+        elif mark_type == "code":
+            value = f"<code>{value}</code>"
+        elif mark_type == "link":
+            attrs = mark.get("attrs") if isinstance(mark, dict) else {}
+            href = escape_html(str((attrs or {}).get("href", "#")), quote=True)
+            value = f'<a href="{href}" target="_blank" rel="noreferrer">{value}</a>'
+    return value
+
+
+def _render_tiptap_node(node: dict[str, Any]) -> str:
+    node_type = node.get("type", "")
+    if node_type == "text":
+        return _render_inline_html(node)
+    children = "".join(_render_tiptap_node(child) for child in node.get("content", []) or [])
+    if node_type == "paragraph":
+        return f"<p>{children}</p>"
+    if node_type == "heading":
+        level = int((node.get("attrs") or {}).get("level", 2))
+        return f"<h{level}>{children}</h{level}>"
+    if node_type == "bulletList":
+        return "<ul>" + "".join(f"<li>{_render_tiptap_node(item)}</li>" for item in node.get("content", []) or []) + "</ul>"
+    if node_type == "orderedList":
+        return "<ol>" + "".join(f"<li>{_render_tiptap_node(item)}</li>" for item in node.get("content", []) or []) + "</ol>"
+    if node_type == "listItem":
+        return "".join(_render_tiptap_node(child) for child in node.get("content", []) or [])
+    if node_type == "blockquote":
+        return f"<blockquote>{children}</blockquote>"
+    if node_type == "codeBlock":
+        return f"<pre><code>{escape_html(''.join(child.get('text', '') for child in node.get('content', []) or []))}</code></pre>"
+    if node_type == "table":
+        return "<table><tbody>" + children + "</tbody></table>"
+    if node_type == "tableRow":
+        return f"<tr>{children}</tr>"
+    if node_type == "tableCell":
+        return _render_table_cell("td", node, children)
+    if node_type == "tableHeader":
+        return _render_table_cell("th", node, children)
+    if node_type == "horizontalRule":
+        return "<hr />"
+    if node_type == "image":
+        attrs = node.get("attrs") or {}
+        src = escape_html(str(attrs.get("src", "")), quote=True)
+        if not src:
+            return ""
+        alt = escape_html(str(attrs.get("alt", "")), quote=True)
+        align = escape_html(str(attrs.get("align") or "center"), quote=True)
+        image_attrs = [f'data-align="{align}"']
+        width = attrs.get("width")
+        if isinstance(width, (int, float)) and width > 0:
+            width_value = int(width)
+            image_attrs.insert(0, f'width="{width_value}"')
+            image_attrs.append(f'style="width:{width_value}px;height:auto;max-width:100%;"')
+        rendered_attrs = " ".join(image_attrs)
+        return f'<figure data-align="{align}"><img src="{src}" alt="{alt}" {rendered_attrs} /></figure>'
+    return children
+
+
+def _render_table_cell(tag: str, node: dict[str, Any], children: str) -> str:
+    """将 TipTap 表格单元格属性回写为 HTML，避免回填后丢失合并单元格。"""
+
+    attrs = node.get("attrs") or {}
+    html_attrs: list[str] = []
+    for name in ("colspan", "rowspan"):
+        value = attrs.get(name)
+        if isinstance(value, int) and value > 1:
+            html_attrs.append(f'{name}="{value}"')
+    attributes = f" {' '.join(html_attrs)}" if html_attrs else ""
+    return f"<{tag}{attributes}>{children}</{tag}>"
+
+
+def render_tiptap_document(document: dict[str, Any]) -> str:
+    return "".join(_render_tiptap_node(node) for node in document.get("content", []) or [])
+
+
+def select_target_articles(slugs: list[str] | None = None) -> list[Article]:
+    if slugs:
+        return list(Article.objects.filter(slug__in=slugs).order_by("id"))
     articles = Article.objects.all().order_by("id")
     targets: list[Article] = []
     for article in articles:
@@ -366,17 +645,19 @@ def article_needs_rebuild(article: Article) -> bool:
 
 
 @transaction.atomic
-def backfill_articles() -> dict[str, Any]:
-    targets = select_target_articles()
+def backfill_articles(slugs: list[str] | None = None) -> dict[str, Any]:
+    targets = select_target_articles(slugs)
     updated: list[dict[str, Any]] = []
 
     for article in targets:
         body_html = normalize_legacy_html(_normalize_html(article.body))
         content_html = normalize_legacy_html(_normalize_html(article.content_html)) or body_html
-        if _has_renderable_content_json(article.content_json) and not article_needs_rebuild(article):
+        if not slugs and _has_renderable_content_json(article.content_json) and not article_needs_rebuild(article):
             content_json = article.content_json
         else:
             content_json = build_tiptap_document_from_html(content_html)
+        content_html = render_tiptap_document(content_json)
+        body_html = content_html
         content_blocks = content_json.get("content", []) if isinstance(content_json, dict) else []
         missing_image_sources = _collect_missing_image_sources(content_blocks)
 
@@ -404,5 +685,8 @@ def backfill_articles() -> dict[str, Any]:
 
 
 if __name__ == "__main__":
-    result = backfill_articles()
+    argument_parser = argparse.ArgumentParser(description="将文章 HTML 回填为可逆向编辑的 TipTap 文档")
+    argument_parser.add_argument("--slugs", nargs="+", help="只处理指定 slug，避免影响其他文章")
+    arguments = argument_parser.parse_args()
+    result = backfill_articles(arguments.slugs)
     print(json.dumps(result, ensure_ascii=False, indent=2))

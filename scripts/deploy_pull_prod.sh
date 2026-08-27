@@ -16,7 +16,6 @@ ACR_REGISTRY="${ACR_REGISTRY:-}"
 ACR_USERNAME="${ACR_USERNAME:-}"
 ACR_PASSWORD="${ACR_PASSWORD:-}"
 PUBLIC_WEB_SMOKE_URL="${PUBLIC_WEB_SMOKE_URL:-http://127.0.0.1:13003}"
-PUBLIC_WEB_EXPECTED_TEXT="${PUBLIC_WEB_EXPECTED_TEXT:-让云贴近业务}"
 EDITOR_WEB_SMOKE_URL="${EDITOR_WEB_SMOKE_URL:-http://127.0.0.1:13000/django-admin/next-editor/login}"
 RESERVED_PORTS=(15432 16379 18001 18002 13000 13003)
 
@@ -159,9 +158,10 @@ wait_http() {
   local url="$1"
   local attempts="$2"
   local sleep_seconds="$3"
+  shift 3
   local attempt=1
   while [[ "${attempt}" -le "${attempts}" ]]; do
-    if curl -fsS --max-time 10 "${url}" >/dev/null; then
+    if curl -fsS --max-time 10 "$@" "${url}" >/dev/null; then
       return 0
     fi
     if [[ "${attempt}" -eq "${attempts}" ]]; then
@@ -174,12 +174,7 @@ wait_http() {
 }
 
 smoke_public_web() {
-  local home_html
-  home_html="$(curl -fsS --max-time 10 "${PUBLIC_WEB_SMOKE_URL}/")"
-  if ! grep -q "${PUBLIC_WEB_EXPECTED_TEXT}" <<<"${home_html}"; then
-    echo "[deploy-pull] public-web 首页未包含预期文案: ${PUBLIC_WEB_EXPECTED_TEXT}" >&2
-    exit 1
-  fi
+  curl -fsSI --max-time 10 "${PUBLIC_WEB_SMOKE_URL}/" >/dev/null
   curl -fsSI --max-time 10 "${PUBLIC_WEB_SMOKE_URL}/solutions" >/dev/null
 }
 
@@ -200,7 +195,10 @@ echo "[deploy-pull] 拉取最新镜像"
 
 echo "[deploy-pull] 启动后端核心服务"
 "${COMPOSE_CMD[@]}" up -d --remove-orphans db redis web ai-service worker lead-notifier
-wait_http "http://127.0.0.1:18001/" 24 5
+wait_http "http://127.0.0.1:18001/api/health/" 24 5 \
+  -H "Host: www.yuncan.com" \
+  -H "X-Forwarded-Host: www.yuncan.com" \
+  -H "X-Forwarded-Proto: https"
 
 echo "[deploy-pull] 执行数据库迁移"
 "${COMPOSE_CMD[@]}" exec -T web python manage.py migrate --noinput

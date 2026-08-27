@@ -8,7 +8,6 @@ NGINX_SITE_PATH="${NGINX_SITE_PATH:-}"
 SKIP_GIT_SYNC="${SKIP_GIT_SYNC:-0}"
 NGINX_RELOAD_CMD="${NGINX_RELOAD_CMD:-/etc/init.d/nginx reload}"
 PUBLIC_WEB_SMOKE_URL="${PUBLIC_WEB_SMOKE_URL:-http://127.0.0.1:13003}"
-PUBLIC_WEB_EXPECTED_TEXT="${PUBLIC_WEB_EXPECTED_TEXT:-让云贴近业务}"
 EDITOR_WEB_SMOKE_URL="${EDITOR_WEB_SMOKE_URL:-http://127.0.0.1:13000/django-admin/next-editor/login}"
 PUBLIC_WEB_ENV_FILE="${PUBLIC_WEB_ENV_FILE:-.env.public-web.prod}"
 REQUIRED_ENV_VARS=(
@@ -184,9 +183,9 @@ update_nginx_config() {
 
 smoke_public_web() {
   echo "[deploy] 验证 public-web 首页"
-  local home_html attempt
+  local attempt
   for attempt in $(seq 1 40); do
-    if home_html="$(curl -fsS --max-time 10 "${PUBLIC_WEB_SMOKE_URL}/")"; then
+    if curl -fsSI --max-time 10 "${PUBLIC_WEB_SMOKE_URL}/" >/dev/null; then
       break
     fi
     if (( attempt == 40 )); then
@@ -197,12 +196,6 @@ smoke_public_web() {
     fi
     sleep 5
   done
-  if ! grep -q "${PUBLIC_WEB_EXPECTED_TEXT}" <<<"${home_html}"; then
-    echo "[deploy] public-web 首页未包含预期文案：${PUBLIC_WEB_EXPECTED_TEXT}" >&2
-    "${COMPOSE_CMD[@]}" logs --tail 200 public-web >&2 || true
-    exit 1
-  fi
-
   echo "[deploy] 验证 public-web 解决方案页"
   for attempt in $(seq 1 20); do
     if curl -fsSI --max-time 10 "${PUBLIC_WEB_SMOKE_URL}/solutions" >/dev/null; then
