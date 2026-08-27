@@ -64,25 +64,6 @@ npm run dev --prefix apps/public-web
 ```
 
 
-## AI 网盘演示录制
-
-官网首页的 AI 网盘演示使用浏览器自动化录制，产物为可直接发布的 1280×720 H.264 MP4。脚本在真实页面上注入橙色指针、目标聚焦框和点击波纹，再执行同一坐标的真实点击，因此视频中的操作提示和页面行为保持一致。
-
-账号只可通过当前终端环境变量传入，禁止写入任何文件：
-
-```bash
-KODCLOUD_DEMO_USERNAME="<演示账号>" \\
-KODCLOUD_DEMO_PASSWORD="<演示密码>" \\
-npm run record:kodcloud-demo --prefix apps/public-web
-```
-
-原始 WebM 保存在 `apps/public-web/public/media/ai-drive/raw/`，不进入 Git。录制后执行下列转码命令，输出首页引用的 MP4 和封面图：
-
-```bash
-ffmpeg -i raw.webm -an -c:v libx264 -preset slow -crf 23 -pix_fmt yuv420p -movflags +faststart output.mp4
-ffmpeg -ss 00:00:06 -i raw.webm -frames:v 1 -q:v 2 output.jpg
-```
-
 ## 生产验证
 
 ```bash

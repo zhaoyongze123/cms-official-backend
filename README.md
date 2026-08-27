@@ -47,9 +47,6 @@
 - [测试与质量校验](#测试与质量校验)
 - [GitHub Actions 自动部署](#github-actions-自动部署)
 - [API 与路由概览](#api-与路由概览)
-- [Roadmap](ROADMAP.md)
-- [Contributing](CONTRIBUTING.md)
-- [Security](SECURITY.md)
 - [License](LICENSE)
 - [安全说明](#安全说明)
 - [English Summary](#english-summary)
@@ -347,9 +344,9 @@ git reset --hard origin/main
 - Studio Web 通过 Django 暴露的 API 获取内容与监控数据。
 - `/django-admin/next-editor/*` 通过 Django 代理到 Next.js。
 
-## 🗺️ Roadmap
+## 🗺️ 后续方向
 
-项目后续计划维护在 [`ROADMAP.md`](ROADMAP.md)，当前重点方向包括：
+当前重点方向包括：
 
 - 完善公开站页面截图与功能演示
 - 补充 Django API 文档与示例请求
@@ -358,8 +355,6 @@ git reset --hard origin/main
 - 增加端到端验收测试
 
 ## 🤝 Contributing
-
-贡献流程、模块边界和推荐验证命令见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
 
 提交前请特别注意：
 
@@ -373,7 +368,6 @@ git reset --hard origin/main
 - 不要在公开文档中写入生产网络拓扑、宿主机路径、容器内部地址、精确端口映射。
 - GitHub Actions 不应打印 `PROD_ENV_FILE` 内容。
 - 所有生产敏感信息请只保存在 GitHub Secrets 或服务器环境文件中。
-- 安全报告与凭证处理建议见 [`SECURITY.md`](SECURITY.md)。
 
 ## English Summary
 
