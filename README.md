@@ -46,6 +46,7 @@
 - [本地开发](#本地开发)
 - [测试与质量校验](#测试与质量校验)
 - [GitHub Actions 自动部署](#github-actions-自动部署)
+- [项目交接](#项目交接)
 - [API 与路由概览](#api-与路由概览)
 - [License](LICENSE)
 - [安全说明](#安全说明)
@@ -59,7 +60,7 @@
 - `apps/public-web`：Next.js 对外站点，承接官网公开展示页。
 - `packages/editor-protocol`：前后端共享的编辑协议包。
 
-当前仓库同时维护开发环境与生产环境两套 Compose 配置，并提供 `main` 分支自动部署工作流。
+当前仓库同时维护开发环境与生产环境两套 Compose 配置。`main` 分支工作流负责测试、构建并推送生产镜像，生产服务器再由主动拉取脚本完成切换。
 
 ## 🛠️ 技术栈
 
@@ -319,6 +320,10 @@ git reset --hard origin/main
 - 用 `cron` 定时执行
 - 用 `systemd timer` 定时执行
 - 由你自己的内网 Runner / 运维机触发执行
+
+## 🤝 项目交接
+
+完整的交接说明、数据库恢复步骤、服务器现状和 GitHub Actions 接手流程见 [`handoff/`](handoff/README.md)。生产环境文件、账号密码、数据库初始化文件和媒体数据不进入 Git，存放在仓库同级的私密交接目录。
 
 ## 🔌 API 与路由概览
 

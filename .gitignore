@@ -103,3 +103,8 @@ editor-web/coverage/
 apps/**/__pycache__/
 node_modules/
 output/
+
+# 交接私密资料和完整数据库初始化文件禁止进入源码仓库。
+handoff-private/
+*.initial.sql
+*.initial.sql.gz

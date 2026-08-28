@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "motion/react";
 import { ArrowRight, Cloud, Code, Server, Settings, Shield, X, Zap } from "lucide-react";
 import gsap from "gsap";
@@ -429,9 +430,9 @@ export default function PublicLandingPage({ solutionArticles, caseLogoWallImageU
               <h2 className="text-4xl md:text-5xl font-black text-charcoal mt-4 mb-6">全生命周期的云技术力量</h2>
               <p className="text-muted text-lg">从初创上云到大规模集团化跨云治理，我们提供涵盖各阶段的专业解决方案。</p>
             </div>
-            <a href="/services" className="group flex items-center gap-3 text-hermes font-bold">
+            <Link href="/services" className="group flex items-center gap-3 text-hermes font-bold">
               了解详细服务标准 <ArrowRight className="group-hover:translate-x-2 transition-transform" />
-            </a>
+            </Link>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -450,9 +451,9 @@ export default function PublicLandingPage({ solutionArticles, caseLogoWallImageU
                 <h3 className="text-xl font-bold text-white mb-4">定制化服务</h3>
                 <p className="text-white/80 text-sm leading-relaxed">除标准化产品外，云璨还支持针对特殊行业、高并发场景的1对1深度定制开发。</p>
               </div>
-              <a href="/contact" className="mt-8 inline-flex items-center justify-center rounded-xl bg-white py-4 font-black text-hermes shadow-lg transition-colors hover:bg-mist">
+              <Link href="/contact" className="mt-8 inline-flex items-center justify-center rounded-xl bg-white py-4 font-black text-hermes shadow-lg transition-colors hover:bg-mist">
                 预约专家诊断
-              </a>
+              </Link>
             </motion.div>
           </div>
         </div>
